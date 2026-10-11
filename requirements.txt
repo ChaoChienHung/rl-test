@@ -2,10 +2,7 @@
 #   pip install torch --index-url https://download.pytorch.org/whl/cu128
 gymnasium>=0.29
 numpy>=1.24
-stable-baselines3>=2.3
 torch>=2.7
-
-# factcheck
 transformers
 accelerate
 peft
@@ -16,3 +13,4 @@ bm25s
 PyStemmer
 openai
 python-dotenv
+pytest

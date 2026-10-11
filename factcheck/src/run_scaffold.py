@@ -3,8 +3,7 @@ heuristic, plus the two charts the presentation depends on (reliability
 bins, ops-vs-accuracy).
 
 No training here on purpose. The question this answers is only "does the MDP
-hold together and do the metrics compute", not "does RL win" -- same split as
-the negotiation spike's R1/R2.
+hold together and do the metrics compute", not "does RL win".
 
     python run_scaffold.py
 """

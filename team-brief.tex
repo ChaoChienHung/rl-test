@@ -1,0 +1,103 @@
+\documentclass[10pt]{article}
+\usepackage[a4paper,margin=0.5in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[expansion=false]{microtype}
+\usepackage{tabularx,array,booktabs}
+\usepackage{enumitem}
+\usepackage[table]{xcolor}
+\usepackage[hidelinks]{hyperref}
+\usepackage[compact]{titlesec}
+
+\titleformat*{\section}{\normalsize\bfseries}
+\titlespacing*{\section}{0pt}{5pt}{2pt}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{3pt}
+\setlength{\tabcolsep}{4pt}
+\renewcommand{\arraystretch}{1.15}
+\newcolumntype{L}{>{\raggedright\arraybackslash}X}
+\newcolumntype{P}[1]{>{\raggedright\arraybackslash}p{#1}}
+\setlist{leftmargin=*,nosep}
+\definecolor{band}{gray}{0.92}
+\pagestyle{empty}
+
+\begin{document}
+
+{\large\bfseries Fact-checking RL project: team brief\par}
+\vspace{1pt}
+{\small Week of 8 Oct 2026 \quad$\cdot$\quad Project ends 11 Nov 2026 \quad$\cdot$\quad Agentic lead: Chia Kwang Yang}
+
+\section*{Background}
+A fact-checker that answers confidently when the evidence is unclear spreads false confidence. Our system takes a claim and returns three things: a verdict
+(Supported, Refuted or Not Enough Info), the Wikipedia sentences it relied on, and a confidence. On 900
+FEVER claims, Qwen3.5-2B is right only 47\% of the time even with the correct evidence in front of it; it calls almost everything Supported.
+Fine-tuning (SFT) lifts it to 78\%, above a prompted 180B model (72\% with our retrieval); it writes confidence 1.0 every time, but its verdict probability is well calibrated (error 0.03).
+Our first GRPO run (no KL penalty) gained nothing: the model grew over-certain, raising that error to 0.21.
+\textbf{Decided:} we train the 2B; the 4B was only about 1 point better after SFT.
+
+\section*{What we aim to show by 11 November}
+\begin{enumerate}
+  \item \textbf{RL improves the verifier without breaking calibration.} The GRPO-trained 2B verifier beats the SFT model on
+        accuracy or harm-weighted error (calling a false claim true is the worst mistake) while its verdict probability stays
+        calibrated (error at most 0.05), on the same 900 claims, and holds up on the shortcut tests.
+  \item \textbf{A cost-aware controller.} A small learned policy that decides when to search again, verify,
+        abstain or answer sits above fixed policies on the accuracy-versus-search-cost curve.
+  \item \textbf{Multi-turn vs single-turn RL,} same model and reward; only the loop differs.
+  \item \textbf{Transfer and demo.} Results on SciFact and AVeriTeC, and a live demo that shows the decision trace.
+\end{enumerate}
+
+\section*{Who does what}
+\footnotesize
+\begin{tabularx}{\linewidth}{@{}P{2.95cm}P{3.6cm}LP{3.3cm}@{}}
+\toprule
+\textbf{Person, role} & \textbf{This week (8 Oct)} & \textbf{Weeks 2--4 (15 Oct -- 1 Nov)} & \textbf{Done when} \\
+\midrule
+\rowcolor{band}\multicolumn{4}{@{}l}{\textit{RL group: first GRPO run done (no gain, calibration lost). Confidence is now the verdict probability, not the written number.}} \\
+\textbf{Chao Chien Hung} \newline RL-1 verifier &
+  Rerun GRPO with the KL penalty on ($\beta\approx0.04$), on the 926 claims whose 8 samples score differently; stop at 200 steps if calibration slips (GPU) &
+  Wk 2: final verifier, 3 seeds; fallback: SFT that writes its verdict probability (GPU). Wk 3: before/after tables. Wk 4: FEVER+SciFact vs FEVER-only run, scored on SciFact dev (GPU) &
+  GRPO beats SFT on accuracy or harm, calibration error $\le$0.05; SFT vs GRPO table \\
+\textbf{Michel Yildirim} \newline RL-2 reward &
+  Temperature-scaling baseline on the verdict probability (the bar RL must beat); calibration metrics in AG-3's eval &
+  Wk 2: 4 ablations on the fixed setup, overnight (GPU); hacking checks (confidence tracks correctness per claim, not per label). Wk 3: reliability diagrams. Wk 4: buffer &
+  Reliability diagrams before/after; ablation table; hacking checks pass \\
+\textbf{Yao Tianhao} \newline RL-3 controller &
+  Controller env on real FEVER; abstain confidence = verifier's NEI probability &
+  Wk 2: controller training (CPU). Wk 3: cost sweep; fixed-policy baselines. Wk 4: buffer &
+  Accuracy-vs-cost curve; controller vs fixed policies \\
+\rowcolor{band}\multicolumn{4}{@{}l}{\textit{Agentic group: the loop, the tools, the data and the demo}} \\
+\textbf{Yu Jing} \newline AG-1 retrieval &
+  Build the \texttt{search(query, k)} tool &
+  Wk 2: sentence recall; Exa search for AVeriTeC (date cutoff, fact-check sites excluded, cached), 50-claim cost pilot. Wk 3: \texttt{follow()} hyperlink tool on FEVER; re-query &
+  Retrieval recall table across datasets \\
+\textbf{Chia Kwang Yang} \newline AG-2 agent loop &
+  Loop skeleton over all 900 claims; one multi-turn GRPO test (GPU); keep the GPU calendar &
+  Wk 2: prompted agentic baseline (GPU); loop streams each step as an event (FastAPI). Wk 3--4: multi-turn GRPO runs 1 and 2 (GPU); GRPO verifier into the demo &
+  Multi-turn vs single-turn GRPO on the 900 claims; live event stream \\
+\textbf{Bryan Wu Jiahe} \newline AG-3 eval \& demo &
+  Eval script and frozen test splits &
+  Wk 2: shortcut test set; loaders; demo Browse mode on saved traces. Wk 3: failure audit in Browse; Live mode. Wk 4: transfer runs; Compare mode &
+  Every reported number comes from the eval script; demo with fallback \\
+\bottomrule
+\end{tabularx}
+\normalsize
+
+\section*{How we work together}
+\begin{itemize}
+  \item \textbf{Freeze four interfaces this week} so nobody waits on anyone: \texttt{search()} (AG-1),
+        \texttt{verify()} (RL-1 trains it, AG-2 sets the signature), \texttt{reward()} (RL-2), and the
+        trace JSONL, one row per claim (AG-2 writes it; RL-3 trains on it; AG-3 scores it).
+  \item \textbf{No number goes on a slide unless it came from AG-3's eval script.}
+  \item \textbf{One GPU} (RTX 5070 Ti, 16GB). Week 1: RL-1 by day; one AG-2 test. Week 2: RL-1 final verifier by day; AG-2 baseline and RL-2
+        ablations share nights. Week 3: AG-2 first, leftover ablations when free. Week 4: AG-2 by day, RL-1 SciFact run overnight.
+        Week 5: spare. Book with KY.
+  \item \textbf{Reviews:} 15 Oct (does fixed GRPO beat SFT and keep calibration?), 29 Oct (pick the lead claim),
+        5--11 Nov (report, slides, demo dry run, final review).
+  \item \textbf{Demo:} one frontend fed by the loop's trace events. \emph{Live}: any claim, steps appear as they run (Exa for open claims).
+        \emph{Compare}: SFT vs GRPO on the same claim. \emph{Browse}: saved traces; doubles as the failure audit and the fallback.
+  \item \textbf{Tools by dataset:} FEVER uses Wikipedia search plus hyperlink follow; SciFact searches its abstracts; AVeriTeC and the demo use Exa.
+  \item \textbf{Open:} AVeriTeC's fourth label (Conflicting/Cherrypicking) mapped to NEI or dropped, AG-3 to decide. Exa key: KY.
+        Out of scope: dense retriever, escalate action, LIAR-PLUS.
+\end{itemize}
+
+\end{document}

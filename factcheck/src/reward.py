@@ -97,8 +97,17 @@ def evidence_f1(gold_ids: list[str], cited_ids: list[str]) -> float:
     return 2 * precision * recall / (precision + recall)
 
 
-def evidence_score(gold: str, gold_ids: list[str], cited_ids: list[str]) -> float:
-    """Evidence F1 on SUPPORTED/REFUTED; the empty-list rule on gold NEI."""
+def evidence_score(gold: str, pred: str, gold_ids: list[str], cited_ids: list[str]) -> float:
+    """Evidence F1 on SUPPORTED/REFUTED; the empty-list rule on gold NEI.
+
+    Credit only comes with the right verdict, as in the FEVER score: otherwise
+    citing the right sentence would refund the harm penalty on a lie waved
+    through, and SUPPORTED-with-no-evidence on an NEI claim would collect the
+    abstention reward. Citing anything on a gold-NEI claim is penalised
+    whatever the verdict.
+    """
+    if pred != gold:
+        return -NEI_CITED_PENALTY if gold == NEI and cited_ids else 0.0
     if gold == NEI:
         return NEI_EMPTY_REWARD if not cited_ids else -NEI_CITED_PENALTY
     return evidence_f1(gold_ids, cited_ids)
@@ -138,7 +147,7 @@ def total(
 
     parts = {
         "correctness": correctness(gold, pred, harm=cfg.harm),
-        "evidence": evidence_score(gold, gold_ids, cited_ids) if cfg.evidence else 0.0,
+        "evidence": evidence_score(gold, pred, gold_ids, cited_ids) if cfg.evidence else 0.0,
         "calibration": calibration(gold, pred, confidence) if cfg.calibration else 0.0,
         "cost": float(n_ops),
         "evidence_f1": evidence_f1(gold_ids, cited_ids),  # metric only, not in r

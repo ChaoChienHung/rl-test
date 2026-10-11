@@ -1,0 +1,11 @@
+{
+ "model": "Qwen/Qwen3.5-4B",
+ "n_train": 5895,
+ "qlora": true,
+ "max_steps": 0,
+ "lr": 0.0001,
+ "rank": 16,
+ "seed": 0,
+ "train_seconds": 5143,
+ "peak_gpu_gb": 4.98
+}

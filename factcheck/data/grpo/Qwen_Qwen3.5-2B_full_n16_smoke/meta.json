@@ -1,0 +1,22 @@
+{
+ "model": "Qwen/Qwen3.5-2B",
+ "sft": "/mnt/c/Users/ky/Desktop/rl-test/factcheck/src/../data/fever/../sft_probe/Qwen_Qwen3.5-2B_n6000",
+ "reward": "full",
+ "n_train": 16,
+ "num_generations": 8,
+ "prompts_per_step": 2,
+ "lr": 2e-05,
+ "max_steps": 3,
+ "seed": 0,
+ "tag": "smoke",
+ "steps": 3,
+ "train_seconds": 72,
+ "peak_gpu_gb": 9.65,
+ "harm": {
+  "REFUTED->SUPPORTED": 1.5,
+  "SUPPORTED->REFUTED": 1.0,
+  "NEI->SUPPORTED": 1.75,
+  "NEI->REFUTED": 1.0
+ },
+ "nei_cited_penalty": 0.5
+}

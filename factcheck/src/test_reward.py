@@ -61,10 +61,25 @@ def test_harm_independent_of_confidence():
 
 
 def test_nei_evidence_rule():
-    assert R.evidence_score(NEI, [], []) == R.NEI_EMPTY_REWARD
-    assert R.evidence_score(NEI, [], ["x:1"]) == -R.NEI_CITED_PENALTY
-    assert R.evidence_score(SUPPORTED, ["a", "b"], ["a"]) == pytest.approx(2 / 3)
-    assert R.evidence_score(SUPPORTED, ["a"], []) == 0.0
+    assert R.evidence_score(NEI, NEI, [], []) == R.NEI_EMPTY_REWARD
+    assert R.evidence_score(NEI, NEI, [], ["x:1"]) == -R.NEI_CITED_PENALTY
+    assert R.evidence_score(SUPPORTED, SUPPORTED, ["a", "b"], ["a"]) == pytest.approx(2 / 3)
+    assert R.evidence_score(SUPPORTED, SUPPORTED, ["a"], []) == 0.0
+
+
+def test_evidence_credit_needs_the_right_verdict():
+    """Right sentence, wrong verdict earns nothing (FEVER-score style)."""
+    assert R.evidence_score(REFUTED, SUPPORTED, ["a"], ["a"]) == 0.0
+    # SUPPORTED with no evidence on an NEI claim does not collect the abstention reward
+    assert R.evidence_score(NEI, SUPPORTED, [], []) == 0.0
+    # citing on a gold-NEI claim is penalised whatever the verdict
+    assert R.evidence_score(NEI, SUPPORTED, [], ["x:1"]) == -R.NEI_CITED_PENALTY
+
+
+def test_lie_with_right_evidence_scores_below_honest_abstain():
+    lie, _ = R.total(REFUTED, SUPPORTED, 0.5, ["a"], ["a"], 0)
+    abstain, _ = R.total(REFUTED, NEI, 0.5, ["a"], [], 0)
+    assert lie < abstain
 
 
 def test_nei_citing_nothing_beats_citing_something():

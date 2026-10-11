@@ -1,0 +1,13 @@
+{
+ "sft_claims": "C:\\Users\\ky\\Desktop\\rl-test\\factcheck\\src\\..\\data\\fever\\..\\sft_probe\\Qwen_Qwen3.5-2B_n6000",
+ "n": 1200,
+ "retrieval": "titles",
+ "seed": 0,
+ "counts": {
+  "SUPPORTED|True": 329,
+  "REFUTED|True": 346,
+  "REFUTED|False": 64,
+  "NOT_ENOUGH_INFO|None": 407,
+  "SUPPORTED|False": 54
+ }
+}

@@ -44,6 +44,10 @@ COMMITS = {
 }
 # Confidence is "chance this verdict is right" (Brier, reward.py), so an
 # abstain states a middling belief that NEI is right, not 0.
+# Checked 2026-10-08: the Brier-optimal constant is the policy's abstain
+# precision (random 0.26, heuristic 0.65), and moving it 0.3-0.7 changes
+# mean reward by under 0.02. The real-FEVER env should use the verifier's
+# NEI probability per claim instead of a constant.
 ABSTAIN_CONF = 0.5
 
 

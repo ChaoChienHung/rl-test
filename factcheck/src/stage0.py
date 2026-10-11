@@ -178,12 +178,14 @@ class LocalModel:
         self.tok = AutoTokenizer.from_pretrained(name)
         self.tok.padding_side = "left"
         self.model = AutoModelForCausalLM.from_pretrained(name, dtype=torch.bfloat16, device_map="cuda")
-        if adapter:  # LoRA adapter from sft_probe.py, merged so generation is unchanged
+        if adapter:  # LoRA adapter(s), merged in order so generation is unchanged:
+            # "sft" or "sft,grpo" for a GRPO LoRA trained on the merged SFT model (grpo_verifier --beta)
             from peft import PeftModel
-            self.model = PeftModel.from_pretrained(self.model, adapter).merge_and_unload()
+            for ad in adapter.split(","):
+                self.model = PeftModel.from_pretrained(self.model, ad).merge_and_unload()
         self.model.eval()
         self.batch_size = batch_size
-        self.name = name if not adapter else f"{name}+{os.path.basename(os.path.normpath(adapter))}"
+        self.name = name if not adapter else f"{name}+{os.path.basename(os.path.normpath(adapter.split(',')[-1]))}"
 
     def run(self, prompts):
         out = []
@@ -293,7 +295,7 @@ def run(model_name, n, retrieval="bm25", chunk=20, adapter=None):
     if model_name.startswith("local"):
         base = model_name.split(":", 1)[1] if ":" in model_name else None
         if adapter and not base:
-            with open(os.path.join(adapter, "adapter_config.json"), encoding="utf-8") as f:
+            with open(os.path.join(adapter.split(",")[0], "adapter_config.json"), encoding="utf-8") as f:
                 base = json.load(f)["base_model_name_or_path"]
         model = LocalModel(base or LOCAL_MODEL, adapter=adapter)
     else:

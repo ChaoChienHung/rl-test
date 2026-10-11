@@ -35,6 +35,7 @@ from stage0 import (FEVER_LABEL, LOCAL_MODEL, SEED, SYSTEM, build_context, gold_
 
 OUT_DIR = os.path.join(DATA, "..", "sft_probe")
 NEI = "NOT_ENOUGH_INFO"
+MAX_LEN = 4096  # prompt + completion; ~13% of stage-0 prompts exceed 2048 tokens
 
 
 def build_examples(n, seed, chunk=200):
@@ -80,6 +81,8 @@ def train(model_name, rows, out, qlora, max_steps, lr, rank):
             tokenize=False, add_generation_prompt=True, enable_thinking=False)
         return {"prompt": prompt, "completion": r["completion"] + tok.eos_token}
     ds = Dataset.from_list([to_text(r) for r in rows])
+    n_long = sum(len(tok(r["prompt"] + r["completion"]).input_ids) > MAX_LEN for r in ds)
+    print(f"{n_long}/{len(ds)} examples over {MAX_LEN} tokens (completion truncated)")
 
     kw = {"dtype": torch.bfloat16, "device_map": "cuda"}
     if qlora:
@@ -88,12 +91,15 @@ def train(model_name, rows, out, qlora, max_steps, lr, rank):
             bnb_4bit_compute_dtype=torch.bfloat16, bnb_4bit_use_double_quant=True)
     model = AutoModelForCausalLM.from_pretrained(model_name, **kw)
 
+    # transformers 5 folded warmup_ratio into warmup_steps (a float < 1 is a ratio)
+    warmup = ({"warmup_ratio": 0.03} if "warmup_ratio" in SFTConfig.__dataclass_fields__
+              else {"warmup_steps": 0.03})
     cfg = SFTConfig(
         output_dir=out, seed=SEED,
         per_device_train_batch_size=1, gradient_accumulation_steps=8,
-        learning_rate=lr, lr_scheduler_type="cosine", warmup_ratio=0.03,
+        learning_rate=lr, lr_scheduler_type="cosine", **warmup,
         num_train_epochs=1, max_steps=max_steps if max_steps else -1,
-        max_length=2048, bf16=True, gradient_checkpointing=True,
+        max_length=MAX_LEN, bf16=True, gradient_checkpointing=True,
         completion_only_loss=True, logging_steps=10,
         save_strategy="no", report_to="none", dataset_num_proc=1,
     )
@@ -120,11 +126,23 @@ if __name__ == "__main__":
     ap.add_argument("--lr", type=float, default=1e-4)
     ap.add_argument("--rank", type=int, default=16)
     ap.add_argument("--seed", type=int, default=SEED)
+    ap.add_argument("--subset-of", default=None,
+                    help="probe dir: train on the first n-train of its examples after a seeded shuffle, "
+                         "the same claims grpo_verifier.load_rows picks (a matched SFT-vs-GRPO run)")
     a = ap.parse_args()
 
-    out = os.path.join(OUT_DIR, f"{a.model.replace('/', '_')}_n{a.n_train}{'_qlora' if a.qlora else ''}")
+    tag = f"_from_{os.path.basename(os.path.normpath(a.subset_of))}" if a.subset_of else ""
+    out = os.path.join(OUT_DIR, f"{a.model.replace('/', '_')}_n{a.n_train}{'_qlora' if a.qlora else ''}{tag}")
     os.makedirs(out, exist_ok=True)
     data_path = os.path.join(out, "train.jsonl")
+    if a.subset_of and not os.path.exists(data_path):
+        import random
+        with open(os.path.join(a.subset_of, "train.jsonl"), encoding="utf-8") as f:
+            src = [json.loads(line) for line in f]
+        random.Random(a.seed).shuffle(src)
+        with open(data_path, "w", encoding="utf-8") as f:
+            for r in src[:a.n_train]:
+                f.write(json.dumps(r, ensure_ascii=False) + "\n")
     if os.path.exists(data_path):
         with open(data_path, encoding="utf-8") as f:
             rows = [json.loads(line) for line in f]
@@ -137,7 +155,7 @@ if __name__ == "__main__":
 
     secs, peak_gb = train(a.model, rows, out, a.qlora, a.max_steps, a.lr, a.rank)
     meta = {"model": a.model, "n_train": len(rows), "qlora": a.qlora, "max_steps": a.max_steps,
-            "lr": a.lr, "rank": a.rank, "seed": a.seed, "train_seconds": round(secs),
+            "lr": a.lr, "rank": a.rank, "seed": a.seed, "subset_of": a.subset_of, "train_seconds": round(secs),
             "peak_gpu_gb": round(peak_gb, 2)}
     with open(os.path.join(out, "meta.json"), "w", encoding="utf-8") as f:
         json.dump(meta, f, indent=1)

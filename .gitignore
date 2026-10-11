@@ -1,5 +1,23 @@
 .venv/
 __pycache__/
 *.pyc
+.pytest_cache/
 .env
-factcheck/data/
+
+# Raw datasets and the BM25 index: download and build them with
+# factcheck/docs/data.md. Too large for git (21 GB).
+factcheck/data/fever/
+factcheck/data/scifact/
+factcheck/data/averitec/
+
+# Model weights, trainer state and tokenizer copies: regenerate with the
+# scripts. Run metadata, training logs, training sets and eval outputs stay.
+factcheck/data/**/checkpoint-*/
+factcheck/data/**/*.safetensors
+factcheck/data/**/tokenizer.json
+factcheck/data/**/tokenizer_config.json
+factcheck/data/**/chat_template.jinja
+factcheck/data/**/training_args.bin
+factcheck/data/**/README.md
+# Byte-identical copy of sft_probe/Qwen_Qwen3.5-2B_n6000/train.jsonl
+factcheck/data/sft_probe/Qwen_Qwen3.5-4B_n6000_qlora/train.jsonl

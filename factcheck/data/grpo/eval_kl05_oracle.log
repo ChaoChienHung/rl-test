@@ -1,0 +1,73 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+0 done, 900 to go -> /mnt/c/Users/ky/Desktop/rl-test/factcheck/src/../data/fever/../stage0/local+Qwen_Qwen3.5-2B_full_n1200_kl05_n900_oracle.jsonl
+Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]Loading weights:   8%|▊         | 26/320 [00:00<00:01, 257.18it/s]Loading weights:  42%|████▏     | 133/320 [00:00<00:00, 732.15it/s]Loading weights:  75%|███████▌  | 240/320 [00:00<00:00, 883.84it/s]Loading weights: 100%|██████████| 320/320 [00:00<00:00, 856.10it/s]
+[transformers] `causal_conv1d_fn` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+[transformers] `causal_conv1d_update` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+  20/900  13s
+  40/900  20s
+  60/900  26s
+  80/900  32s
+  100/900  38s
+  120/900  45s
+  140/900  51s
+  160/900  58s
+  180/900  64s
+  200/900  71s
+  220/900  78s
+  240/900  84s
+  260/900  90s
+  280/900  96s
+  300/900  103s
+  320/900  110s
+  340/900  117s
+  360/900  123s
+  380/900  130s
+  400/900  137s
+  420/900  143s
+  440/900  150s
+  460/900  156s
+  480/900  163s
+  500/900  169s
+  520/900  176s
+  540/900  182s
+  560/900  188s
+  580/900  195s
+  600/900  201s
+  620/900  207s
+  640/900  214s
+  660/900  221s
+  680/900  227s
+  700/900  234s
+  720/900  240s
+  740/900  247s
+  760/900  253s
+  780/900  259s
+  800/900  265s
+  820/900  272s
+  840/900  278s
+  860/900  284s
+  880/900  290s
+  900/900  297s
+
+== Qwen/Qwen3.5-2B+Qwen_Qwen3.5-2B_full_n1200_kl05  (900 claims, local+Qwen_Qwen3.5-2B_full_n1200_kl05_n900_oracle.jsonl) ==
+  format adherence      1.000   json=1.00  verdict=1.00  evidence=1.00  confidence=1.00
+  label accuracy        0.769
+  FEVER score           0.691
+  evidence F1 (non-NEI) 0.746
+  recall SUPPORTED        0.860  (n=300)
+  recall REFUTED          0.850  (n=300)
+  recall NOT_ENOUGH_INFO  0.597  (n=300)
+  ECE stated_conf       0.231   (available 1.00)
+      [0.9,1.0)  n=900  conf=1.00  acc=0.77
+  ECE token_conf        0.164   (available 1.00)
+      [0.3,0.4)  n=2    conf=0.37  acc=1.00
+      [0.4,0.5)  n=6    conf=0.45  acc=0.50
+      [0.5,0.6)  n=30   conf=0.55  acc=0.47
+      [0.6,0.7)  n=52   conf=0.65  acc=0.48
+      [0.7,0.8)  n=32   conf=0.75  acc=0.53
+      [0.8,0.9)  n=69   conf=0.85  acc=0.59
+      [0.9,1.0)  n=709  conf=0.99  acc=0.83
+  non-NEI, gold in  context: n=586  acc=0.860  FEVER=0.756
+  non-NEI, gold NOT in context: n=14   acc=0.643  FEVER=0.000
+  tokens in/out         1387 / 25 per claim
+  providers             {'local': 900}

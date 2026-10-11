@@ -1,0 +1,136 @@
+\documentclass[10pt]{article}
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[expansion=false]{microtype}
+\usepackage{tabularx,array}
+\usepackage{enumitem}
+\usepackage[hidelinks]{hyperref}
+\urlstyle{same}
+\usepackage[compact]{titlesec}
+
+% All text stays at 10pt or larger (course minimum); single-spaced, 1-inch margins.
+\titleformat*{\section}{\normalsize\bfseries}
+\titlespacing*{\section}{0pt}{3pt}{1pt}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{1pt}
+\setlength{\tabcolsep}{4pt}
+\newcolumntype{L}{>{\raggedright\arraybackslash}X}
+
+\begin{document}
+
+% ---------------- Title and team ----------------
+\begin{center}
+  {\large\bfseries Knowing When the Evidence Is Not Enough:
+  Reinforcement Learning for Calibrated Fact Verification\par}
+  \vspace{4pt}
+  \begin{tabular}{@{}llll@{}}
+    \textbf{Name} & \textbf{Matric no.} & \textbf{Email} & \textbf{Role} \\
+    Chia Kwang Yang & A0248658L & e0929828@u.nus.edu & AG-1 retrieval \& tools \\
+    Yu Jing & A0351724H & jing\_yu@u.nus.edu & AG-2 agent loop \& multi-turn RL \\
+    Bryan Wu Jiahe & A0355175Y & wubryan@u.nus.edu & AG-3 evaluation, data \& demo \\
+    Chao Chien Hung & A0327301U & e1539132@u.nus.edu & RL-1 verifier training \\
+    Michel Yildirim & A0350371M & yldrmmichel@u.nus.edu & RL-2 reward \& calibration \\
+    Yao Tianhao & A0274850Y & yao.tianhao@u.nus.edu & RL-3 cost-aware controller \\
+  \end{tabular}
+\end{center}
+\vspace{-8pt}
+
+% ---------------- Body ----------------
+\section*{Background}
+Platforms are handing fact-checking to AI. Meta ended its US fact-checking programme in April
+2025~\cite{meta}, and 447{,}083 posts on X asked Grok for a fact check in six months of 2025, yet the bots
+agreed with professional fact-checkers only about half the time~\cite{renault}. A fact-checker that answers
+confidently when the evidence is unclear spreads false confidence. Datasets such as FEVER~\cite{fever},
+SciFact~\cite{scifact} and AVeriTeC~\cite{averitec} have answer keys, so verdicts can be scored
+automatically, which reinforcement learning (RL) needs. RL has been used to make fact-checkers
+cite evidence~\cite{verir1} and check claims in steps~\cite{profact}, and to teach honest confidence and
+``I don't know'' in question answering~\cite{rlcr,truthrl}. None do this for fact-checking.
+
+\section*{Problem statement}
+Given a claim, the model must say whether it is Supported, Refuted or Not Enough Info (NEI), point to the
+Wikipedia sentences it relied on, and state how confident it is. Small models that fit on one GPU do this
+poorly. On 900 FEVER claims, Qwen3.5-2B is right only 63\% of the time even when shown the correct evidence
+(a 180B model: 95\%). It calls almost everything Supported and almost always claims 100\% confidence. Can
+RL teach a small model to weigh evidence, say NEI when the evidence falls short, give a confidence that
+matches its accuracy, and treat calling a false claim true as the worst mistake?
+
+\section*{Approach}
+\textbf{Verifier:} fine-tune the model on labelled examples (SFT), then train it further with RL (GRPO~\cite{grpo}).
+The reward pays for correct verdicts, penalises calling false claims true the most, rewards citing the right
+sentences, and scores stated confidence against actual accuracy. Varying the NEI reward shows how accuracy
+trades off against how often the model abstains, so we can choose how cautious it is. \textbf{Controller:} a
+small second model that decides whether to search again, split the claim, verify, abstain or answer, with a
+cost for each search. \textbf{Evaluation:} one shared script scores every run for accuracy, confidence
+calibration and search cost, and compares RL against the SFT model and simple baselines~\cite{spurious}. We
+test for shortcuts with the FEVER symmetric set~\cite{symmetric} and by swapping evidence between claims,
+and test on SciFact and AVeriTeC to see if the model generalises.
+
+\section*{Team roles and deadlines}
+\begin{tabularx}{\linewidth}{|l|L|L|}
+  \hline
+  & \textbf{Agentic group (AG-1, AG-2, AG-3)} & \textbf{RL group (RL-1, RL-2, RL-3)} \\ \hline
+  Wk 7 & Agent loop, dataset loaders, shortcut tests & Try the 4B model, fix the reward \\ \hline
+  Wk 8--9 & Agent baseline, multi-step RL training & RL training, reward experiments \\ \hline
+  Wk 10--11 & Tests on new datasets, error analysis, demo & Controller training, cost experiments \\ \hline
+  Wk 12 & \multicolumn{2}{l|}{Final report, slides and live demo} \\ \hline
+\end{tabularx}
+
+\section*{Risk assessment and preliminary results}
+We have already tested the riskiest steps. Fine-tuning took 37 minutes on our 16\,GB GPU (RTX 5070Ti).
+\begin{itemize}[leftmargin=*,nosep]
+  \item \textbf{The 2B model is too small.} Fine-tuning raised it from 63\% to 82\% with the correct evidence
+        shown. In week 7 we try the 4B model (about 1.5 hours as a test) before choosing.
+  \item \textbf{RL adds nothing over fine-tuning.} Fine-tuning alone raised correct NEI answers from 14\% to
+        72\% (180B model: 35\%). RL targets what fine-tuning cannot fix: the model still always claims 100\%
+        confidence, and says NEI on 20\% of false claims even when shown evidence that disproves them.
+  \item \textbf{The model takes shortcuts.} Given the wrong claim's evidence, it says NEI on 98\% of true
+        claims, so it does read the evidence. However, it still calls 23\% of false claims false from their
+        wording alone, so both shortcut tests run on every training run.
+  \item \textbf{The model says NEI to everything to play safe.} We report accuracy at every level of caution.
+  \item \textbf{It only works on FEVER.} We test on AVeriTeC's real-world claims and report the gap.
+  \item \textbf{One GPU for two training jobs.} We share GPU time, and the controller trains on CPU.
+\end{itemize}
+
+% ---------------- References (Vancouver style, in order of first citation) ----------------
+\clearpage
+\begin{thebibliography}{99}\setlength{\itemsep}{1pt}\raggedright
+\bibitem{meta} Meta. More speech and fewer mistakes [Internet]. Menlo Park (CA): Meta; 2025 Jan 7
+  [cited 2026 Sep 26]. Available from: \url{https://about.fb.com/news/2025/01/meta-more-speech-fewer-mistakes/}
+\bibitem{renault} Renault T, Mosleh M, Rand DG. @Grok is this true? LLM-powered fact-checking on social
+  media [Preprint]. PsyArXiv; 2025 [cited 2026 Sep 26]. Available from: \url{https://doi.org/10.31234/osf.io/85quw}
+\bibitem{fever} Thorne J, Vlachos A, Christodoulopoulos C, Mittal A. FEVER: a large-scale dataset for fact
+  extraction and VERification. In: Proceedings of the 2018 Conference of the North American Chapter of the
+  Association for Computational Linguistics: Human Language Technologies; 2018 Jun; New Orleans, LA.
+  Stroudsburg (PA): Association for Computational Linguistics; 2018. p. 809-19.
+\bibitem{scifact} Wadden D, Lin S, Lo K, Wang LL, van Zuylen M, Cohan A, et al. Fact or fiction: verifying
+  scientific claims. In: Proceedings of the 2020 Conference on Empirical Methods in Natural Language
+  Processing (EMNLP); 2020 Nov; online. Stroudsburg (PA): Association for Computational Linguistics; 2020.
+  p. 7534-50.
+\bibitem{averitec} Schlichtkrull M, Guo Z, Vlachos A. AVeriTeC: a dataset for real-world claim verification
+  with evidence from the web. Adv Neural Inf Process Syst. 2023;36:65128-67.
+\bibitem{verir1} He Q, Qian C, Chen X, He B, Fung YR, Ji H. Veri-R1: toward precise and faithful claim
+  verification via online reinforcement learning [Preprint]. arXiv:2510.01932. 2025 [cited 2026 Sep 26].
+  Available from: \url{https://arxiv.org/abs/2510.01932}
+\bibitem{profact} Yang R, He S, Zhu S, Yu C. From verdict to process: agentic reinforcement learning for
+  multi-stage fact verification [Preprint]. arXiv:2606.13262. 2026 [cited 2026 Sep 26].
+  Available from: \url{https://arxiv.org/abs/2606.13262}
+\bibitem{rlcr} Damani M, Puri I, Slocum S, Shenfeld I, Choshen L, Kim Y, et al. Beyond binary rewards:
+  training LMs to reason about their uncertainty [Preprint]. arXiv:2507.16806. 2025 [cited 2026 Sep 26].
+  Available from: \url{https://arxiv.org/abs/2507.16806}
+\bibitem{truthrl} Wei Z, Yang X, Sun K, Wang J, Shao R, Chen J, et al. TruthRL: incentivizing truthful LLMs
+  via reinforcement learning [Preprint]. arXiv:2509.25760. 2025 [cited 2026 Sep 26].
+  Available from: \url{https://arxiv.org/abs/2509.25760}
+\bibitem{grpo} Shao Z, Wang P, Zhu Q, Xu R, Song J, Bi X, et al. DeepSeekMath: pushing the limits of
+  mathematical reasoning in open language models [Preprint]. arXiv:2402.03300. 2024 [cited 2026 Sep 26].
+  Available from: \url{https://arxiv.org/abs/2402.03300}
+\bibitem{spurious} Shao R, Li SS, Xin R, Geng S, Wang Y, Oh S, et al. Spurious rewards: rethinking training
+  signals in RLVR [Preprint]. arXiv:2506.10947. 2025 [cited 2026 Sep 26].
+  Available from: \url{https://arxiv.org/abs/2506.10947}
+\bibitem{symmetric} Schuster T, Shah D, Yeo YJS, Filizzola Ortiz DR, Santus E, Barzilay R. Towards debiasing
+  fact verification models. In: Proceedings of the 2019 Conference on Empirical Methods in Natural Language
+  Processing and the 9th International Joint Conference on Natural Language Processing (EMNLP-IJCNLP);
+  2019 Nov; Hong Kong, China. Stroudsburg (PA): Association for Computational Linguistics; 2019. p. 3419-25.
+\end{thebibliography}
+
+\end{document}

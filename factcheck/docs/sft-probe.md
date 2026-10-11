@@ -1,7 +1,7 @@
 # SFT capacity probe: 2B or 4B?
 
-Decision experiment, set up 2026-09-25. Not yet run. Fill in the table
-at the bottom and apply the rule in section 3.
+Decision experiment, set up 2026-09-25. 2B run 2026-09-26, 4B run
+2026-10-03; results in section 5.
 
 ## 1. Question
 
@@ -23,7 +23,7 @@ should run on Qwen3.5-4B.
 | Train data | FEVER train, balanced by label, default 6,000 claims |
 | Context | "Oracle" retrieval: pages of the smallest gold evidence set are guaranteed, title-match pages fill to 5, order shuffled per claim. NEI claims get plain title-match pages. Same prompt and sentence cut as stage 0. |
 | Target | `{"verdict": <gold>, "evidence": [<gold ids>], "confidence": 1.0}` |
-| Method | LoRA r=16 on all linear layers, lr 1e-4, 1 epoch, batch 8 (1 x 8 accumulation), 2,048 max tokens. 4B uses 4-bit base weights (QLoRA). |
+| Method | LoRA r=16 on all linear layers, lr 1e-4, 1 epoch, batch 8 (1 x 8 accumulation), 4,096 max tokens. 4B uses 4-bit base weights (QLoRA). |
 | Eval | `stage0.py --adapter`, the same 900 dev claims as stage 0, in two conditions: `oracle` (ceiling) and `titles` (the real pipeline) |
 | Metrics | Accuracy, FEVER score, evidence F1, per-label recall, token-probability ECE, format adherence. Accuracy on the gold-in-context subset under `titles` is the number that compares directly to stage 0's 0.632. |
 
@@ -97,13 +97,41 @@ Fill in. Stage-0 rows are from `stage0-results.md`.
 | Model | Trained | Retrieval | Acc | FEVER | Ev F1 | R-SUP | R-REF | R-NEI | Acc, gold in ctx | ECE token | Format | Train s | Peak GB |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | 2B | no | titles | 0.459 | 0.340 | 0.423 | 0.940 | 0.300 | 0.137 | 0.632 | 0.308 | 0.843 | - | - |
-| 2B | no | oracle | | | | | | | | | | - | - |
-| 2B | SFT | oracle | | | | | | | | | | | |
-| 2B | SFT | titles | | | | | | | | | | | |
-| 4B | no | titles | | | | | | | | | | - | - |
-| 4B | no | oracle | | | | | | | | | | - | - |
-| 4B | SFT | oracle | | | | | | | | | | | |
-| 4B | SFT | titles | | | | | | | | | | | |
+| 2B | no | oracle | 0.469 | 0.370 | 0.428 | 0.953 | 0.307 | 0.147 | 0.630 | 0.298 | 0.877 | - | - |
+| 2B | SFT | oracle | 0.779 | 0.702 | 0.688 | 0.867 | 0.750 | 0.720 | 0.814 | 0.028 | 1.000 | 2190 | 5.18 |
+| 2B | SFT | titles | 0.759 | 0.667 | 0.631 | 0.827 | 0.727 | 0.723 | 0.824 | 0.034 | 1.000 | 2190 | 5.18 |
+| 4B | no | titles | 0.669 | 0.569 | 0.635 | 0.903 | 0.883 | 0.220 | 0.913 | 0.234 | 0.998 | - | - |
+| 4B | no | oracle | 0.674 | 0.616 | 0.671 | 0.937 | 0.887 | 0.200 | 0.911 | 0.233 | 1.000 | - | - |
+| 4B | SFT | oracle | 0.788 | 0.721 | 0.687 | 0.877 | 0.753 | 0.733 | 0.821 | 0.047 | 1.000 | 5143 | 4.98 |
+| 4B | SFT | titles | 0.772 | 0.690 | 0.652 | 0.853 | 0.737 | 0.727 | 0.851 | 0.050 | 1.000 | 5143 | 4.98 |
 | 180B | no | titles | 0.720 | 0.640 | 0.717 | 0.907 | 0.907 | 0.347 | 0.952 | 0.214 | 0.999 | - | - |
 
-Decision: ______ (date, who, one sentence why)
+2B rows run 2026-09-26 under WSL2 (Ubuntu 22.04, torch 2.11 cu128, transformers
+5.17, TRL 1.14, flash-linear-attention with Triton; `causal_conv1d` not
+installed). 5,895 training examples after 105 drops (gold line past the
+sentence cut); 1 example over the 4,096-token limit. Training ran at about
+3 s per step, 737 steps; each 900-claim eval took about 5 minutes. Loss fell
+from 0.23 to about 0.05 by step 90 and stayed flat after that.
+
+4B rows run 2026-10-03, same WSL2 setup, QLoRA (nf4, double quant), trained
+on the same 5,895 examples as 2B (`train.jsonl` copied over). About 7 s per
+step, 2.35x the 2B time; peak 4.98 GB, below 2B's bf16 5.18 GB. Loss fell
+from 0.14 to about 0.04. Eval loads the base in bf16 and merges the adapter,
+so the adapter runs on slightly different weights than it was trained on.
+Each 900-claim eval took about 10 minutes.
+
+Reading. Under the rule in section 3, 2B SFT oracle is 0.779 (0.70 to 0.80
+band), and 4B SFT beats it by 0.9 points oracle and 1.3 points titles, inside
+noise and short of the 5-point bar. The rule says 2B. One caveat: the
+untrained 4B already gets 0.91 on gold-in-context claims (2B: 0.63, 180B:
+0.95), with NEI recall at 0.20. SFT bought NEI recall (0.20 to 0.73) at the
+cost of about 9 points on gold-in-context claims and 13 points of REFUTED
+recall, so after SFT the two sizes look alike. The 4B's evidence reading is
+much stronger than SFT shows; a reward that does not trade it away (GRPO)
+could keep more of it. Worth weighing before locking in 2B.
+
+Decision: Qwen3.5-2B (2026-10-08, team decision, recorded by KY). 4B SFT
+beat 2B SFT by 0.9 points oracle and 1.3 titles, inside noise and short of
+the 5-point bar, and the untrained 2B's 63% vs 95% on gold-in-context claims
+leaves the most room to show what RL adds. The 4B's stronger untrained
+evidence reading (0.91) stays a known caveat for the write-up.

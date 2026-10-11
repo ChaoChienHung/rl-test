@@ -1,0 +1,11 @@
+{
+ "mode": "sentence",
+ "n": 1200,
+ "seed": 0,
+ "excluded": "/mnt/c/Users/ky/Desktop/rl-test/factcheck/src/../data/fever/../sft_probe/Qwen_Qwen3.5-2B_n6000",
+ "counts": {
+  "SUPPORTS": 600,
+  "removed": 2027,
+  "REFUTES": 600
+ }
+}

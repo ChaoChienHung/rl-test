@@ -1,12 +1,16 @@
-# rl-test
+# rl-test: fact verification with RL
 
-Two independent RL experiments. They share one venv and `requirements.txt`
-at the repo root and nothing else; neither imports from the other.
+Claim verification with a small model trained by RL (SFT, then GRPO with a
+calibration-aware reward), and a cost-aware search controller on top. The
+code, docs and results are in [`factcheck/`](factcheck/README.md).
 
-| Folder | What | Status |
-|---|---|---|
-| [`calendar-negotiation/`](calendar-negotiation/README.md) | PPO vs heuristics on toy calendar-slot negotiation envs, plus a CalBench integration probe | Feasibility spike, iterations 1-4 done |
-| [`factcheck/`](factcheck/README.md) | Claim verification with a cost-aware controller and a calibration-aware reward | Scaffold only, no model, nothing trained |
+| File | What |
+|---|---|
+| [`factcheck/README.md`](factcheck/README.md) | Project overview, status by stage, how to run, file map |
+| [`factcheck/docs/data.md`](factcheck/docs/data.md) | Download FEVER, SciFact and AVeriTeC and build the index |
+| [`report.md`](report.md) | Team plan: split into RL and agentic sub-teams, schedule, failure scenarios, decisions |
+| `proposal.tex` / `.pdf` / `.docx` | Project proposal |
+| `team-brief.tex` / `.pdf` | One-page team brief (week of 8 Oct 2026) |
 
 ## Setup
 
@@ -15,4 +19,6 @@ python -m venv .venv
 ./.venv/Scripts/pip install -r requirements.txt   # Windows
 ```
 
-Secrets (API keys) go in `.env` at the repo root, which is gitignored.
+Then fetch the datasets with [`factcheck/docs/data.md`](factcheck/docs/data.md).
+API keys (OpenRouter, for the big-model baseline) go in `.env` at the repo
+root, which is gitignored.
