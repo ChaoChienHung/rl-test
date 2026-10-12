@@ -134,10 +134,10 @@ harness. This is the single most important coordination rule.
 Four contracts, each a short Python signature plus a JSONL schema. Once
 frozen, each team can work without the other.
 
-1. **Retriever tool.** `search(query, k) -> [{page, sent_id, text, score}]`.
+1. **Retriever tool.** `search(query, k) -> [{page, line, text, score}]`.
    Owned by AG-1, consumed by everyone.
-2. **Verifier call.** `verify(claim, evidence) -> {verdict, evidence_ids,
-   confidence, token_prob}`. Owned by RL-1 (the trained model) but the
+2. **Verifier call.** `verify(claim, evidence) -> {verdict, evidence,
+   confidence, token_prob}`, evidence as `"page:line"` ids. Owned by RL-1 (the trained model) but the
    signature is set by AG-2 (the loop).
 3. **Reward.** `reward(gold, pred, confidence, gold_ids, cited_ids,
    n_ops) -> (float, parts)`. Owned by RL-2. Already exists; the

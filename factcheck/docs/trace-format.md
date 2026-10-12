@@ -1,8 +1,9 @@
 # Trace format: one JSONL row per claim
 
-Draft 2026-10-08 for sign-off by AG-2 (writes it) and RL-3 (trains the
-controller on it); AG-3's eval script and the demo read it too. Interface 4
-of the four frozen in week 1 (`report.md` 3.3).
+Frozen 2026-10-11 (schema 1). AG-2 writes it, RL-3 trains the controller
+on it, AG-3's eval script and the demo read it. Interface 4 of the four
+frozen in week 1 (`report.md` 3.3). The `search` and `verify` signatures
+the steps log are in `src/interfaces.py`.
 
 ## Rules
 
@@ -71,9 +72,12 @@ budget left) are all derivable from the steps, so they are not stored twice.
  "reward": null}
 ```
 
-## Open for sign-off
+## Decisions at sign-off (2026-10-11)
 
-- Does RL-3 want per-step `reward` (shaped) or only the final one? Current
-  reward is terminal-only, so this draft logs it once.
-- Should `search` hits keep full sentence text? Keeps traces self-contained
-  for the demo and the failure audit, at roughly 1 KB per hit.
+- **Reward is final only.** `reward` is filled once per row from
+  `reward.total`; there is no per-step reward. RL-3 can derive shaping from
+  the steps if it needs it.
+- **Search hits keep the full sentence text**, so a trace is
+  self-contained for the demo and the failure audit (about 1 KB per hit).
+- **Sentence ids are `line`**, FEVER's line number on the page, the same
+  as `stage0.py` and `pages.sqlite`. A hit is `{page, line, text, score}`.

@@ -62,6 +62,8 @@ Verifier pipeline:
 - `src/disagreement.py`: samples the SFT model 8 times per claim to find which claims give GRPO a signal.
 - `src/build_grpo_data.py`: GRPO prompts with retrieved evidence instead of gold.
 - `src/build_nei_ablation.py`, `src/probe_nei_set.py`: evidence-removed NEI training sets and a probe of how a model answers them.
+- `src/grpo_multiturn.py`: multi-turn GRPO spike. The model calls `search` itself through TRL's tool calling, and tool output is masked from the loss.
+- `src/interfaces.py`: the frozen `search()` and `verify()` signatures (week-1 interfaces 1 and 2).
 
 Controller scaffold (toy data, no model):
 
