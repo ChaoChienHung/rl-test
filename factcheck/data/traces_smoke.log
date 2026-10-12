@@ -1,0 +1,16 @@
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+0 done, 30 to go -> /mnt/c/Users/ky/Desktop/rl-test/factcheck/src/../data/fever/../traces/fever_dev_fixed-base_smoke_n30.jsonl
+Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]Loading weights:   0%|          | 1/320 [00:00<00:40,  7.96it/s]Loading weights:  25%|██▍       | 79/320 [00:00<00:00, 412.46it/s]Loading weights:  48%|████▊     | 152/320 [00:00<00:00, 544.61it/s]Loading weights:  73%|███████▎  | 234/320 [00:00<00:00, 639.29it/s]Loading weights:  95%|█████████▌| 305/320 [00:00<00:00, 661.77it/s]Loading weights: 100%|██████████| 320/320 [00:00<00:00, 574.09it/s]
+[transformers] `causal_conv1d_fn` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+[transformers] `causal_conv1d_update` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+  20/30  19s
+  30/30  27s
+
+== fever_dev_fixed-base_smoke_n30.jsonl  (30 claims) ==
+  label accuracy   0.367
+  FEVER score      0.233
+  valid verdict    0.967
+  recall SUPPORTED        0.800  (n=10)
+  recall REFUTED          0.200  (n=10)
+  recall NOT_ENOUGH_INFO  0.100  (n=10)
+  seconds/claim    0.89

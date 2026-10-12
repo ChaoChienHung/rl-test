@@ -1,0 +1,22 @@
+{
+ "model": "Qwen/Qwen3.5-2B",
+ "sft": "/mnt/c/Users/ky/Desktop/rl-test/factcheck/src/../data/fever/../sft_probe/Qwen_Qwen3.5-2B_n6000",
+ "init": "base",
+ "reward": "full",
+ "n_train": 16,
+ "max_steps": 3,
+ "num_generations": 8,
+ "prompts_per_step": 2,
+ "max_calls": 2,
+ "max_completion_length": 2048,
+ "lr": 2e-05,
+ "beta": 0.04,
+ "seed": 0,
+ "tag": "",
+ "steps": 3,
+ "train_seconds": 403,
+ "seconds_per_step": 134.2,
+ "peak_gpu_gb": 41.49,
+ "k_pages": 3,
+ "sents_per_page": 10
+}

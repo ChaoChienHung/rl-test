@@ -83,3 +83,42 @@ NEI set (`data/grpo_data/probe_sft.log`). It answered NEI on 58% of the
 page set: (77 + 96) / 300. On the sentence set it answered NEI on 52%:
 (73 + 82) / 300. So the sets are not trivially easy for the current
 model, and both have room to teach abstention.
+
+## 5. Multi-turn spike (2026-10-12)
+
+`src/grpo_multiturn.py`, defaults: base Qwen3.5-2B, 16 FEVER train claims,
+3 steps, 8 samples per claim, at most 2 searches, KL 0.04. The model gets
+only the claim and calls `search` itself; tool output is masked from the
+loss. Run: `data/grpo/Qwen_Qwen3.5-2B_mt_base_full_n16/` (`meta.json`,
+`train_log.json`, `rollouts.jsonl`).
+
+| | Result |
+|---|---|
+| Runs end to end | Yes, 3 steps, no tool failures |
+| Rollouts that searched | 48 / 48 (28 once, 20 twice) |
+| Valid final JSON | 35 / 48 |
+| Correct verdict | 20 / 48 |
+| Groups with reward spread | 50% at step 1, 100% at steps 2 and 3 |
+| Seconds per step | 134 |
+| Peak GPU memory | **41.5 GB on a 16 GB card** |
+
+The memory figure is the finding. Windows let CUDA spill into system RAM,
+so the run finished, but slowly. Single-turn GRPO peaked at 13.6 GB. Each
+search adds about 860 tokens, and 8 samples per claim do not fit. Before
+multi-turn runs 1 and 2: try `--num-generations 4`, or shorter search
+results (AG-1's sentence-level `search()` with a small k).
+
+## 6. Agent loop reproduces stage 0 (2026-10-12)
+
+`src/agent_loop.py`, fixed policy (search the claim once, verify, abstain
+on NEI else commit), writing `data/traces/fever_dev_<run>_n900.jsonl` in the
+frozen trace format. With the same retrieval as stage 0's `titles`:
+
+| Verifier | Loop acc | Stage-0 acc | Same verdict | s / claim |
+|---|---|---|---|---|
+| Base 2B | 0.461 | 0.459 | 96.9% | 0.64 |
+| SFT 2B (6,000 claims) | 0.759 | 0.759 | 100% | 0.36 |
+
+The base model's 3% of flips are bf16 batch nondeterminism on near-ties;
+per-label recall matches within 0.003. The loop is wired correctly, so any
+later gain from a smarter policy is the policy, not plumbing.
