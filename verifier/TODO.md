@@ -2,6 +2,13 @@
 
 Current work is verifier evaluation on the `rl` branch. These tasks replace the old proposal's dated week-by-week schedule; completed SFT and GRPO runs are documented in [docs/sft-probe.md](docs/sft-probe.md) and [docs/grpo-results.md](docs/grpo-results.md).
 
+## Next experiment sequence
+
+1. [ ] Once the no-CoT 2B SFT run completes, use **the same checkpoint** for direct (`THINKING=off`) and evidence-chain (`THINKING=on`) evaluation on the same 900 dev IDs, retrieval setup and evaluator. Compare both with the base-model runs, including accuracy, FEVER score, label recall, citation quality, confidence and token cost.
+2. [ ] Start a **new GRPO run from that SFT checkpoint**, retaining the checkpoint path and matched no-GRPO SFT results as the control. First inspect sampled rollouts and reward spread; for CoT GRPO, update the current 96-token completion cap, prompt format and reward checks before training, then compare on the same held-out evaluation.
+
+CoT SFT data preparation can proceed in parallel with step 1; it is a separate experiment and should not change the existing no-CoT checkpoint or its evaluation.
+
 ## P0 — comparable verifier evaluation (RL-1, AG-3)
 
 - [ ] Train the no-CoT Qwen3.5-2B SFT adapter from the committed 5,895 examples (seed 0); the historical LoRA weights are not committed. Record job ID, runtime, peak GPU memory, and checkpoint path.
@@ -9,12 +16,14 @@ Current work is verifier evaluation on the `rl` branch. These tasks replace the 
 - [ ] Run direct JSON (`THINKING=off`) and zero-shot evidence-chain (`THINKING=on`) evaluation on the same FEVER dev IDs and title retrieval: 30-claim smoke tests, then 900 claims. Submit `verifier/evaluation/run.sbatch`; each run stores predictions, metrics, manifest and logs under `verifier/evaluation/results/<condition>/<run>/`.
 - [ ] Record per claim: gold, verdict, evidence IDs, retrieval condition, reasoning if present, stated confidence, verdict-token probability, tokens and latency. Check evidence citations by hand; a valid E-ID alone does not prove support.
 - [ ] Report accuracy, FEVER score, evidence F1, label recall, Brier, ECE, risk–coverage and evidence-in-context strata with one evaluator. `verifier/evaluation/score_predictions.py` already replays the archived outputs.
-- [ ] Evaluate that **same no-CoT SFT checkpoint** with `THINKING=off` and `THINKING=on` on the same 900 FEVER dev IDs. This isolates prompting; `THINKING=on` does not turn the checkpoint into CoT SFT.
 
 ## P1 — prompt and inference controls (RL-1)
 
 - [ ] Add a few-shot evidence-chain condition using examples outside evaluation IDs.
-- [ ] Design a separate CoT SFT dataset using Gemini 2.5 to draft reasoning from only the shown evidence. Validate verdict/evidence consistency and cited E IDs, keep teacher-generated targets and provenance separate from no-CoT SFT, and avoid evaluation-ID leakage. Train and compare only after the no-CoT baseline is measured.
+- [x] Implement SoCLaaS/Gemini CoT SFT teacher-data preparation from the existing 5,895 FEVER **train** oracle prompts, with a 100-per-class pilot, resumable requests and automated validation (`python -m utils.build_cot_sft_data`). No API request has been sent. Try `qwen3.8:27b` if the key-specific SoCLaaS model list allows it; the published limits are 90 requests/minute and virtual US$80/day, with no real billing. Run 10 requests first, then record model/version, actual usage, latency, accepted count and rejection reasons before expanding. Never send dev/evaluation claims to the teacher for training data.
+- [ ] Use the pilot to assess explanation quality without per-row manual review: inspect automated rejection categories, add an independent evidence-faithfulness judge or targeted challenge set, and record its limits. Valid E IDs and a teacher self-check do not establish semantic faithfulness. The accepted CoT target omits `confidence`; decide how to train and evaluate this output format before using it as a checkpoint.
+- [ ] After the oracle-prompt pilot, add **train-only** title-retrieval contexts so CoT SFT sees the evidence distribution used at evaluation. For non-NEI claims whose gold evidence is absent, do not teach the original FEVER label as though it were supported by the shown text; exclude them from ordinary CoT SFT or make a separately labeled contextual-abstention set. Keep the original FEVER gold label for evaluation and provenance.
+- [ ] Keep CoT targets in a versioned dataset and train a separate CoT SFT adapter only after the no-CoT checkpoint comparison. Evaluate direct and evidence-chain prompts on identical held-out IDs, including output length and evidence quality.
 - [ ] At a fixed total token budget, compare one response with multiple samples / voting.
 - [ ] Compare direct, short evidence reasoning, and explicit evidence chain on quality, token use, and citation faithfulness.
 
@@ -26,7 +35,7 @@ Current work is verifier evaluation on the `rl` branch. These tasks replace the 
 
 ## P3 — train and integrate only after controls (RL-1/2/3, agent group)
 
-- [ ] If evidence-chain prompting helps and rollouts show reward spread, run CoT + GRPO against matched SFT / CoT controls; report accuracy, evidence, calibration, variance and compute cost.
+- [ ] After the SFT-started GRPO pilot, compare it against the same SFT checkpoint with matched prompts, IDs and evaluator. For CoT GRPO, measure reasoning/citation quality, reward spread, accuracy, evidence, calibration, variance and compute cost; expand only if the pilot is informative.
 - [ ] Connect the verifier to the agent loop's `verify()` interface. Compare one search, fixed NEI retry and confidence-guided retry before training a controller.
 - [ ] Train or evaluate a real-data controller only if simple fixed policies leave a measurable accuracy–cost gap. Check retrieval misses and transfer to SciFact / AVeriTeC.
 - [ ] Prepare the team failure audit, shortcut checks, transfer results and final demo from the same evaluation definitions.

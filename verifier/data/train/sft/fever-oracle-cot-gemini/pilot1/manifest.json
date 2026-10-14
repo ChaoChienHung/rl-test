@@ -1,0 +1,14 @@
+{
+  "source": "verifier/data/train/sft/fever-oracle-full/labeled_prompts.jsonl",
+  "source_sha256": "7000f6afa554c1c2cc33f61b97fc5f0a06d1b4336131bd769ff1cf5aafc8ade0",
+  "model": "gemini-3.8-flash",
+  "seed": 0,
+  "per_class": 100,
+  "count": 300,
+  "label_counts": {
+    "SUPPORTED": 100,
+    "NOT_ENOUGH_INFO": 100,
+    "REFUTED": 100
+  },
+  "schema_version": 2
+}

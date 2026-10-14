@@ -11,6 +11,14 @@ verifier/evaluation/results/*/*/logs/*.log
 verifier/data/**/*.log
 verifier/INSIGHT.md
 .env
+verifier/data/train/sft/fever-oracle-cot-gemini/*/requests.jsonl
+verifier/data/train/sft/fever-oracle-cot-gemini/*/source_rows.jsonl
+verifier/data/train/sft/fever-oracle-cot-gemini/*/responses.jsonl
+verifier/data/train/sft/fever-oracle-cot-gemini/*/rejected.jsonl
+verifier/data/train/sft/fever-oracle-cot-soclaas/*/requests.jsonl
+verifier/data/train/sft/fever-oracle-cot-soclaas/*/source_rows.jsonl
+verifier/data/train/sft/fever-oracle-cot-soclaas/*/responses.jsonl
+verifier/data/train/sft/fever-oracle-cot-soclaas/*/rejected.jsonl
 
 # Raw datasets and the BM25 index: download and build them with
 # verifier/docs/data.md. Too large for git (21 GB).
