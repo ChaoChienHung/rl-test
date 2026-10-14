@@ -1,0 +1,14 @@
+{
+  "job_id": "946585",
+  "run_name": "run1",
+  "commit": "1aafaaad04500b43fac5f5e87e0eefa0a2bd4291",
+  "model": "Qwen/Qwen3.5-2B",
+  "checkpoints": null,
+  "thinking": "on",
+  "prompt_style": "cot_chain",
+  "retrieval": "titles",
+  "n_claims": 900,
+  "predictions": "verifier/evaluation/results/cot-baseline/run1/predictions.jsonl",
+  "metrics": "verifier/evaluation/results/cot-baseline/run1/metrics.json",
+  "log": "verifier/evaluation/results/cot-baseline/run1/logs/run.log"
+}
