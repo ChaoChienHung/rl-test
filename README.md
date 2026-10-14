@@ -77,16 +77,36 @@ find verifier/data/fever/wiki-pages -maxdepth 1 -name 'wiki-*.jsonl' -type f | w
 rm verifier/data/fever/wiki-pages.zip
 ```
 
-After the raw FEVER files are present, submit the CPU indexing job from the repository root:
+## Index preparation
+
+Evaluation and SFT data preparation require two local retrieval files that Git does not contain: `pages.sqlite` (Wikipedia sentences) and `bm25_index/` (the BM25 search index). Build them once from FEVER's `wiki-pages/` on SoC. Before submitting, check the raw inputs and Python environment from the cluster repo root:
 
 ```bash
-sbatch retrieval/build_fever_index.sbatch
-# Check its returned job ID:
-squeue -j <job-id>
-sacct -j <job-id> --format=JobID,State,ExitCode,Elapsed,MaxRSS
+cd "$HOME/rl-test"
+for file in verifier/data/fever/train.jsonl verifier/data/fever/shared_task_dev.jsonl .venv/bin/python; do
+  if test -f "$file"; then echo "OK $file"; else echo "MISSING $file"; fi
+done
+test -d verifier/data/fever/wiki-pages && echo 'OK wiki-pages' || echo 'MISSING wiki-pages'
 ```
 
-Wait for the index job to complete successfully and confirm `verifier/data/fever/pages.sqlite` and `verifier/data/fever/bm25_index/` exist. The batch file refuses to overwrite an existing index.
+When all four checks say `OK`, submit the CPU indexing job. It requests eight CPUs, 32 GB RAM and up to six hours; check the current SoC limits before submission. The job writes `verifier/data/fever/pages.sqlite` and `verifier/data/fever/bm25_index/` and refuses to overwrite either existing output.
+
+```bash
+mkdir -p "$HOME/.pip-tmp"
+export TMPDIR="$HOME/.pip-tmp"
+job_id=$(sbatch --parsable --export=ALL retrieval/build_fever_index.sbatch)
+echo "Index job: $job_id"
+squeue -j "$job_id"
+```
+
+After it leaves the queue, check `sacct -j "$job_id" --format=JobID,State,ExitCode,Elapsed,MaxRSS` for `COMPLETED` and exit code `0:0`, then check both outputs:
+
+```bash
+test -s verifier/data/fever/pages.sqlite && echo 'SQLite: OK' || echo 'SQLite: MISSING'
+test -f verifier/data/fever/bm25_index/doc_ids.json && echo 'BM25: OK' || echo 'BM25: MISSING'
+```
+
+The job log is `slurm-fever-index-<job-id>.out` in the repo root; read it if the job fails. A failed build can leave partial files, so inspect those and the log before retrying. Once both outputs exist and the job completed successfully, proceed to training or evaluation.
 
 ## Train the verifier on SoC
 
@@ -117,14 +137,14 @@ For GRPO using an SFT adapter outside the repo, set `SFT_CHECKPOINTS` to its che
 
 ## Evaluate the verifier on SoC
 
-Submit `verifier/evaluation/run.sbatch` with `sbatch` from the SoC repo root. It requests one GPU, four CPUs, 24 GB RAM and 90 minutes, then invokes `run_eval.sh` inside the job. Evaluation needs `shared_task_dev.jsonl`, `pages.sqlite`, `bm25_index/` and `.venv`. Run these checks first; plain `test -f` is silent even on success:
+Submit `verifier/evaluation/run.sbatch` with `sbatch` from the SoC repo root. It requests one GPU, four CPUs, 24 GB RAM and 90 minutes, then invokes `run_eval.sh` inside the job. Evaluation needs `shared_task_dev.jsonl`, `pages.sqlite`, a completed `bm25_index/` and `.venv`. Run these checks first; plain `test -f` is silent even on success:
 
 ```bash
 cd "$HOME/rl-test"
 for file in verifier/data/fever/shared_task_dev.jsonl verifier/data/fever/pages.sqlite .venv/bin/python; do
   if test -f "$file"; then echo "OK $file"; else echo "MISSING $file"; fi
 done
-test -d verifier/data/fever/bm25_index && echo 'OK BM25 index' || echo 'MISSING BM25 index'
+test -f verifier/data/fever/bm25_index/doc_ids.json && echo 'OK BM25 index' || echo 'MISSING BM25 index'
 ```
 
 The job calls the shared evaluator, scores predictions and records the run. Both prompt settings use the same FEVER dev IDs and title retrieval; neither trains a model. The job sets `TMPDIR` to a directory in cluster home if none is exported, avoiding the observed `/tmp` write quota.

@@ -15,7 +15,7 @@ mkdir -p "$TMPDIR"
 test -f README.md || { echo "Submit from the repository root (README.md missing)" >&2; exit 2; }
 test -f verifier/data/fever/shared_task_dev.jsonl || { echo "Missing FEVER dev claims; see README Data preparation" >&2; exit 2; }
 test -f verifier/data/fever/pages.sqlite || { echo "Missing SQLite index; run retrieval/build_fever_index.sbatch" >&2; exit 2; }
-test -d verifier/data/fever/bm25_index || { echo "Missing BM25 index; run retrieval/build_fever_index.sbatch" >&2; exit 2; }
+test -f verifier/data/fever/bm25_index/doc_ids.json || { echo "Missing or incomplete BM25 index; check retrieval/build_fever_index.sbatch" >&2; exit 2; }
 source .venv/bin/activate
 export TOKENIZERS_PARALLELISM=false
 
