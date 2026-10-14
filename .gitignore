@@ -5,7 +5,6 @@ __pycache__/
 .DS_Store
 slurm-*.out
 verifier/data/baseline_runs/
-verifier/evaluation/results/*/*/
 verifier/evaluation/results/manual/
 verifier/experiments/*/runs/*/artifacts/logs/*.log
 verifier/evaluation/results/*/*/logs/*.log

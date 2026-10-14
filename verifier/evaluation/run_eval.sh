@@ -44,10 +44,19 @@ PY
   condition="checkpoint-${condition%-baseline}"
 fi
 
-results_root="${RESULTS_ROOT:-verifier/evaluation/results}"
-result_dir="${results_root%/}/$condition/$run_name"
-if [[ -e "$result_dir" ]]; then
-  echo "Run name already exists: $result_dir (choose another RUN_NAME)" >&2
+if [[ -n "${RESULT_DIR:-}" && -n "${RESULTS_ROOT:-}" ]]; then
+  echo "Set either RESULT_DIR (exact run directory) or RESULTS_ROOT (parent of condition/run), not both" >&2
+  exit 2
+fi
+if [[ -n "${RESULT_DIR:-}" ]]; then
+  result_dir="${RESULT_DIR%/}"
+  [[ -n "$result_dir" && "$result_dir" != "." ]] || { echo "RESULT_DIR must name a new run directory" >&2; exit 2; }
+else
+  results_root="${RESULTS_ROOT:-verifier/evaluation/results}"
+  result_dir="${results_root%/}/$condition/$run_name"
+fi
+if [[ -e "$result_dir" || -L "$result_dir" ]]; then
+  echo "Result directory already exists: $result_dir (choose another RUN_NAME or RESULT_DIR)" >&2
   exit 2
 fi
 mkdir -p "$result_dir/logs"
@@ -56,7 +65,7 @@ metrics="$result_dir/metrics.json"
 log="$result_dir/logs/run.log"
 commit="$(git rev-parse HEAD)"
 {
-  echo "job=$job_id run=$run_name commit=$commit n=$n thinking=$thinking retrieval=titles model=$model checkpoints=${checkpoints:-none}"
+  echo "job=$job_id run=$run_name commit=$commit n=$n thinking=$thinking retrieval=titles model=$model checkpoints=${checkpoints:-none} result_dir=$result_dir"
   echo "started_at=$(date -u +%FT%TZ)"
   srun python -m verifier.evaluation.eval_verifier --model local --n "$n" --retrieval titles \
     --prompt-style "$style" --output "$output" "${adapter_args[@]}"
@@ -76,17 +85,18 @@ PY
   echo "finished_at=$(date -u +%FT%TZ)"
   echo "predictions=$output metrics=$metrics"
 } 2>&1 | tee "$log"
-python - "$result_dir/manifest.json" "$job_id" "$run_name" "$commit" "$model" "$checkpoints" "$thinking" "$style" "$n" "$output" "$metrics" "$log" <<'PY'
+python - "$result_dir/manifest.json" "$job_id" "$run_name" "$commit" "$model" "$checkpoints" "$thinking" "$style" "$n" "$output" "$metrics" "$log" "$condition" "$result_dir" <<'PY'
 import json
 import sys
 from pathlib import Path
 
 (_, manifest, job_id, run_name, commit, model, checkpoints, thinking,
- style, n, predictions, metrics, log) = sys.argv
+ style, n, predictions, metrics, log, condition, result_dir) = sys.argv
 record = {
     'job_id': job_id, 'run_name': run_name, 'commit': commit,
     'model': model, 'checkpoints': checkpoints or None,
     'thinking': thinking, 'prompt_style': style, 'retrieval': 'titles',
+    'condition': condition, 'result_dir': result_dir,
     'n_claims': int(n), 'predictions': predictions, 'metrics': metrics,
     'log': log,
 }

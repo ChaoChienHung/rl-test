@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 #SBATCH --job-name=train-verifier
+#SBATCH --partition=gpu-long
 #SBATCH --time=06:00:00
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=32G
-#SBATCH --gpus=1
+#SBATCH --gpus=a100-40:1
 #SBATCH --output=slurm-%x-%j.out
 
 set -euo pipefail

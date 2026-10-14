@@ -4,16 +4,17 @@ Current work is verifier evaluation on the `rl` branch. These tasks replace the 
 
 ## P0 — comparable verifier evaluation (RL-1, AG-3)
 
+- [ ] Train the no-CoT Qwen3.5-2B SFT adapter from the committed 5,895 examples (seed 0); the historical LoRA weights are not committed. Record job ID, runtime, peak GPU memory, and checkpoint path.
 - [ ] Freeze disjoint train, prompt-development, calibration and holdout claim IDs, then publish the split manifest and leakage check. The committed 5,895-row SFT train set and matched 1,200-row subset have zero ID overlap with the archived 900 dev claims; the remaining splits are not frozen.
 - [ ] Run direct JSON (`THINKING=off`) and zero-shot evidence-chain (`THINKING=on`) evaluation on the same FEVER dev IDs and title retrieval: 30-claim smoke tests, then 900 claims. Submit `verifier/evaluation/run.sbatch`; each run stores predictions, metrics, manifest and logs under `verifier/evaluation/results/<condition>/<run>/`.
 - [ ] Record per claim: gold, verdict, evidence IDs, retrieval condition, reasoning if present, stated confidence, verdict-token probability, tokens and latency. Check evidence citations by hand; a valid E-ID alone does not prove support.
 - [ ] Report accuracy, FEVER score, evidence F1, label recall, Brier, ECE, risk–coverage and evidence-in-context strata with one evaluator. `verifier/evaluation/score_predictions.py` already replays the archived outputs.
-- [ ] Reproduce the SFT baseline with the original adapter or retrain it; the LoRA weights are not committed.
+- [ ] Evaluate that **same no-CoT SFT checkpoint** with `THINKING=off` and `THINKING=on` on the same 900 FEVER dev IDs. This isolates prompting; `THINKING=on` does not turn the checkpoint into CoT SFT.
 
 ## P1 — prompt and inference controls (RL-1)
 
 - [ ] Add a few-shot evidence-chain condition using examples outside evaluation IDs.
-- [ ] Run the evidence-chain prompt with the SFT Qwen3.5-2B adapter after restoring or retraining its weights. Measure whether it actually emits usable reasoning and valid JSON before considering CoT SFT or GRPO.
+- [ ] Design a separate CoT SFT dataset using Gemini 2.5 to draft reasoning from only the shown evidence. Validate verdict/evidence consistency and cited E IDs, keep teacher-generated targets and provenance separate from no-CoT SFT, and avoid evaluation-ID leakage. Train and compare only after the no-CoT baseline is measured.
 - [ ] At a fixed total token budget, compare one response with multiple samples / voting.
 - [ ] Compare direct, short evidence reasoning, and explicit evidence chain on quality, token use, and citation faithfulness.
 

@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 #SBATCH --job-name=eval-verifier
+#SBATCH --partition=gpu
 #SBATCH --time=01:30:00
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=24G
-#SBATCH --gpus=1
+#SBATCH --gpus=a100-40:1
 #SBATCH --output=slurm-%x-%j.out
 
 set -euo pipefail
