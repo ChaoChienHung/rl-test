@@ -30,21 +30,42 @@ A committed SFT `labeled_prompts.jsonl` row has a claim/evidence `prompt` and a 
 
 ## Set up on the SoC cluster
 
-Run commands from the repository root after pushing this branch and pulling it on SoC. Check the [SoC Slurm guide](https://dochub.comp.nus.edu.sg/cf/guides/compute-cluster/slurm) and [cluster information](https://dochub.comp.nus.edu.sg/cf/guides/compute-cluster/slurm-info) on the cluster for current partitions, GPU types and limits; resource lines in the supplied batch files may need adjustment.
+Submit jobs from an SoC Slurm login node (`xlogin.comp.nus.edu.sg`), not `stu2`. Run commands from the repository root after pushing this branch and pulling it on SoC. Check the [SoC Slurm guide](https://dochub.comp.nus.edu.sg/cf/guides/compute-cluster/slurm) and [cluster information](https://dochub.comp.nus.edu.sg/cf/guides/compute-cluster/slurm-info) on the cluster for current partitions, GPU types and limits; resource lines in the supplied batch files may need adjustment.
 
 ```bash
 git fetch origin
 git switch rl
 git pull --ff-only origin rl
-python3 -m venv .venv
-source .venv/bin/activate
-# Install a CUDA-compatible PyTorch build for the cluster GPU, then:
-python -m pip install -r requirements.txt
 sinfo
 squeue -u "$USER"
 ```
 
-Download FEVER and build its BM25/SQLite index using [the data guide](verifier/docs/data.md). After the raw FEVER files are present, submit the CPU indexing job from the repository root:
+## Data preparation
+
+The repository commits prepared SFT/GRPO examples and archived predictions, but not raw FEVER, its retrieval index, model weights or the Python environment. Prepare these once on a filesystem visible to both the login and compute nodes. The raw FEVER files plus index need roughly 21 GB; model downloads and Python packages need additional space. Check your quota before starting. Creating `.venv` inside a Slurm job at the same repo path does not avoid a home-directory quota; a node-local temporary environment would disappear after the job.
+
+From the repository root, create the environment and install dependencies. The batch files activate this existing `.venv` but do not create it. If installation reports `Disk quota exceeded`, stop and resolve the storage location before submitting an index or evaluation job; `df -h` shows filesystem-wide free space, which may differ from your account quota.
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+# Install a CUDA-compatible PyTorch build for the cluster GPU, then:
+python -m pip install --no-cache-dir -r requirements.txt
+```
+
+Download only FEVER for the baseline; [the data guide](verifier/docs/data.md) has SciFact and AVeriTeC instructions for later experiments. The zip and extracted Wikipedia pages coexist until the successful `unzip` finishes, then the command removes the zip to recover space.
+
+```bash
+mkdir -p verifier/data/fever
+cd verifier/data/fever
+curl -fLO https://fever.ai/download/fever/train.jsonl
+curl -fLO https://fever.ai/download/fever/shared_task_dev.jsonl
+curl -fLO https://fever.ai/download/fever/wiki-pages.zip
+unzip -q wiki-pages.zip && rm wiki-pages.zip
+cd ../../..
+```
+
+After the raw FEVER files are present, submit the CPU indexing job from the repository root:
 
 ```bash
 sbatch retrieval/build_fever_index.sbatch
