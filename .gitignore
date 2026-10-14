@@ -4,34 +4,36 @@ __pycache__/
 .pytest_cache/
 .DS_Store
 slurm-*.out
-data/baseline_runs/
-results/eval/*/*/
-experiments/*/runs/*/artifacts/logs/*.log
-data/**/*.log
-INSIGHT.md
+verifier/data/baseline_runs/
+verifier/evaluation/results/*/*/
+verifier/evaluation/results/manual/
+verifier/experiments/*/runs/*/artifacts/logs/*.log
+verifier/evaluation/baselines/*/runs/*/artifacts/logs/*.log
+verifier/data/**/*.log
+verifier/INSIGHT.md
 .env
 
 # Raw datasets and the BM25 index: download and build them with
-# docs/data.md. Too large for git (21 GB).
-data/fever/
-data/scifact/
-data/averitec/
+# verifier/docs/data.md. Too large for git (21 GB).
+verifier/data/fever/
+verifier/data/scifact/
+verifier/data/averitec/
 
 # Model weights, trainer state and tokenizer copies: regenerate with the
 # scripts. Run metadata, training logs, training sets and eval outputs stay.
-data/**/checkpoint-*/
-data/**/*.safetensors
-data/**/tokenizer.json
-data/**/tokenizer_config.json
-data/**/chat_template.jinja
-data/**/training_args.bin
-data/**/README.md
-experiments/**/artifacts/checkpoints/checkpoint-*/
-experiments/**/artifacts/checkpoints/*.safetensors
-experiments/**/artifacts/checkpoints/tokenizer.json
-experiments/**/artifacts/checkpoints/tokenizer_config.json
-experiments/**/artifacts/checkpoints/chat_template.jinja
-experiments/**/artifacts/checkpoints/training_args.bin
-experiments/**/artifacts/checkpoints/README.md
+verifier/data/**/checkpoint-*/
+verifier/data/**/*.safetensors
+verifier/data/**/tokenizer.json
+verifier/data/**/tokenizer_config.json
+verifier/data/**/chat_template.jinja
+verifier/data/**/training_args.bin
+verifier/data/**/README.md
+verifier/experiments/**/artifacts/checkpoints/checkpoint-*/
+verifier/experiments/**/artifacts/checkpoints/*.safetensors
+verifier/experiments/**/artifacts/checkpoints/tokenizer.json
+verifier/experiments/**/artifacts/checkpoints/tokenizer_config.json
+verifier/experiments/**/artifacts/checkpoints/chat_template.jinja
+verifier/experiments/**/artifacts/checkpoints/training_args.bin
+verifier/experiments/**/artifacts/checkpoints/README.md
 # Byte-identical copy of train/sft/Qwen_Qwen3.5-2B_n6000/train.jsonl
-data/train/sft/Qwen_Qwen3.5-4B_n6000_qlora/train.jsonl
+verifier/data/train/sft/Qwen_Qwen3.5-4B_n6000_qlora/train.jsonl

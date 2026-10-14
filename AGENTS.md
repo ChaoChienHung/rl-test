@@ -1,19 +1,19 @@
 # Repository conventions
 
-This is the team RL branch for the fact verifier. Read `README.md` for the document map and `TODO.md` for current priorities before editing. The root contains top-level project documents; detailed historical results and methods are in `docs/`.
+This is the team RL branch for a fact verifier. Read `README.md` for the directory and document map, then `verifier/TODO.md` for current priorities.
 
-## Files and runs
+## Directory roles
 
-- `data/train/sft/` contains committed SFT prompt/completion pairs. `data/train/grpo/` contains prepared GRPO prompts and disagreement samples. `data/eval/` contains frozen evaluation IDs. Raw FEVER, SciFact, AVeriTeC and retrieval indexes must be downloaded or built locally; follow `docs/data.md`.
-- `data/stage0/` and `data/traces/` contain archived predictions and agent traces. Keep them as historical records. New evaluation outputs go to `results/eval/<version>/<run>/`.
-- Keep each training configuration under `experiments/<config>/` and each attempt under `runs/<run>/`. Run-specific metadata, checkpoint files and training logs belong under `runs/<run>/artifacts/`; terminal logs go in `artifacts/logs/`. The model weights are ignored by Git, while small metadata and structured `train_log.json` may be committed.
-- The two prompt controls are `experiments/direct-baseline/` and `experiments/cot-baseline/`. `experiments/run_eval.sh` is shared execution logic; each experiment's `run.sbatch` is its Slurm entry point. Use a new `RUN_NAME` for each attempt. Never overwrite an existing run.
-- Training entry points are the configuration-specific `experiments/<config>/train.py` files. Shared trainers are in `experiments/_shared/`; reusable helpers are in `src/utils/`. Keep resource requests in `.sbatch` files aligned with the target cluster.
+- `core/` has shared reward definitions and interfaces. `retrieval/` builds and queries the FEVER index. `agent/` has the search/verify loop and controller scaffold. `utils/` has data preparation and shared experiment helpers. Do not recreate a `src/` wrapper.
+- `verifier/model.py` contains reusable verifier inference, prompting and scoring logic. `verifier/evaluation/` contains the command-line evaluators, untrained prompt baselines and `results/`. Archived claim-level predictions are in `verifier/evaluation/results/archive/`; new outputs go under `results/<configuration>/<run>/`.
+- `verifier/data/train/` contains committed SFT/GRPO examples; `verifier/data/eval/` has frozen claim IDs. Raw FEVER and the BM25/SQLite index must be downloaded or built locally; follow `verifier/docs/data.md`.
+- Each training configuration lives under `verifier/experiments/<config>/` and each attempt under `runs/<run>/`. Keep its metadata, checkpoint files and logs under `runs/<run>/artifacts/`. Model weights and terminal `.log` files are ignored. Use a new run name; never overwrite an existing run.
+- `verifier/docs/` records methods and historical results. `verifier/TODO.md` tracks unfinished work. `verifier/INSIGHT.md` is local and Git-ignored; do not commit it or treat it as a shared source.
 
-## Working practices
+## Editing and running
 
-- Do not rewrite historical `meta.json` paths or prediction JSONL just to match the new tree; those values record the original runs. Update present-day code and documentation paths instead.
-- Do not claim a historical adapter is available because an `adapter_config.json` exists; the weight file is absent from Git. Check data availability before scheduling training or evaluation.
-- Keep comparisons on the same claim IDs, model, retrieval condition and evaluator. Preserve run manifests, seeds, and logs so repeated runs are traceable.
-- When changing layout or commands, update `README.md` and relevant `docs/` pages. Track outstanding work in `TODO.md`. `INSIGHT.md` is a local, gitignored private note and is not a shared project document.
-- Do not commit raw datasets, indexes, model weights, credentials or generated terminal `.log` files. Do not push or submit jobs unless the user asks.
+- Run Python modules from the repository root with `python -m ...` where a module is available. Keep Slurm submission commands rooted here. Inspect the current SoC partition and resource limits before submitting.
+- Preserve historical `meta.json` values and prediction rows as records of the original run. Update current code and documentation paths rather than rewriting their provenance.
+- Compare experiments with the same claim IDs, model, retrieval condition and evaluator. Record seed, revision, resources, predictions, metrics and logs for each run.
+- Update `README.md`, `verifier/TODO.md` and relevant `verifier/docs/` pages when commands, layout or experiment assumptions change.
+- Do not commit raw datasets, indexes, checkpoints, credentials or terminal logs. Do not push or submit cluster jobs unless the user requests it.
