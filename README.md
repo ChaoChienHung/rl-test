@@ -65,6 +65,13 @@ unzip -q wiki-pages.zip && rm wiki-pages.zip
 cd ../../..
 ```
 
+If `wiki-pages/` was already extracted by an earlier attempt but the 1.6 GB zip is still present, confirm the expected 109 `wiki-*.jsonl` files, then remove the redundant archive from the repository root:
+
+```bash
+find verifier/data/fever/wiki-pages -maxdepth 1 -name 'wiki-*.jsonl' -type f | wc -l
+rm verifier/data/fever/wiki-pages.zip
+```
+
 After the raw FEVER files are present, submit the CPU indexing job from the repository root:
 
 ```bash
