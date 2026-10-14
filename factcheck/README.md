@@ -1,82 +1,77 @@
-# Fact verification with RL
+# Verifier workspace
 
-A claim goes in, and the system returns three things: a verdict
-(SUPPORTED / REFUTED / NOT ENOUGH INFO), the Wikipedia sentences it rests
-on, and a confidence. The aim is a small model (Qwen3.5-2B) that a
-calibration-aware reward trains to be right *and* honest about its
-uncertainty, then a search controller that decides when to look further
-and when to abstain.
+A claim and retrieved FEVER sentences go to a Qwen3.5-2B verifier, which returns a verdict, cited sentence IDs and confidence. The team-level overview and ownership are in the root [README](../README.md) and [plan](docs/plan.md); pending work is in the root [TODO](../TODO.md).
 
-## Where it stands
+## Doc map
 
-| Stage | Status | Doc |
+| Document | Content |
+|---|---|
+| [docs/plan.md](docs/plan.md) | Architecture, roles, decisions and evaluation rules |
+| [docs/data.md](docs/data.md) | Raw dataset download and index build |
+| [docs/stage0-results.md](docs/stage0-results.md) | Prompted and retrieval baselines |
+| [docs/sft-probe.md](docs/sft-probe.md) | SFT setup and results |
+| [docs/grpo-results.md](docs/grpo-results.md) | Single/multi-turn GRPO runs and results |
+| [docs/trace-format.md](docs/trace-format.md) | Search/verify trace schema |
+| [docs/related-work.md](docs/related-work.md) | Literature notes requiring source checks |
+
+## Data and result map
+
+| Path under `factcheck/` | Role | Git |
 |---|---|---|
-| 0. Prompted baseline, retrieval | Done. 900 FEVER dev claims; title-match retrieval at 87.5% page recall@5 | [`docs/stage0-results.md`](docs/stage0-results.md) |
-| 1a. SFT capacity probe (2B vs 4B) | Done. Decision: 2B | [`docs/sft-probe.md`](docs/sft-probe.md) |
-| 1b. Single-turn GRPO on the verifier | First runs done, no gain over SFT yet; calibration worsens | [`docs/grpo-results.md`](docs/grpo-results.md) |
-| 2. Agentic search controller | Toy scaffold only (12 hand-written claims) | [`docs/plan.md`](docs/plan.md), [`docs/trace-format.md`](docs/trace-format.md) |
+| `data/train/manifest.json` | Entry point to existing SFT/GRPO training examples | Yes |
+| `data/eval/fever-dev-900-ids.json` | Frozen archived FEVER dev claim IDs for matched comparisons | Yes |
+| `data/sft_probe/`, `data/grpo_data/` | Existing training sets and run metadata at their historical paths | Partly |
+| `data/grpo/` | GRPO logs and run metadata | Partly |
+| `data/stage0/` | Archived predictions; replay only, not fresh runs | Yes |
+| `data/traces/` | Agent-loop traces | Yes |
+| `data/fever/`, `data/scifact/`, `data/averitec/` | Downloaded raw corpora and FEVER index | No |
+| `results/eval/direct/job-<id>/` | New direct JSON predictions, metrics, manifest, log | No |
+| `results/eval/cot-chain/job-<id>/` | New evidence-chain predictions, metrics, manifest, log | No |
+| `experiments/direct/`, `experiments/cot-chain/` | Version-isolated Slurm jobs | Yes |
 
-## Docs
+The `data/train/` folder is a manifest over existing training files. Those files stay at their historical paths so published run metadata and scripts remain reproducible. `data/eval/` freezes the 900 archived IDs; later prompt-development, calibration and holdout splits are still to be chosen. The scripts use `stage0.py`'s deterministic seed-0 FEVER sampling and the same IDs for the two 900-claim runs. Fresh outputs are ignored by Git so large logs and predictions do not enter a push accidentally.
 
-- [`docs/data.md`](docs/data.md): how to download FEVER, SciFact and AVeriTeC and build the index, plus what is in git and what is not.
-- [`REPORT.md`](REPORT.md): plain-language report on what the project does and why continue with it over the math version.
-- [`docs/plan.md`](docs/plan.md): architecture, what RL is for, the three stages, open decisions.
-- [`docs/related-work.md`](docs/related-work.md): what is already published, what is open, numbers to beat.
-- [`docs/models.md`](docs/models.md): which small model to train and which big model to call, with sizes and prices.
-- [`docs/stage0-results.md`](docs/stage0-results.md): prompted baseline, 2B vs a 180B model, BM25 vs title-match retrieval.
-- [`docs/sft-probe.md`](docs/sft-probe.md): SFT capacity probe (design, commands, decision rule, results).
-- [`docs/grpo-results.md`](docs/grpo-results.md): GRPO runs, the 900-claim results table, and the training sets built for the next runs.
-- [`docs/trace-format.md`](docs/trace-format.md): the per-claim trace schema shared by the verifier and the controller.
-- [`docs/original-proposal.md`](docs/original-proposal.md): the source proposal, verbatim.
+## Existing results
 
-The team plan, proposal and one-page brief are at the repo root:
-`report.md`, `proposal.tex` / `.pdf` / `.docx`, `team-brief.tex` / `.pdf`.
+On the same 900 FEVER dev claims:
 
-## Run
+| Run | Retrieval | Accuracy | FEVER | Stated Brier / ECE | Token Brier / ECE |
+|---|---|---:|---:|---:|---:|
+| Base 2B | titles | 0.459 | 0.340 | 0.515 / 0.513 | 0.329 / 0.308 |
+| SFT 2B | oracle | 0.779 | 0.702 | 0.221 / 0.221 | 0.146 / 0.028 |
+| SFT 2B | titles | 0.759 | 0.667 | 0.241 / 0.241 | 0.158 / 0.034 |
 
-Set up the venv (top-level README), then fetch the data with
-[`docs/data.md`](docs/data.md). All scripts run from `factcheck/src`.
+These calibration numbers are binary correctness scores: confidence in the selected verdict being right. The base run has stated confidence on 93.8% of rows and token confidence on 94.4%; SFT has both on 100%. They are replayed from saved predictions, not fresh inference. Recompute without a GPU:
 
-```
-python stage0.py --model local --n 900 --retrieval titles          # baseline on 900 dev claims
-python sft_probe.py --model Qwen/Qwen3.5-2B --n-train 6000         # SFT
-python grpo_verifier.py --beta 0.04 --filter --max-steps 200 --tag kl   # GRPO
-python stage0.py --model local --adapter ../data/grpo/<run> --n 900 --retrieval oracle
-python -m pytest test_reward.py                                    # reward unit tests
-python run_scaffold.py                                             # toy controller scaffold
+```bash
+python3 factcheck/src/eval_saved_runs.py factcheck/data/stage0/local_n900_titles.jsonl
+python3 factcheck/src/eval_saved_runs.py factcheck/data/stage0/local+Qwen_Qwen3.5-2B_n6000_n900_titles.jsonl
 ```
 
-The GPU runs were made under WSL2 (Ubuntu 22.04, torch cu128, TRL).
-See `docs/sft-probe.md` for the exact setup.
+The 5,895 distinct SFT training IDs and matched 1,200-row subset do not overlap the archived 900 dev IDs. This does not yet establish separate prompt-development, calibration and holdout sets. The SFT target wrote confidence `1.0`; its stated confidence is therefore a poor calibration target. The LoRA weights are excluded from Git, so saved JSONL alone cannot reproduce SFT inference.
 
-## Files
+## Fresh direct versus evidence-chain baseline on SoC
 
-Verifier pipeline:
+From the repo root, create `.venv` as described in the root README and download FEVER using [docs/data.md](docs/data.md). Inspect `sinfo` and adjust the scripts' GPU, RAM and time requests for the available partition. Build the index once; wait for success before running GPU jobs:
 
-- `src/build_bm25_index.py`: BM25 index and `pages.sqlite` over the FEVER Wikipedia dump.
-- `src/fever_retrieval.py`, `src/eval_retrieval.py`: query side of the index; page recall@k.
-- `src/stage0.py`: prompt a model on N dev claims and score it (accuracy, FEVER score, evidence F1, per-label recall, ECE, format). `--adapter` scores a trained LoRA.
-- `src/sft_probe.py`: LoRA / QLoRA SFT on FEVER train with gold pages in context.
-- `src/reward.py`: correctness with asymmetric harm weights, negative-Brier calibration, evidence F1 with the NEI rule, format, and the `ABLATIONS` switches. `src/test_reward.py` pins its intended behaviour.
-- `src/grpo_verifier.py`: single-turn GRPO from the SFT adapter, optional KL and spread filter.
-- `src/disagreement.py`: samples the SFT model 8 times per claim to find which claims give GRPO a signal.
-- `src/build_grpo_data.py`: GRPO prompts with retrieved evidence instead of gold.
-- `src/build_nei_ablation.py`, `src/probe_nei_set.py`: evidence-removed NEI training sets and a probe of how a model answers them.
-- `src/grpo_multiturn.py`: multi-turn GRPO spike. The model calls `search` itself through TRL's tool calling, and tool output is masked from the loss.
-- `src/interfaces.py`: the frozen `search()` and `verify()` signatures (week-1 interfaces 1 and 2).
+```bash
+sbatch factcheck/slurm/build_fever_index.sbatch
+squeue -u "$USER"
+# After the index finishes successfully:
+sbatch --export=ALL,N_CLAIMS=30 factcheck/experiments/direct/run.sbatch
+sbatch --export=ALL,N_CLAIMS=30 factcheck/experiments/cot-chain/run.sbatch
+# Then repeat each with N_CLAIMS=900 after checking the smoke-test logs.
+```
 
-Controller scaffold (toy data, no model):
+Each job writes `predictions.jsonl`, `metrics.json`, `manifest.json` and `run.log` in its own `results/eval/<version>/job-<id>/`. Slurm also writes a small `slurm-<name>-<id>.out` at the root; both locations are ignored. For a 900-claim job, compare its ID set with `data/eval/fever-dev-900-ids.json` before using the result. Both prompts use the base `Qwen/Qwen3.5-2B`, title retrieval and greedy decoding. Direct outputs only the verdict JSON; `cot_chain` asks for a concise numbered evidence chain before the verdict in JSON. Its generation cap is larger, so compare tokens and cost as well as accuracy. These are prompt baselines, not SFT or GRPO training. A cited E-ID is only syntax; inspect whether it genuinely supports the verdict.
 
-- `src/toy_corpus.py`: 12-claim stand-in for FEVER, word-overlap retriever, split-on-"and" decomposer.
-- `src/verification_env.py`: Gymnasium MDP with retrieve / decompose / cross-check / abstain / commit at a stated confidence.
-- `src/run_scaffold.py`: random vs heuristic policy over 200 episodes.
+Use `sacct -j <job-id> --format=JobID,State,Elapsed,MaxRSS,ExitCode` and the per-run `run.log` to diagnose jobs. The scripts expect submission from the repo root, raw FEVER, built index and a CUDA-ready `.venv`; they do not submit anything themselves.
 
-## Known gaps
+## Code map
 
-- **The controller still runs on toy data.** It has not been wired to the
-  FEVER retriever or to a trained verifier.
-- **Retrieval is not entailment in the scaffold.** Word overlap finds
-  sentences *about* the claim, including ones that refute it, so the toy
-  heuristic never predicts REFUTED.
-- **SciFact and AVeriTeC are downloaded but have no loaders yet.** They
-  are the transfer test sets.
+- `src/stage0.py`: retrieval, prompts, local/API inference and per-claim output (`--output` avoids resuming old archived runs).
+- `src/eval_saved_runs.py`: offline evaluator with FEVER, evidence, recall, binary Brier/ECE, risk–coverage and evidence-in-context strata.
+- `src/sft_probe.py`, `src/grpo_verifier.py`, `src/reward.py`: verifier training and reward.
+- `src/grpo_multiturn.py`: multi-turn tool-calling experiment.
+- `src/build_bm25_index.py`, `src/fever_retrieval.py`: FEVER index and search.
+- `src/interfaces.py`, `src/verification_env.py`, `src/run_scaffold.py`: shared contracts and toy controller scaffold.

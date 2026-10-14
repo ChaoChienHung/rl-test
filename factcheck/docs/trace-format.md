@@ -2,7 +2,7 @@
 
 Frozen 2026-10-11 (schema 1). AG-2 writes it, RL-3 trains the controller
 on it, AG-3's eval script and the demo read it. Interface 4 of the four
-frozen in week 1 (`report.md` 3.3). The `search` and `verify` signatures
+frozen in week 1 ([`plan.md`](plan.md)). The `search` and `verify` signatures
 the steps log are in `src/interfaces.py`.
 
 ## Rules

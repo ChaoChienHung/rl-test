@@ -1,4 +1,4 @@
-"""The two tool signatures frozen in week 1 (report.md 3.3, interfaces 1 and 2).
+"""The two tool signatures frozen in week 1 (docs/plan.md and docs/trace-format.md).
 
 Frozen 2026-10-11. The loop (AG-2) calls these; AG-1 implements `search`,
 RL-1's trained model sits behind `verify`. Implementations live elsewhere and

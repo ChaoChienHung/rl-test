@@ -2,6 +2,11 @@
 __pycache__/
 *.pyc
 .pytest_cache/
+.DS_Store
+slurm-*.out
+factcheck/data/baseline_runs/
+factcheck/results/eval/*/job-*/
+INSIGHT.md
 .env
 
 # Raw datasets and the BM25 index: download and build them with

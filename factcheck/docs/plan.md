@@ -1,123 +1,46 @@
-# Fact verification RL — plan
+# Project plan and ownership
 
-Working notes as of 2026-09-19. The source proposal these notes build on
-is kept verbatim in [`original-proposal.md`](original-proposal.md). Prior
-work is in [`related-work.md`](related-work.md), model choices in
-[`models.md`](models.md).
+Updated 2026-10-14. This is the current synthesis of the original proposal, team brief and later experiment reports. Measured results live in the stage 0, SFT and GRPO documents; tasks live in the root [TODO.md](../../TODO.md).
 
-## Task
+## Goal and system
 
-Input: a claim. Output: a verdict (Supported / Refuted / Not Enough Info),
-the evidence sentences that justify it, and a confidence.
+For each claim, produce a three-way verdict, evidence sentence IDs, and a confidence that estimates whether the chosen verdict is correct. FEVER supplies training and the initial 900-claim evaluation. SciFact and AVeriTeC are intended transfer sets; their loaders and final results are still pending.
 
-Train on FEVER, evaluate transfer on SciFact and AVeriTeC, demo on
-AVeriTeC. All three are public with gold labels; this is a loader, not a
-data-collection effort.
-
-## Architecture
-
-```
-claim
-  |
-  v
-+------------------------ agent loop -------------------------+
-|  CONTROLLER: picks the next action                          |
-|    sees: evidence so far, retrieval score, verifier's       |
-|          verdict + confidence, hops used, budget left       |
-|    actions: search | decompose | verify | abstain | commit  |
-|        |              |               |                     |
-|        v              v               v                     |
-|   RETRIEVER      DECOMPOSER       VERIFIER (small LLM)      |
-|   BM25 + dense   prompted LLM     (claim, evidence) ->      |
-|   frozen         frozen           verdict + evidence ids    |
-|                                   + confidence              |
-+-------------------------------------------------------------+
-  v
-verdict + cited sentences + confidence + decision trace
+```text
+claim -> search -> evidence -> verifier -> verdict + cited evidence + confidence
+                         ^                         |
+                         +--- optional agent/controller retry or abstain
 ```
 
-The `verify` step is not in the original proposal's action list. The
-scaffold showed it is required: retrieval finds sentences *about* a claim,
-including ones that refute it, so retrieval score alone cannot produce a
-verdict.
+The retriever finds candidate text; it does not decide entailment. The verifier judges the evidence. The agent loop owns search, decomposition, retries, logging and final commitment. A controller can choose actions from those observations, but it is useful only if a simple fixed retry policy leaves an accuracy–cost gap. RL on the verifier and RL on a controller are separate experiments, not two competing copies of the whole system. The shared contracts are `search()`, `verify()`, `reward()`, and the [trace schema](trace-format.md).
 
-## What RL is for
+SFT can teach the labelled verdict and evidence format directly. A verifier GRPO run is worth testing only if it improves an outcome SFT does not already provide, such as calibrated confidence, harmful-error trade-offs, or evidence use. The written SFT confidence target is always `1.0`, so it cannot teach graded uncertainty. For a controller, the reward is final decision quality minus search and token cost; its possible gain comes from deciding *when* another search is worth that cost. These are hypotheses to measure, not automatic reasons to train.
 
-A prompted agent can already run the whole loop with no training. RL is
-only needed where there is nothing to imitate. There are two such places.
+## Team ownership
 
-| Place | Why supervised training cannot do it | What RL optimises |
+The 8 October team brief assigns:
+
+| Role | Person | Main responsibility |
 |---|---|---|
-| Verifier (GRPO) | There is no gold confidence label. How sure the model *should* be depends on its own accuracy, so the signal has to be on-policy. Asymmetric harm is a cost on outcomes and cannot be written as a label. | correct verdict + evidence F1 + Brier confidence + harm-weighted errors |
-| Controller (RL) | No dataset labels "the right number of searches". It is a sequential decision with delayed reward and a per-step cost. | correctness - lambda * (searches + tokens); when more evidence is worth paying for, when to abstain |
+| RL-1 | Chao Chien Hung | Verifier SFT/GRPO, baselines, training and before/after comparisons |
+| RL-2 | Michel Yildirim | Reward, confidence calibration, ablations and reliability analysis |
+| RL-3 | Yao Tianhao | Real-data controller, fixed-policy controls and accuracy–cost curve |
+| AG-1 | Yu Jing | Retrieval and search tools, recall and transfer knowledge stores |
+| AG-2 | Chia Kwang Yang | Agent loop, traces, prompted agent baseline and multi-turn GRPO |
+| AG-3 | Bryan Wu Jiahe | Data splits, shared evaluation, error audit and demo |
 
-SFT can teach verdict labels. RL is for confidence, stopping and cost.
-That is the answer to "why not just fine-tune?".
+These are ownership notes, not proof that any pending component has been completed. The proposal and the later team brief disagree on some earlier AG name-to-role assignments; this table follows the later brief.
 
-## Stages
+## Evidence and decisions so far
 
-Built so the contribution of RL shows up as a measured difference, and so
-an earlier stage is still a complete result if a later one fails.
+1. Title matching lifted FEVER page recall@5 to 0.875, but the untrained 2B verifier still reached only 0.459 accuracy on the full 900-claim title-retrieval test. See [stage 0](stage0-results.md).
+2. SFT gave a large gain: 0.759 accuracy with title retrieval. The training target writes confidence `1.0`, so stated confidence cannot be treated as learned calibration. See [SFT](sft-probe.md).
+3. The recorded single-turn GRPO runs have not beaten the 6,000-claim SFT accuracy, and their verdict-token ECE is worse. The matched 1,200-claim SFT control and seed variance matter when comparing runs. See [GRPO](grpo-results.md).
+4. A direct-JSON versus evidence-chain prompt comparison is the next inexpensive test. It changes prompting, not model weights. CoT + GRPO is a hypothesis to test if reasoning improves outcomes and rollout rewards vary; a chain alone does not guarantee faithful evidence use.
+5. Confidence must mean probability that the chosen verdict is correct. Evaluate stated text and verdict-token probability separately with binary correctness Brier/ECE and risk–coverage. Fit post-hoc calibration on a separate split before claiming RL adds value.
 
-| Stage | What is trained | Needs | Shows |
-|---|---|---|---|
-| 0 | nothing, prompted agent | small model run locally + a big model on OpenRouter | baseline accuracy, reliability diagram, searches per claim, format-adherence rate |
-| 1 | verifier, single-turn GRPO | 1 GPU | calibration and evidence grounding, before vs after |
-| 2 | controller | CPU for a small policy | accuracy-vs-cost curve from a lambda sweep, abstention behaviour |
+## Evaluation and scope
 
-Stage 0 also tells you whether the small model can hold the output format.
-If it cannot, GRPO starts with near-zero reward and nothing to rank, and
-an SFT warm-start is needed first.
+Use identical claim IDs, retrieval, model and decoding for prompt comparisons, and log token cost. Separate oracle evidence from real title retrieval; otherwise retrieval failures can be mistaken for verifier failures. Audit claims with confidently wrong answers, missing gold evidence, NEI, and unsupported citations. For the controller, compare one search, a fixed NEI retry, and a learned policy on the same accuracy–cost axes. Do not infer transfer from FEVER alone.
 
-## Single-turn vs multi-turn GRPO
-
-The difference is who decides what evidence the model sees.
-
-| | Single-turn | Multi-turn |
-|---|---|---|
-| Rollout | prompt -> one completion | generate -> pause at a search call -> retriever output injected -> resume -> verdict |
-| Model learns | read evidence, judge, state confidence, abstain | all that, plus what to query, when to search again, when to stop |
-| Retriever miss | stuck; gold evidence not in top-k means guess or NEI | can recover by re-querying |
-| Loss masking | none needed | injected retrieval tokens must be masked |
-| Credit assignment | one decision, one reward | many decisions share one end reward; noisier |
-| Infra | TRL `GRPOTrainer` out of the box | tool-calling rollouts; TRL support is experimental, the papers all used verl |
-| Agentic? | no | yes |
-
-Same reward function and same algorithm for both. ProFact's ablation shows
-the cost of sparse reward in multi-turn: verdict-only reward drops their
-score from 47.8 to 34.4.
-
-## Open decisions
-
-1. **Who the controller is.** The original proposal (section 4) has a
-   separate controller that observes the LLM. During discussion this
-   drifted to "one LLM, GRPO only", where the LLM picks its own actions.
-   The literature search favours the original two-learner design: the
-   GRPO-only version is largely pre-empted by ProFact and AWA-RL, while no
-   paper was found that puts a small explicit-MDP controller on top of a
-   GRPO-trained verifier for fact verification. It is also cheaper (lambda
-   sweeps and action ablations retrain in minutes on CPU). Stages 0 and 1
-   are identical either way, so this can wait until stage 1 works.
-2. ~~**Which GPU is available.**~~ Settled: RTX 5070 Ti 16GB, so
-   Qwen3.5-2B. See [`models.md`](models.md).
-3. **Evidence F1 on Not-Enough-Info claims.** Gold NEI claims have no gold
-   evidence, so the term is always 0 on exactly the claims the abstention
-   story cares about. Needs a real decision, not the current placeholder.
-4. **Optional `escalate` action.** Controller hands uncertain claims to the
-   big model at a cost. Makes calibration a working part of the system.
-   Novelty for fact-checking not checked. Extra scope; only after the core
-   works.
-
-## Must fix before any training
-
-The calibration term in the proposal (and in `src/reward.py`) is `+q` when
-right and `-w*q` when wrong. Expected reward is `q * [p(1+w) - w]`, linear
-in `q`, so the optimum is always an extreme confidence: maximum if
-`p > w/(1+w)`, otherwise minimum. The model never learns to say 0.6 when
-it is 60% sure and the reliability diagram collapses to two points. It is
-not a proper scoring rule.
-
-Fix: use a Brier term, `-(q - 1[correct])^2`, whose optimum is `q = p`,
-and put the asymmetric harm weights on the verdict term instead. Weighting
-the Brier term by outcome does not work: the optimum shifts to
-`p*w1 / (p*w1 + (1-p)*w0)`, which breaks calibration.
+The original proposal's claims about novelty, fixed six-week schedule and expected RL gains were hypotheses. [Related work](related-work.md) is a reading list whose unverified entries need source checks before citation.

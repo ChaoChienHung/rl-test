@@ -60,6 +60,9 @@ factcheck/data/
   sft_probe/      SFT runs: meta.json, train_log.json, train.jsonl, adapter_config.json; eval logs (in git)
   grpo/           GRPO runs: meta.json, train_log.json, adapter_config.json; train/eval logs   (in git)
   grpo_data/      alternative GRPO training sets (retrieved evidence, evidence-removed NEI)     (in git)
+  train/          manifest pointing to the existing SFT/GRPO training files                       (in git)
+  eval/           frozen archived FEVER dev claim IDs; future split manifests belong here         (in git)
+factcheck/results/eval/   fresh direct and cot-chain results, by Slurm job ID                     (not in git)
 ```
 
 ## 4. What is left out of git, and how to get it back

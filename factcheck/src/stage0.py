@@ -11,6 +11,7 @@ of the verdict (renormalised over the three labels).
     python stage0.py --model local --n 50
     python stage0.py --model qwen/qwen3.8-flash --n 50
     python stage0.py --model local --n 900 --retrieval titles
+    python stage0.py --model local --n 900 --retrieval titles --prompt-style cot_chain --output ../results/eval/cot-chain/run/predictions.jsonl
     python stage0.py --summarize ../data/stage0/local_n50.jsonl
 
 Results are appended per claim to factcheck/data/stage0/<model>_n<N>[_titles].jsonl,
@@ -28,8 +29,9 @@ import time
 
 sys.stdout.reconfigure(encoding="utf-8")
 
-from build_bm25_index import DATA
 from reward import evidence_f1
+
+DATA = os.path.join(os.path.dirname(__file__), "..", "data", "fever")
 
 LOCAL_MODEL = "Qwen/Qwen3.5-2B"
 BIG_MODEL = "qwen/qwen3.8-flash"
@@ -46,6 +48,24 @@ Decide whether the evidence SUPPORTS the claim, REFUTES it, or gives NOT_ENOUGH_
 
 Reply with only a JSON object, nothing else:
 {"verdict": "SUPPORTED" | "REFUTED" | "NOT_ENOUGH_INFO", "evidence": ["E3", ...], "confidence": <number 0 to 1>}
+
+- evidence: ids of the sentences that justify the verdict, at most 5. Use [] for NOT_ENOUGH_INFO.
+- confidence: the probability that your verdict is correct."""
+
+REASONING_SYSTEM = """You are a fact-checker. You get a claim and numbered evidence sentences from Wikipedia.
+Use only the given evidence. Briefly explain which shown sentences support or refute the claim, or why they are insufficient. Keep the explanation to at most three short sentences and cite prompt-local E ids. Do not invent evidence.
+
+Reply with only one JSON object, nothing else:
+{"reasoning": "brief evidence-based explanation with E ids", "verdict": "SUPPORTED" | "REFUTED" | "NOT_ENOUGH_INFO", "evidence": ["E3", ...], "confidence": <number 0 to 1>}
+
+- evidence: ids of the sentences that justify the verdict, at most 5. Use [] for NOT_ENOUGH_INFO.
+- confidence: the probability that your verdict is correct."""
+
+COT_CHAIN_SYSTEM = """You are a fact-checker. You get a claim and numbered evidence sentences from Wikipedia.
+Reason step by step using only the evidence shown. In the reasoning field: (1) identify the checkable parts of the claim, (2) match each relevant part to E ids and quote or paraphrase what those sentences say, (3) resolve contradictions or missing support, and (4) explain why the final verdict follows. Keep the chain concise. Do not invent evidence or use outside knowledge.
+
+Reply with only one JSON object, nothing else:
+{"reasoning": "numbered evidence-based reasoning chain with E ids", "verdict": "SUPPORTED" | "REFUTED" | "NOT_ENOUGH_INFO", "evidence": ["E3", ...], "confidence": <number 0 to 1>}
 
 - evidence: ids of the sentences that justify the verdict, at most 5. Use [] for NOT_ENOUGH_INFO.
 - confidence: the probability that your verdict is correct."""
@@ -171,7 +191,8 @@ def label_probs(tokens):
 # ---------------------------------------------------------------- models
 
 class LocalModel:
-    def __init__(self, name=LOCAL_MODEL, batch_size=4, adapter=None):
+    def __init__(self, name=LOCAL_MODEL, batch_size=4, adapter=None,
+                 system_prompt=SYSTEM, max_new_tokens=160):
         import torch
         from transformers import AutoModelForCausalLM, AutoTokenizer
         self.torch = torch
@@ -185,6 +206,8 @@ class LocalModel:
                 self.model = PeftModel.from_pretrained(self.model, ad).merge_and_unload()
         self.model.eval()
         self.batch_size = batch_size
+        self.system_prompt = system_prompt
+        self.max_new_tokens = max_new_tokens
         self.name = name if not adapter else f"{name}+{os.path.basename(os.path.normpath(adapter.split(',')[-1]))}"
 
     def run(self, prompts):
@@ -195,11 +218,11 @@ class LocalModel:
 
     def _batch(self, prompts):
         texts = [self.tok.apply_chat_template(
-            [{"role": "system", "content": SYSTEM}, {"role": "user", "content": p}],
+            [{"role": "system", "content": self.system_prompt}, {"role": "user", "content": p}],
             tokenize=False, add_generation_prompt=True, enable_thinking=False) for p in prompts]
         inp = self.tok(texts, return_tensors="pt", padding=True).to("cuda")
         self.torch.manual_seed(SEED)
-        gen = self.model.generate(**inp, max_new_tokens=160, do_sample=False,
+        gen = self.model.generate(**inp, max_new_tokens=self.max_new_tokens, do_sample=False,
                                   output_logits=True, return_dict_in_generate=True)
         n_in = inp["input_ids"].shape[1]
         res = []
@@ -220,22 +243,24 @@ class LocalModel:
 
 
 class OpenRouterModel:
-    def __init__(self, name=BIG_MODEL):
+    def __init__(self, name=BIG_MODEL, system_prompt=SYSTEM, max_new_tokens=160):
         from dotenv import load_dotenv
         from openai import OpenAI
         load_dotenv(os.path.join(os.path.dirname(__file__), "..", "..", ".env"))
         self.client = OpenAI(base_url="https://openrouter.ai/api/v1",
                              api_key=os.environ["OPENROUTER_API_KEY"], max_retries=3)
         self.name = name
+        self.system_prompt = system_prompt
+        self.max_new_tokens = max_new_tokens
 
     def run(self, prompts):
         return [self._one(p) for p in prompts]
 
     def _one(self, prompt):
         r = self.client.chat.completions.create(
-            model=self.name, temperature=0, seed=SEED, max_tokens=160,
+            model=self.name, temperature=0, seed=SEED, max_tokens=self.max_new_tokens,
             logprobs=True, top_logprobs=5,  # Alibaba, the only provider, caps this at 5
-            messages=[{"role": "system", "content": SYSTEM}, {"role": "user", "content": prompt}],
+            messages=[{"role": "system", "content": self.system_prompt}, {"role": "user", "content": prompt}],
             extra_body={"reasoning": {"enabled": False}, "provider": {"require_parameters": True}},
         )
         ch = r.choices[0]
@@ -251,6 +276,8 @@ class OpenRouterModel:
 
 def score(claim, ctx, gen):
     obj, ok = parse(gen["text"])
+    reasoning = obj.get("reasoning") if isinstance(obj.get("reasoning"), str) else None
+    reasoning_ids = re.findall(r"\bE\d+\b", reasoning or "")
     gold = FEVER_LABEL[claim["label"]]
     pred = obj.get("verdict") if ok["verdict"] else None
     by_eid = {eid: (p, line) for eid, p, line, _ in ctx["shown"]}
@@ -269,11 +296,15 @@ def score(claim, ctx, gen):
         "gold_page_retrieved": ctx["gold_page_retrieved"], "gold_in_context": ctx["gold_in_context"],
         "n_shown": len(ctx["shown"]), "cited": cited,
         "provider": gen["provider"], "in_tokens": gen["in_tokens"], "out_tokens": gen["out_tokens"],
-        "raw": gen["text"],
+        "raw": gen["text"], "reasoning": reasoning,
+        "reasoning_present": bool(reasoning and reasoning.strip()),
+        "reasoning_cited_ids": reasoning_ids,
+        "reasoning_citations_valid": all(eid in by_eid for eid in reasoning_ids) if reasoning_ids else None,
     }
 
 
-def run(model_name, n, retrieval="bm25", chunk=20, adapter=None):
+def run(model_name, n, retrieval="bm25", chunk=20, adapter=None, output=None,
+        prompt_style="direct"):
     """model_name: "local" (LOCAL_MODEL), "local:<hf id>" for another local
     base, or an OpenRouter id. adapter: LoRA dir from sft_probe.py; its base
     model is read from adapter_config.json unless "local:<hf id>" is given."""
@@ -283,7 +314,10 @@ def run(model_name, n, retrieval="bm25", chunk=20, adapter=None):
     if adapter:
         tag += "+" + os.path.basename(os.path.normpath(adapter))
     suffix = "" if retrieval == "bm25" else f"_{retrieval}"
-    path = os.path.join(OUT_DIR, f"{tag}_n{n}{suffix}.jsonl")
+    if prompt_style != "direct":
+        suffix += f"_{prompt_style}"
+    path = output or os.path.join(OUT_DIR, f"{tag}_n{n}{suffix}.jsonl")
+    os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
     done = set()
     if os.path.exists(path):
         with open(path, encoding="utf-8") as f:
@@ -292,14 +326,19 @@ def run(model_name, n, retrieval="bm25", chunk=20, adapter=None):
     print(f"{len(done)} done, {len(claims)} to go -> {path}")
     if not claims:
         return path
+    system_prompt = {"direct": SYSTEM, "reasoning": REASONING_SYSTEM,
+                     "cot_chain": COT_CHAIN_SYSTEM}[prompt_style]
+    max_new_tokens = {"direct": 160, "reasoning": 320, "cot_chain": 512}[prompt_style]
     if model_name.startswith("local"):
         base = model_name.split(":", 1)[1] if ":" in model_name else None
         if adapter and not base:
             with open(os.path.join(adapter.split(",")[0], "adapter_config.json"), encoding="utf-8") as f:
                 base = json.load(f)["base_model_name_or_path"]
-        model = LocalModel(base or LOCAL_MODEL, adapter=adapter)
+        model = LocalModel(base or LOCAL_MODEL, adapter=adapter,
+                           system_prompt=system_prompt, max_new_tokens=max_new_tokens)
     else:
-        model = OpenRouterModel(model_name)
+        model = OpenRouterModel(model_name, system_prompt=system_prompt,
+                                max_new_tokens=max_new_tokens)
     retriever = FeverRetriever()
     t0 = time.time()
     for i in range(0, len(claims), chunk):
@@ -308,7 +347,8 @@ def run(model_name, n, retrieval="bm25", chunk=20, adapter=None):
         gens = model.run([render(c["claim"], x["shown"]) for c, x in zip(batch, ctxs)])
         with open(path, "a", encoding="utf-8") as f:
             for c, x, g in zip(batch, ctxs, gens):
-                f.write(json.dumps({"model": model.name, "retrieval": retrieval, **score(c, x, g)}, ensure_ascii=False) + "\n")
+                f.write(json.dumps({"model": model.name, "retrieval": retrieval,
+                                    "prompt_style": prompt_style, **score(c, x, g)}, ensure_ascii=False) + "\n")
         print(f"  {i + len(batch)}/{len(claims)}  {time.time() - t0:.0f}s", flush=True)
     return path
 
@@ -373,12 +413,15 @@ if __name__ == "__main__":
     ap.add_argument("--model", default="local", help='"local", "local:<hf id>", or an OpenRouter model id')
     ap.add_argument("--n", type=int, default=50)
     ap.add_argument("--retrieval", choices=["bm25", "titles", "oracle"], default="bm25")
+    ap.add_argument("--prompt-style", choices=["direct", "reasoning", "cot_chain"], default="direct")
     ap.add_argument("--adapter", help="LoRA adapter dir from sft_probe.py (local models only)")
+    ap.add_argument("--output", help="write to this JSONL file instead of the default (resume by claim id if it exists)")
     ap.add_argument("--summarize", help="only print metrics for an existing results file")
     a = ap.parse_args()
     PRICES = {BIG_MODEL: (0.15, 0.47)}  # $/M tokens, OpenRouter 2026-09-19
     if a.summarize:
         summarize(a.summarize)
     else:
-        p = run(a.model, a.n, a.retrieval, adapter=a.adapter)
+        p = run(a.model, a.n, a.retrieval, adapter=a.adapter,
+                output=a.output, prompt_style=a.prompt_style)
         summarize(p, *PRICES.get(a.model, (None, None)))

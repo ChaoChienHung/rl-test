@@ -32,7 +32,7 @@ L3_COST = 0.02  # per retrieval call / decomposition / cross-check
 # (gold, predicted) -> harm of that wrong verdict. Unlisted errors cost 1.0.
 # Waving a false claim through is worse than over-flagging a true one.
 # A wrong verdict scores 1 - harm, so harm 1.0 is plain 0/1 accuracy and the
-# harm-ratio sweep (1, 1.5, 3, 5; report.md 4.2 G) is a change to this table.
+# A harm-ratio sweep (for example 1, 1.5, 3, 5) changes this table.
 HARM = {
     (REFUTED, SUPPORTED): 1.5,
     (SUPPORTED, REFUTED): 1.0,
@@ -48,7 +48,7 @@ NEI_CITED_PENALTY = 0.5
 
 @dataclass(frozen=True)
 class RewardConfig:
-    """Switches for the reward ablations (report.md 2.3, 4.3).
+    """Switches for reward ablations (see docs/plan.md and the root TODO.md).
 
     mode: "full" (the shaped reward), "format_only" (1 if the output parsed,
     else 0), or "random" (uniform in [0, 1], ignores the episode).

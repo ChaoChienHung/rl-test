@@ -3,7 +3,7 @@
 Run 2026-09-19. 900 FEVER dev claims, 300 per label, seed 0. Top 5 pages,
 up to 20 sentences each, one JSON answer per claim, temperature 0,
 no thinking. Code: `src/stage0.py`. Raw per-claim rows are in
-`data/stage0/` (gitignored). Standard error on a 900-claim accuracy is
+`data/stage0/` (committed archived outputs). Standard error on a 900-claim accuracy is
 about ±1.6 points; on the 300-claim per-label recalls about ±2.8.
 
 ## Retrieval
