@@ -12,10 +12,10 @@ esac
 cd "${SLURM_SUBMIT_DIR:?submit from the repo root}"
 export TMPDIR="${TMPDIR:-$HOME/.pip-tmp}"
 mkdir -p "$TMPDIR"
-test -f README.md
-test -f verifier/data/fever/shared_task_dev.jsonl
-test -f verifier/data/fever/pages.sqlite
-test -d verifier/data/fever/bm25_index
+test -f README.md || { echo "Submit from the repository root (README.md missing)" >&2; exit 2; }
+test -f verifier/data/fever/shared_task_dev.jsonl || { echo "Missing FEVER dev claims; see README Data preparation" >&2; exit 2; }
+test -f verifier/data/fever/pages.sqlite || { echo "Missing SQLite index; run retrieval/build_fever_index.sbatch" >&2; exit 2; }
+test -d verifier/data/fever/bm25_index || { echo "Missing BM25 index; run retrieval/build_fever_index.sbatch" >&2; exit 2; }
 source .venv/bin/activate
 export TOKENIZERS_PARALLELISM=false
 

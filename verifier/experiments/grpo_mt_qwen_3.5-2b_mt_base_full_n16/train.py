@@ -13,6 +13,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--run-name", required=True, help="new run label, e.g. run3")
     parser.add_argument("--output-root", help="experiments directory for run artifacts")
+    parser.add_argument("--sft", help="SFT adapter checkpoint directory used by GRPO")
     parser.add_argument("--seed", type=int, default=0)
     args = parser.parse_args()
     cmd = [sys.executable, str(SCRIPT)]
@@ -26,6 +27,8 @@ def main():
     cmd.extend(["--run-name", args.run_name, "--seed", str(args.seed)])
     if args.output_root:
         cmd.extend(["--output-root", args.output_root])
+    if args.sft:
+        cmd.extend(["--sft", args.sft])
     subprocess.run(cmd, cwd=ROOT, check=True)
 
 if __name__ == "__main__":

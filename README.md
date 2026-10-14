@@ -88,13 +88,50 @@ sacct -j <job-id> --format=JobID,State,ExitCode,Elapsed,MaxRSS
 
 Wait for the index job to complete successfully and confirm `verifier/data/fever/pages.sqlite` and `verifier/data/fever/bm25_index/` exist. The batch file refuses to overwrite an existing index.
 
+## Train the verifier on SoC
+
+The first reproducible training run is the 2B SFT configuration. It trains a LoRA adapter from FEVER examples; it does not run evaluation. GRPO configurations need an existing SFT adapter, including base-start GRPO (which reads the SFT LoRA shape). See the [experiment catalogue](#experiment-catalogue) below for the configuration names.
+
+Submit from the SoC repo root with `sbatch`, not by running `train.py` on the login node. `run_train.sbatch` uses one GPU, four CPUs, 32 GB RAM and six hours by default; check `sinfo` and adjust these Slurm requests for the cluster and configuration. Set `TRAIN_SCRIPT` to a configuration's `train.py`; the default is `sft_qwen_3.5-2b_n6000`. `RUN_NAME` identifies a fresh attempt and `SEED` defaults to 0.
+
+```bash
+cd "$HOME/rl-test"
+sbatch --export=ALL,RUN_NAME=run2,SEED=1 verifier/experiments/run_train.sbatch
+# For a specific GRPO configuration after an SFT adapter exists:
+export TRAIN_SCRIPT=verifier/experiments/grpo_qwen_3.5-2b_full_n1200/train.py
+export SFT_CHECKPOINTS=verifier/experiments/sft_qwen_3.5-2b_n6000/runs/run2/artifacts/checkpoints
+sbatch --export=ALL,RUN_NAME=run2,SEED=1 verifier/experiments/run_train.sbatch
+unset TRAIN_SCRIPT SFT_CHECKPOINTS
+```
+
+By default, a run writes `meta.json`, `logs/train_log.json`, and `checkpoints/` under `verifier/experiments/<configuration>/runs/<run-name>/artifacts/`. `checkpoints/` contains the LoRA adapter for later evaluation; the Slurm terminal log is `slurm-train-verifier-<job-id>.out` in the submission directory. The script refuses to reuse an existing artifacts directory. To put all training runs on a different shared filesystem, set `OUTPUT_ROOT` to the **experiments root** before submission; the configuration and run subdirectories are still added automatically. For example:
+
+```bash
+export OUTPUT_ROOT="$HOME/rl-training"
+sbatch --export=ALL,RUN_NAME=run2,SEED=1 verifier/experiments/run_train.sbatch
+# Then inspect: $HOME/rl-training/sft_qwen_3.5-2b_n6000/runs/run2/artifacts/
+unset OUTPUT_ROOT
+```
+
+For GRPO using an SFT adapter outside the repo, set `SFT_CHECKPOINTS` to its checkpoint directory; single-turn GRPO can also set `TRAIN_DATA` to a directory containing `labeled_prompts.jsonl`. `OUTPUT_ROOT` changes run artifacts, not the FEVER source data. Inspect a completed training run with `sacct -j <job-id> --format=JobID,State,ExitCode,Elapsed,MaxRSS` and, for the default 2B SFT example, `cat verifier/experiments/sft_qwen_3.5-2b_n6000/runs/run2/artifacts/meta.json` and `cat verifier/experiments/sft_qwen_3.5-2b_n6000/runs/run2/artifacts/logs/train_log.json`. If it fails before those files appear, read `slurm-train-verifier-<job-id>.out`.
+
 ## Evaluate the verifier on SoC
 
-Submit `verifier/evaluation/run.sbatch` with `sbatch` from the repository root, keeping `TMPDIR` exported as above (`--export=ALL` forwards it). It requests Slurm resources and invokes `verifier/evaluation/run_eval.sh` inside the job. The shell script validates inputs, calls the shared `verifier/evaluation/eval_verifier.py`, scores predictions and records the run. Both prompt settings use the same FEVER dev IDs and title retrieval. Neither evaluation script trains a model.
+Submit `verifier/evaluation/run.sbatch` with `sbatch` from the SoC repo root. It requests one GPU, four CPUs, 24 GB RAM and 90 minutes, then invokes `run_eval.sh` inside the job. Evaluation needs `shared_task_dev.jsonl`, `pages.sqlite`, `bm25_index/` and `.venv`. Run these checks first; plain `test -f` is silent even on success:
+
+```bash
+cd "$HOME/rl-test"
+for file in verifier/data/fever/shared_task_dev.jsonl verifier/data/fever/pages.sqlite .venv/bin/python; do
+  if test -f "$file"; then echo "OK $file"; else echo "MISSING $file"; fi
+done
+test -d verifier/data/fever/bm25_index && echo 'OK BM25 index' || echo 'MISSING BM25 index'
+```
+
+The job calls the shared evaluator, scores predictions and records the run. Both prompt settings use the same FEVER dev IDs and title retrieval; neither trains a model. The job sets `TMPDIR` to a directory in cluster home if none is exported, avoiding the observed `/tmp` write quota.
 
 `CHECKPOINTS` is optional: without it the evaluator loads the untrained `Qwen/Qwen3.5-2B`; with it, the evaluator loads the LoRA adapter and its base model from `adapter_config.json`. Adapter weights must be present on the cluster, since Git does not contain them. `THINKING=off` (default) uses direct JSON; `THINKING=on` asks for a concise evidence chain in the JSON `reasoning` field. This switch changes the prompt; Qwen's internal `enable_thinking` remains disabled in both modes. Choose a new `RUN_NAME` for every attempt.
 
-First run 30-claim smoke tests, then the 900-claim comparison:
+First run a 30-claim smoke test, then the 900-claim comparison. Change the run name if it already exists:
 
 ```bash
 sbatch --export=ALL,N_CLAIMS=30,RUN_NAME=smoke1 verifier/evaluation/run.sbatch
@@ -107,7 +144,24 @@ sbatch --export=ALL,N_CLAIMS=900,RUN_NAME=run1,THINKING=on verifier/evaluation/r
 sbatch --export=ALL,N_CLAIMS=30,RUN_NAME=sft-smoke1,THINKING=on,CHECKPOINTS=verifier/experiments/sft_qwen_3.5-2b_n6000/runs/run2/artifacts/checkpoints verifier/evaluation/run.sbatch
 ```
 
-Each job writes predictions, metrics, a manifest and `logs/run.log` to `verifier/evaluation/results/<condition>/<run>/`. Conditions are `direct-baseline`, `cot-baseline`, `checkpoint-direct` and `checkpoint-cot`. The script refuses to overwrite an existing run. Use `squeue -u "$USER"`, then `sacct -j <job-id>` and the run log to inspect status. Slurm also writes an ignored root-level `slurm-*.out` fallback log. No cluster jobs have been submitted from this workspace.
+Each job writes `predictions.jsonl` (one claim per line), `metrics.json` (aggregate scores), `manifest.json` (settings and paths), and `logs/run.log` under `verifier/evaluation/results/<condition>/<run>/`. Conditions are `direct-baseline`, `cot-baseline`, `checkpoint-direct` and `checkpoint-cot`. For example, read a completed direct run with:
+
+```bash
+cat verifier/evaluation/results/direct-baseline/run1/metrics.json
+head -n 1 verifier/evaluation/results/direct-baseline/run1/predictions.jsonl
+cat verifier/evaluation/results/direct-baseline/run1/manifest.json
+```
+
+To save evaluation runs elsewhere, export `RESULTS_ROOT` as the **results root** before `sbatch`; the condition and run subdirectories are added automatically. The path must be visible and writable on the compute node. For example:
+
+```bash
+export RESULTS_ROOT="$HOME/rl-evaluation"
+sbatch --export=ALL,N_CLAIMS=900,RUN_NAME=run2,THINKING=off verifier/evaluation/run.sbatch
+# Then inspect: $HOME/rl-evaluation/direct-baseline/run2/metrics.json
+unset RESULTS_ROOT
+```
+
+The script refuses to overwrite an existing run. Use `squeue -j <job-id>`, then `sacct -j <job-id> --format=JobID,State,ExitCode,Elapsed,MaxRSS` and the run log to inspect status. Slurm also writes `slurm-eval-verifier-<job-id>.out` in the submission directory; read it first if a job fails before creating its result directory. No cluster jobs have been submitted from this workspace.
 
 Archived predictions can be evaluated without a GPU or raw FEVER:
 
@@ -116,7 +170,7 @@ python -m verifier.evaluation.score_predictions verifier/evaluation/results/arch
 python -m unittest verifier.tests.test_score_predictions verifier.tests.test_eval_verifier_reasoning
 ```
 
-## Repeat a historical training configuration
+## Experiment catalogue
 
 The training configuration names are historical. `n16`, `n60` and `n1200` are requested training claim counts; `n6000` produced 5,895 usable rows. `full` means the complete reward formula, not a full dataset. `base` means GRPO starts from the base model; otherwise it starts from an SFT model or adapter. `kl` uses KL beta 0.04, while `kl05` uses 0.5. `qlora` means 4-bit QLoRA, `mt` means multi-turn search/verification, and `smoke` marks a small trial.
 
@@ -134,11 +188,6 @@ The training configuration names are historical. `n16`, `n60` and `n1200` are re
 | `grpo_qwen_3.5-2b_full_n1200_kl05` | Same filtered setup with KL beta 0.5 |
 | `grpo_mt_qwen_3.5-2b_mt_base_full_n16` | Multi-turn GRPO from base with search/verify actions, 16-claim trial |
 
-Each SFT or GRPO configuration has a `train.py` launcher reconstructed from its saved `runs/run1/artifacts/meta.json`. It creates a new run and stores metadata, structured `train_log.json`, and checkpoints with that run. The checkpoint weights are ignored by Git. SFT needs raw FEVER and the index; GRPO additionally needs the SFT adapter weights restored or retrained.
-
-```bash
-python verifier/experiments/sft_qwen_3.5-2b_n6000/train.py --run-name run2 --seed 1
-python verifier/experiments/grpo_qwen_3.5-2b_full_n1200_kl/train.py --run-name run3 --seed 2
-```
+Each SFT or GRPO configuration has a `train.py` launcher reconstructed from its saved `runs/run1/artifacts/meta.json`. Its checkpoint weights are ignored by Git. SFT needs raw FEVER and the index; GRPO additionally needs the SFT adapter weights restored or retrained. See [Train the verifier on SoC](#train-the-verifier-on-soc) for commands and output locations.
 
 The historical JSONL predictions are in `verifier/evaluation/results/archive/`; new results belong in a named evaluation run. Preserve seeds, input IDs, retrieval condition and resource use when comparing runs.

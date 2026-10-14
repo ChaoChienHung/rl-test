@@ -8,7 +8,7 @@
 
 set -euo pipefail
 cd "${SLURM_SUBMIT_DIR:?submit from the repo root}"
-test -f README.md
+test -f README.md || { echo "Submit from the repository root (README.md missing)" >&2; exit 2; }
 source .venv/bin/activate
 export TMPDIR="${TMPDIR:-$HOME/.pip-tmp}"
 mkdir -p "$TMPDIR"
@@ -26,6 +26,18 @@ seed="${SEED:-0}"
 args=(--run-name "$run_name" --seed "$seed")
 if [[ -n "${OUTPUT_ROOT:-}" ]]; then
   args+=(--output-root "$OUTPUT_ROOT")
+fi
+if [[ -n "${SFT_CHECKPOINTS:-}" ]]; then
+  case "$train_script" in
+    verifier/experiments/grpo_*/train.py) args+=(--sft "$SFT_CHECKPOINTS") ;;
+    *) echo "SFT_CHECKPOINTS applies only to GRPO training" >&2; exit 2 ;;
+  esac
+fi
+if [[ -n "${TRAIN_DATA:-}" ]]; then
+  case "$train_script" in
+    verifier/experiments/grpo_qwen_*/train.py) args+=(--data "$TRAIN_DATA") ;;
+    *) echo "TRAIN_DATA applies only to single-turn GRPO training" >&2; exit 2 ;;
+  esac
 fi
 echo "job=$SLURM_JOB_ID commit=$(git rev-parse HEAD) script=$train_script run=$run_name seed=$seed output_root=${OUTPUT_ROOT:-verifier/experiments}"
 srun python "$train_script" "${args[@]}"
