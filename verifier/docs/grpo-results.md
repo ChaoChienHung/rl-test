@@ -59,7 +59,7 @@ pipeline.
   the model becomes certain. Stated confidence stays at 1.0 throughout, so
   its ECE equals 1 minus accuracy.
 - **Why the first run barely moved.** `disagreement.py` sampled the SFT
-  model 8 times per training claim (`verifier/data/train/grpo/disagreement_Qwen_Qwen3.5-2B_n6000_n1200.jsonl`).
+  model 8 times per training claim (`verifier/data/train/grpo/disagreement_fever-oracle-full_n1200.jsonl`).
   77% of claims had some reward spread and 69% had disagreeing verdicts,
   but during the unfiltered run about 88% of groups had zero spread. As
   the model sharpened, its 8 samples converged and GRPO lost its signal.
@@ -75,13 +75,13 @@ pipeline.
 
 | Set (`verifier/data/train/grpo/...`) | Built by | What it is |
 |---|---|---|
-| `titles_n1200` | `build_grpo_data.py` | The same 1,200 claims with title-match retrieval instead of gold pages, so GRPO practises on what the search loop will hand the verifier |
-| `nei_page_n1200` | `build_nei_ablation.py --mode page` | NEI by construction: SUPPORTED/REFUTED claims with every gold page removed |
-| `nei_sentence_n1200` | `build_nei_ablation.py --mode sentence` | Gold pages kept, annotated evidence lines removed. Noisier, because FEVER annotation is incomplete |
+| `fever-titles-1200` | `build_grpo_data.py` | The same 1,200 claims with title-match retrieval instead of gold pages, so GRPO practises on what the search loop will hand the verifier |
+| `fever-nei-pages-removed-1200` | `build_nei_ablation.py --mode page` | NEI by construction: SUPPORTED/REFUTED claims with every gold page removed |
+| `fever-nei-sentences-removed-1200` | `build_nei_ablation.py --mode sentence` | Gold pages kept, annotated evidence lines removed. Noisier, because FEVER annotation is incomplete |
 
 `probe_nei_set.py` ran the 6,000-claim SFT adapter on 300 claims of each
-NEI set (`verifier/data/train/grpo/nei_page_n1200/probe_Qwen_Qwen3.5-2B_n6000.jsonl`
-and the corresponding `nei_sentence_n1200` file). It answered NEI on 58% of the
+NEI set (`verifier/evaluation/results/archive/probe_sft_fever-nei-pages-removed-1200.jsonl`
+and `verifier/evaluation/results/archive/probe_sft_fever-nei-sentences-removed-1200.jsonl`). It answered NEI on 58% of the
 page set: (77 + 96) / 300. On the sentence set it answered NEI on 52%:
 (73 + 82) / 300. So the sets are not trivially easy for the current
 model, and both have room to teach abstention.

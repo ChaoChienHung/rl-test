@@ -17,7 +17,7 @@ sentence: the gold pages stay but every annotated evidence line is removed.
     page can still settle the claim.
 
 Claims in the SFT probe's 6,000 are excluded. Writes
-<out>/train.jsonl in the SFT probe's schema (id, gold, prompt, completion)
+<out>/labeled_prompts.jsonl in the SFT probe's schema (id, gold, prompt, completion)
 plus orig_label, n_shown and n_removed, so sft_probe --subset-of and
 grpo_verifier --data read it as is.
 """

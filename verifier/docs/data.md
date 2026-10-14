@@ -55,15 +55,15 @@ verifier/data/
   fever/          train.jsonl, shared_task_dev.jsonl, wiki-pages/, bm25_index/, pages.sqlite   (not in git)
   scifact/data/   claims_{train,dev,test}.jsonl, corpus.jsonl, cross_validation/               (not in git)
   averitec/       train.json, dev.json                                                         (not in git)
-  train/sft/      historical SFT prompt/completion JSONL                                   (in git)
-  train/grpo/     GRPO prompt sets and disagreement samples                                 (in git)
+  train/sft/      model-independent SFT labeled_prompts.jsonl sets                         (in git)
+  train/grpo/     GRPO labeled_prompts.jsonl sets and disagreement samples                 (in git)
   eval/           frozen FEVER dev claim IDs                                                (in git)
   traces/         archived agent search/verify action histories                             (in git)
 verifier/experiments/<configuration>/runs/<run>/artifacts/
   meta.json, logs/train_log.json, checkpoints/adapter_config.json, optional rollouts.jsonl (in git)
   checkpoints/*.safetensors and checkpoint-*/                                             (not in git)
 verifier/evaluation/results/archive/        archived per-claim evaluation outputs                           (in git)
-verifier/evaluation/results/<version>/<run>/  fresh predictions, metrics and manifest                      (not in git)
+verifier/evaluation/results/<condition>/<run>/  fresh predictions, metrics, manifest and logs                (not in git)
 ```
 
 ## 4. What is left out of git, and how to get it back
@@ -73,7 +73,7 @@ verifier/evaluation/results/<version>/<run>/  fresh predictions, metrics and man
 | LoRA adapters (`adapter_model.safetensors`) | 65 MB each | Rerun `verifier/experiments/<config>/train.py --run-name <new-run>` after downloading raw data and restoring any required SFT adapter; settings come from the historical metadata |
 | Trainer checkpoints (`checkpoint-*/`) | 220 MB each | Written during training; only needed to resume a run |
 | Tokenizer and chat template copies, `training_args.bin`, TRL model cards | 20 MB per run | Written next to every adapter; identical to the base model's |
-| `verifier/data/train/sft/Qwen_Qwen3.5-4B_n6000_qlora/train.jsonl` | 30 MB | Byte-identical copy of `verifier/data/train/sft/Qwen_Qwen3.5-2B_n6000/train.jsonl` |
+| Duplicate 4B SFT training JSONL | 30 MB | The same model-independent `verifier/data/train/sft/fever-oracle-full/labeled_prompts.jsonl` is shared by the 2B and 4B configurations |
 
 Paths inside historical `meta.json` files are absolute paths from the
 machine that ran them (`/mnt/c/...` under WSL2). They describe those old
@@ -85,4 +85,4 @@ The historical terminal `.log` files were removed because their useful
 results are in the per-claim JSONL, `meta.json`, structured `train_log.json`
 or the experiment documents. Future raw terminal logs under `verifier/data/` are
 ignored; new SoC job logs belong under their experiment run's
-`artifacts/logs/` and are also ignored.
+`artifacts/logs/` for training, or under `verifier/evaluation/results/<condition>/<run>/logs/` for evaluation; terminal logs are ignored.

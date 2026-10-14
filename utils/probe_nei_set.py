@@ -1,10 +1,10 @@
 """What a trained verifier says on an evidence-removed NEI set.
 
-    python -m utils.probe_nei_set --data verifier/data/train/grpo/nei_page_n1200 --adapter <dir> --n 300
+    python -m utils.probe_nei_set --data verifier/data/train/grpo/fever-nei-pages-removed-1200 --adapter <dir> --n 300
 
 A model that answers NEI on most of them treats the set as easy; one that
 still answers SUPPORTED/REFUTED is either reading leftover evidence or
-guessing from the claim. Writes <data>/probe_<adapter>.jsonl.
+guessing from the claim. Writes under verifier/evaluation/results/manual/.
 """
 
 import argparse

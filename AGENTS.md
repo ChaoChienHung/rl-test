@@ -5,7 +5,7 @@ This is the team RL branch for a fact verifier. Read `README.md` for the directo
 ## Directory roles
 
 - `core/` has shared reward definitions and interfaces. `retrieval/` builds and queries the FEVER index. `agent/` has the search/verify loop and controller scaffold. `utils/` has data preparation and shared experiment helpers. Do not recreate a `src/` wrapper.
-- `verifier/model.py` contains reusable verifier inference, prompting and scoring logic. `verifier/evaluation/` contains the command-line evaluators, untrained prompt baselines and `results/`. Archived claim-level predictions are in `verifier/evaluation/results/archive/`; new outputs go under `results/<configuration>/<run>/`.
+- `verifier/model.py` contains reusable verifier inference, prompting and scoring logic. `verifier/evaluation/` contains the shared evaluator, Slurm entry point and `results/`. Submit `run.sbatch`; it calls `run_eval.sh`. Archived claim-level predictions are in `verifier/evaluation/results/archive/`; new outputs go under `results/<condition>/<run>/`.
 - `verifier/data/train/` contains committed SFT/GRPO examples; `verifier/data/eval/` has frozen claim IDs. Raw FEVER and the BM25/SQLite index must be downloaded or built locally; follow `verifier/docs/data.md`.
 - Each training configuration lives under `verifier/experiments/<config>/` and each attempt under `runs/<run>/`. Keep its metadata, checkpoint files and logs under `runs/<run>/artifacts/`. Model weights and terminal `.log` files are ignored. Use a new run name; never overwrite an existing run.
 - `verifier/docs/` records methods and historical results. `verifier/TODO.md` tracks unfinished work. `verifier/INSIGHT.md` is local and Git-ignored; do not commit it or treat it as a shared source.

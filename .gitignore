@@ -8,7 +8,7 @@ verifier/data/baseline_runs/
 verifier/evaluation/results/*/*/
 verifier/evaluation/results/manual/
 verifier/experiments/*/runs/*/artifacts/logs/*.log
-verifier/evaluation/baselines/*/runs/*/artifacts/logs/*.log
+verifier/evaluation/results/*/*/logs/*.log
 verifier/data/**/*.log
 verifier/INSIGHT.md
 .env
@@ -35,5 +35,3 @@ verifier/experiments/**/artifacts/checkpoints/tokenizer_config.json
 verifier/experiments/**/artifacts/checkpoints/chat_template.jinja
 verifier/experiments/**/artifacts/checkpoints/training_args.bin
 verifier/experiments/**/artifacts/checkpoints/README.md
-# Byte-identical copy of train/sft/Qwen_Qwen3.5-2B_n6000/train.jsonl
-verifier/data/train/sft/Qwen_Qwen3.5-4B_n6000_qlora/train.jsonl

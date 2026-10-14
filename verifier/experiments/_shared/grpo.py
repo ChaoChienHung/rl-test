@@ -86,7 +86,7 @@ if __name__ == "__main__":
     ap.add_argument("--model", default=LOCAL_MODEL)
     ap.add_argument("--sft", default=DEFAULT_SFT, help="SFT probe adapter dir to start from")
     ap.add_argument("--data", default=None,
-                    help="dir with train.jsonl prompts; default the SFT probe's (gold in context), "
+                    help="dir with labeled_prompts.jsonl prompts; default the SFT probe's (gold in context), "
                          "or build_grpo_data.py's retrieved-evidence set")
     ap.add_argument("--reward", default="full", choices=sorted(R.ABLATIONS))
     ap.add_argument("--n-train", type=int, default=1200, help="prompts, one pass")

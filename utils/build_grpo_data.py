@@ -8,14 +8,14 @@ This builds the same claims with the verifier evaluator's "titles" retrieval, so
 practises on the evidence the loop will actually hand it.
 
     python -m utils.build_grpo_data                      # same 1200 claims as grpo_verifier.py
-    python verifier/experiments/_shared/grpo.py --data verifier/data/train/grpo/titles_n1200 ...
+    python verifier/experiments/_shared/grpo.py --data verifier/data/train/grpo/fever-titles-1200 ...
 
 Labels stay FEVER's even when the gold page was not retrieved: that is how
 eval_verifier scores the 900 dev claims, and reward.py already prices the choice
 (abstaining costs 1.0, waving a false claim through 1.5). gold_ids are the
 E-ids of a complete gold set when one is shown, else [].
 
-Writes <out>/train.jsonl in the SFT probe's schema (id, gold, prompt,
+Writes <out>/labeled_prompts.jsonl in the SFT probe's schema (id, gold, prompt,
 completion) plus gold_in_context, so grpo_verifier.load_rows reads it as is.
 """
 

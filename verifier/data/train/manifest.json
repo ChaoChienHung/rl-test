@@ -1,15 +1,42 @@
 {
-  "note": "Prepared training data is committed under verifier/data/train; historical run metadata preserves its original paths. Raw FEVER train data is downloaded to verifier/data/fever/train.jsonl.",
+  "note": "Prepared, model-independent prompts are committed here. Historical experiment metadata retains original paths. Raw FEVER train claims must be downloaded to verifier/data/fever/train.jsonl.",
+  "schema": "Each labeled_prompts.jsonl row includes id, gold, prompt and completion; extra fields vary by set.",
   "sets": [
     {
-      "name": "sft-2b-6000",
-      "path": "sft/Qwen_Qwen3.5-2B_n6000/train.jsonl",
-      "observed_rows": 5895
+      "name": "sft-oracle-full",
+      "path": "sft/fever-oracle-full/labeled_prompts.jsonl",
+      "observed_rows": 5895,
+      "description": "Gold-page evidence prompts for 2B/4B SFT; 6000 requested, 5895 usable."
     },
     {
-      "name": "grpo-titles-1200",
-      "path": "grpo/titles_n1200",
-      "description": "Prepared GRPO data; inspect run metadata for exact file and prompt conditions."
+      "name": "sft-oracle-smoke-60",
+      "path": "sft/fever-oracle-smoke-60/labeled_prompts.jsonl",
+      "observed_rows": 60,
+      "description": "60-claim SFT smoke set shared by 2B and 4B."
+    },
+    {
+      "name": "sft-oracle-matched-grpo-1200",
+      "path": "sft/fever-oracle-matched-grpo-1200/labeled_prompts.jsonl",
+      "observed_rows": 1200,
+      "description": "1200-claim SFT subset matched to the GRPO comparison."
+    },
+    {
+      "name": "grpo-fever-titles-1200",
+      "path": "grpo/fever-titles-1200/labeled_prompts.jsonl",
+      "observed_rows": 1200,
+      "description": "Matched FEVER claims with title-match retrieval, not guaranteed gold in context."
+    },
+    {
+      "name": "grpo-fever-nei-pages-removed-1200",
+      "path": "grpo/fever-nei-pages-removed-1200/labeled_prompts.jsonl",
+      "observed_rows": 1200,
+      "description": "Supported/refuted source claims with all gold evidence pages removed; NEI target."
+    },
+    {
+      "name": "grpo-fever-nei-sentences-removed-1200",
+      "path": "grpo/fever-nei-sentences-removed-1200/labeled_prompts.jsonl",
+      "observed_rows": 1200,
+      "description": "Supported/refuted source claims with annotated evidence sentences removed; NEI target, potentially noisy."
     }
   ]
 }

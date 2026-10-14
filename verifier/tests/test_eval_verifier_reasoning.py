@@ -9,8 +9,8 @@ class ReasoningScoreTest(unittest.TestCase):
     def test_experiment_adapter_label_keeps_run_identity(self):
         path = "../experiments/sft_qwen_3.5-2b_n6000/runs/run2/artifacts/checkpoints"
         self.assertEqual(adapter_label(path), "sft_qwen_3.5-2b_n6000_run2")
-        self.assertEqual(adapter_label("verifier/data/train/sft/Qwen_Qwen3.5-2B_n6000"),
-                         "Qwen_Qwen3.5-2B_n6000")
+        self.assertEqual(adapter_label("verifier/data/train/sft/fever-oracle-full"),
+                         "fever-oracle-full")
 
     def test_reasoning_output_keeps_existing_verdict_metrics(self):
         claim = {"id": 7, "claim": "Ada wrote a book.", "label": "SUPPORTS",

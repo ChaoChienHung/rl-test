@@ -5,7 +5,7 @@ Current work is verifier evaluation on the `rl` branch. These tasks replace the 
 ## P0 — comparable verifier evaluation (RL-1, AG-3)
 
 - [ ] Freeze disjoint train, prompt-development, calibration and holdout claim IDs, then publish the split manifest and leakage check. The committed 5,895-row SFT train set and matched 1,200-row subset have zero ID overlap with the archived 900 dev claims; the remaining splits are not frozen.
-- [ ] Run the direct-JSON and zero-shot evidence-chain scripts on the same FEVER dev IDs and title retrieval: 30-claim smoke tests, then 900 claims. Store predictions, metrics and manifests under `verifier/evaluation/results/<version>/<run>/`; store terminal logs under `verifier/evaluation/baselines/<version>/runs/<run>/artifacts/logs/`.
+- [ ] Run direct JSON (`THINKING=off`) and zero-shot evidence-chain (`THINKING=on`) evaluation on the same FEVER dev IDs and title retrieval: 30-claim smoke tests, then 900 claims. Submit `verifier/evaluation/run.sbatch`; each run stores predictions, metrics, manifest and logs under `verifier/evaluation/results/<condition>/<run>/`.
 - [ ] Record per claim: gold, verdict, evidence IDs, retrieval condition, reasoning if present, stated confidence, verdict-token probability, tokens and latency. Check evidence citations by hand; a valid E-ID alone does not prove support.
 - [ ] Report accuracy, FEVER score, evidence F1, label recall, Brier, ECE, risk–coverage and evidence-in-context strata with one evaluator. `verifier/evaluation/score_predictions.py` already replays the archived outputs.
 - [ ] Reproduce the SFT baseline with the original adapter or retrain it; the LoRA weights are not committed.

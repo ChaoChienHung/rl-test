@@ -109,7 +109,7 @@ sentence cut); 1 example over the 4,096-token limit. Training ran at about
 from 0.23 to about 0.05 by step 90 and stayed flat after that.
 
 4B rows run 2026-10-03, same WSL2 setup, QLoRA (nf4, double quant), trained
-on the same 5,895 examples as 2B (`train.jsonl` copied over). About 7 s per
+on the same 5,895 examples as 2B (same prepared prompts reused). About 7 s per
 step, 2.35x the 2B time; peak 4.98 GB, below 2B's bf16 5.18 GB. Loss fell
 from 0.14 to about 0.04. Eval loads the base in bf16 and merges the adapter,
 so the adapter runs on slightly different weights than it was trained on.
