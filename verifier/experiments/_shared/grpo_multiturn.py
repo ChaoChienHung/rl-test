@@ -237,10 +237,11 @@ if __name__ == "__main__":
     ap.add_argument("--seed", type=int, default=SEED)
     ap.add_argument("--tag", default="")
     ap.add_argument("--run-name", default=None, help="repeat label under verifier/experiments/<configuration>/runs/")
+    ap.add_argument("--output-root", default=None, help="experiments directory for run artifacts (default: verifier/experiments)")
     a = ap.parse_args()
 
     name = f"{a.model.replace('/', '_')}_mt_{a.init}_{a.reward}_n{a.n_train}" + (f"_{a.tag}" if a.tag else "")
-    artifacts = artifacts_dir("grpo_mt", name, a.seed, a.run_name)
+    artifacts = artifacts_dir("grpo_mt", name, a.seed, a.run_name, a.output_root)
     if artifacts.exists():
         raise SystemExit(f"run already exists: {artifacts}; use --run-name for a new run")
     out = artifacts / "checkpoints"

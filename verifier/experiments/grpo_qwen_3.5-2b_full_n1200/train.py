@@ -12,6 +12,7 @@ PARAMS = {'prompts_per_step': 2, 'model': 'Qwen/Qwen3.5-2B', 'max_steps': 0, 'n_
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--run-name", required=True, help="new run label, e.g. run3")
+    parser.add_argument("--output-root", help="experiments directory for run artifacts")
     parser.add_argument("--seed", type=int, default=0)
     args = parser.parse_args()
     cmd = [sys.executable, str(SCRIPT)]
@@ -23,6 +24,8 @@ def main():
             if key == "subset_of": value = str(ROOT / value)
             cmd.extend([flag, str(value)])
     cmd.extend(["--run-name", args.run_name, "--seed", str(args.seed)])
+    if args.output_root:
+        cmd.extend(["--output-root", args.output_root])
     subprocess.run(cmd, cwd=ROOT, check=True)
 
 if __name__ == "__main__":

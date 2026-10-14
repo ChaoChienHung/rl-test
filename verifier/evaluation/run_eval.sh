@@ -10,6 +10,8 @@ case "$thinking" in
 esac
 
 cd "${SLURM_SUBMIT_DIR:?submit from the repo root}"
+export TMPDIR="${TMPDIR:-$HOME/.pip-tmp}"
+mkdir -p "$TMPDIR"
 test -f README.md
 test -f verifier/data/fever/shared_task_dev.jsonl
 test -f verifier/data/fever/pages.sqlite
@@ -39,10 +41,11 @@ with open(sys.argv[1], encoding='utf-8') as f:
 PY
 )"
   adapter_args=(--adapter "$checkpoints")
-  condition="checkpoint-${style}"
+  condition="checkpoint-${condition%-baseline}"
 fi
 
-result_dir="verifier/evaluation/results/$condition/$run_name"
+results_root="${RESULTS_ROOT:-verifier/evaluation/results}"
+result_dir="${results_root%/}/$condition/$run_name"
 if [[ -e "$result_dir" ]]; then
   echo "Run name already exists: $result_dir (choose another RUN_NAME)" >&2
   exit 2

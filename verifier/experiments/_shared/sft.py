@@ -129,6 +129,7 @@ if __name__ == "__main__":
     ap.add_argument("--rank", type=int, default=16)
     ap.add_argument("--seed", type=int, default=SEED)
     ap.add_argument("--run-name", default=None, help="repeat label under verifier/experiments/<configuration>/runs/ (default run1 for seed 0)")
+    ap.add_argument("--output-root", default=None, help="experiments directory for run artifacts (default: verifier/experiments)")
     ap.add_argument("--subset-of", default=None,
                     help="SFT data dir: train on the first n-train of its examples after a seeded shuffle, "
                          "the same claims grpo_verifier.load_rows picks (a matched SFT-vs-GRPO run)")
@@ -167,7 +168,7 @@ if __name__ == "__main__":
             for r in rows:
                 f.write(json.dumps(r, ensure_ascii=False) + "\n")
 
-    artifacts = artifacts_dir("sft", name, a.seed, a.run_name)
+    artifacts = artifacts_dir("sft", name, a.seed, a.run_name, a.output_root)
     if artifacts.exists():
         raise SystemExit(f"run already exists: {artifacts}; use --run-name for a new run")
     checkpoint_dir = artifacts / "checkpoints"

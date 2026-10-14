@@ -101,11 +101,12 @@ if __name__ == "__main__":
     ap.add_argument("--filter", action="store_true", help="only claims with reward spread (disagreement.py)")
     ap.add_argument("--tag", default="")
     ap.add_argument("--run-name", default=None, help="repeat label under verifier/experiments/<configuration>/runs/")
+    ap.add_argument("--output-root", default=None, help="experiments directory for run artifacts (default: verifier/experiments)")
     a = ap.parse_args()
     a.data = a.data or DEFAULT_SFT_DATA
 
     name = f"{a.model.replace('/', '_')}_{'base_' if a.init == 'base' else ''}{a.reward}_n{a.n_train}" + (f"_{a.tag}" if a.tag else "")
-    artifacts = artifacts_dir("grpo", name, a.seed, a.run_name)
+    artifacts = artifacts_dir("grpo", name, a.seed, a.run_name, a.output_root)
     if artifacts.exists():
         raise SystemExit(f"run already exists: {artifacts}; use --run-name for a new run")
     out = artifacts / "checkpoints"

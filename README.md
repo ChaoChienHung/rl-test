@@ -32,7 +32,10 @@ A committed SFT `labeled_prompts.jsonl` row has a claim/evidence `prompt` and a 
 
 Submit jobs from an SoC Slurm login node (`xlogin.comp.nus.edu.sg`), not `stu2`. Run commands from the repository root after pushing this branch and pulling it on SoC. Check the [SoC Slurm guide](https://dochub.comp.nus.edu.sg/cf/guides/compute-cluster/slurm) and [cluster information](https://dochub.comp.nus.edu.sg/cf/guides/compute-cluster/slurm-info) on the cluster for current partitions, GPU types and limits; resource lines in the supplied batch files may need adjustment.
 
+Run the shell commands below **after SSHing into SoC**, where `$HOME` refers to your cluster home (for this account, `/home/c/chaoch`). On the Mac, `$HOME` refers to the Mac home (for example, `/Users/ludwigchao`); its `.venv`, downloaded data and temporary directory are separate. The Slurm job must be able to see the cluster paths used for the repo, data and `TMPDIR`.
+
 ```bash
+cd "$HOME/rl-test"
 git fetch origin
 git switch rl
 git pull --ff-only origin rl
@@ -44,9 +47,11 @@ squeue -u "$USER"
 
 The repository commits prepared SFT/GRPO examples and archived predictions, but not raw FEVER, its retrieval index, model weights or the Python environment. Prepare these once on a filesystem visible to both the login and compute nodes. The raw FEVER files plus index need roughly 21 GB; model downloads and Python packages need additional space. Check your quota before starting. Creating `.venv` inside a Slurm job at the same repo path does not avoid a home-directory quota; a node-local temporary environment would disappear after the job.
 
-From the repository root, create the environment and install dependencies. The batch files activate this existing `.venv` but do not create it. If installation reports `Disk quota exceeded`, stop and resolve the storage location before submitting an index or evaluation job; `df -h` shows filesystem-wide free space, which may differ from your account quota.
+From the repository root, create the environment and install dependencies. The batch files activate this existing `.venv` but do not create it. On SoC `xlogin1`, a direct write test found that `/tmp` hit a write quota after about 10 MiB even though `df -h /tmp` showed free filesystem space. Set `TMPDIR` to a writable directory in the cluster home before installing; keep it exported when submitting Slurm jobs. If that directory also reports `Disk quota exceeded`, check its quota instead of deleting data based on `df` alone.
 
 ```bash
+mkdir -p "$HOME/.pip-tmp"
+export TMPDIR="$HOME/.pip-tmp"
 python3 -m venv .venv
 source .venv/bin/activate
 # Install a CUDA-compatible PyTorch build for the cluster GPU, then:
@@ -85,7 +90,7 @@ Wait for the index job to complete successfully and confirm `verifier/data/fever
 
 ## Evaluate the verifier on SoC
 
-Submit `verifier/evaluation/run.sbatch` with `sbatch` from the repository root. It requests Slurm resources and invokes `verifier/evaluation/run_eval.sh` inside the job. The shell script validates inputs, calls the shared `verifier/evaluation/eval_verifier.py`, scores predictions and records the run. Both prompt settings use the same FEVER dev IDs and title retrieval. Neither evaluation script trains a model.
+Submit `verifier/evaluation/run.sbatch` with `sbatch` from the repository root, keeping `TMPDIR` exported as above (`--export=ALL` forwards it). It requests Slurm resources and invokes `verifier/evaluation/run_eval.sh` inside the job. The shell script validates inputs, calls the shared `verifier/evaluation/eval_verifier.py`, scores predictions and records the run. Both prompt settings use the same FEVER dev IDs and title retrieval. Neither evaluation script trains a model.
 
 `CHECKPOINTS` is optional: without it the evaluator loads the untrained `Qwen/Qwen3.5-2B`; with it, the evaluator loads the LoRA adapter and its base model from `adapter_config.json`. Adapter weights must be present on the cluster, since Git does not contain them. `THINKING=off` (default) uses direct JSON; `THINKING=on` asks for a concise evidence chain in the JSON `reasoning` field. This switch changes the prompt; Qwen's internal `enable_thinking` remains disabled in both modes. Choose a new `RUN_NAME` for every attempt.
 
