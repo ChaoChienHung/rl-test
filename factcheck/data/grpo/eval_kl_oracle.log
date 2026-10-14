@@ -1,72 +1,0 @@
-Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
-0 done, 900 to go -> /mnt/c/Users/ky/Desktop/rl-test/factcheck/src/../data/fever/../stage0/local+Qwen_Qwen3.5-2B_full_n1200_kl_n900_oracle.jsonl
-Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]Loading weights:   0%|          | 1/320 [00:00<00:39,  8.11it/s]Loading weights:  24%|██▍       | 78/320 [00:00<00:00, 416.36it/s]Loading weights:  46%|████▋     | 148/320 [00:00<00:00, 532.90it/s]Loading weights:  70%|██████▉   | 223/320 [00:00<00:00, 613.19it/s]Loading weights:  94%|█████████▍| 301/320 [00:00<00:00, 668.15it/s]Loading weights: 100%|██████████| 320/320 [00:00<00:00, 575.86it/s]
-[transformers] `causal_conv1d_fn` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
-[transformers] `causal_conv1d_update` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
-  20/900  14s
-  40/900  20s
-  60/900  26s
-  80/900  33s
-  100/900  39s
-  120/900  46s
-  140/900  52s
-  160/900  58s
-  180/900  65s
-  200/900  72s
-  220/900  79s
-  240/900  85s
-  260/900  91s
-  280/900  97s
-  300/900  105s
-  320/900  112s
-  340/900  118s
-  360/900  125s
-  380/900  131s
-  400/900  138s
-  420/900  145s
-  440/900  151s
-  460/900  157s
-  480/900  164s
-  500/900  170s
-  520/900  177s
-  540/900  183s
-  560/900  190s
-  580/900  196s
-  600/900  203s
-  620/900  209s
-  640/900  215s
-  660/900  223s
-  680/900  229s
-  700/900  236s
-  720/900  242s
-  740/900  249s
-  760/900  255s
-  780/900  262s
-  800/900  268s
-  820/900  274s
-  840/900  280s
-  860/900  286s
-  880/900  293s
-  900/900  299s
-
-== Qwen/Qwen3.5-2B+Qwen_Qwen3.5-2B_full_n1200_kl  (900 claims, local+Qwen_Qwen3.5-2B_full_n1200_kl_n900_oracle.jsonl) ==
-  format adherence      1.000   json=1.00  verdict=1.00  evidence=1.00  confidence=1.00
-  label accuracy        0.771
-  FEVER score           0.694
-  evidence F1 (non-NEI) 0.713
-  recall SUPPORTED        0.817  (n=300)
-  recall REFUTED          0.860  (n=300)
-  recall NOT_ENOUGH_INFO  0.637  (n=300)
-  ECE stated_conf       0.229   (available 1.00)
-      [0.9,1.0)  n=900  conf=1.00  acc=0.77
-  ECE token_conf        0.209   (available 1.00)
-      [0.4,0.5)  n=1    conf=0.49  acc=1.00
-      [0.5,0.6)  n=12   conf=0.55  acc=0.25
-      [0.6,0.7)  n=13   conf=0.65  acc=0.46
-      [0.7,0.8)  n=16   conf=0.76  acc=0.38
-      [0.8,0.9)  n=13   conf=0.86  acc=0.69
-      [0.9,1.0)  n=845  conf=1.00  acc=0.79
-  non-NEI, gold in  context: n=586  acc=0.843  FEVER=0.741
-  non-NEI, gold NOT in context: n=14   acc=0.643  FEVER=0.000
-  tokens in/out         1387 / 25 per claim
-  providers             {'local': 900}

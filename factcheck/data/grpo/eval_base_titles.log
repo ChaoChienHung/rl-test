@@ -1,71 +1,0 @@
-Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
-0 done, 900 to go -> /mnt/c/Users/ky/Desktop/rl-test/factcheck/src/../data/fever/../stage0/local+Qwen_Qwen3.5-2B_base_full_n1200_n900_titles.jsonl
-Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]Loading weights:   0%|          | 1/320 [00:01<05:53,  1.11s/it]Loading weights:  19%|█▉        | 61/320 [00:01<00:03, 68.61it/s]Loading weights:  29%|██▉       | 94/320 [00:01<00:02, 96.43it/s]Loading weights:  38%|███▊      | 122/320 [00:01<00:02, 96.69it/s]Loading weights:  45%|████▍     | 143/320 [00:01<00:01, 94.40it/s]Loading weights:  50%|█████     | 160/320 [00:02<00:01, 87.87it/s]Loading weights:  54%|█████▍    | 174/320 [00:02<00:01, 87.27it/s]Loading weights:  58%|█████▊    | 186/320 [00:02<00:01, 91.20it/s]Loading weights:  62%|██████▏   | 199/320 [00:02<00:01, 95.04it/s]Loading weights:  66%|██████▌   | 211/320 [00:02<00:01, 84.87it/s]Loading weights:  69%|██████▉   | 221/320 [00:02<00:01, 77.67it/s]Loading weights:  74%|███████▍  | 237/320 [00:03<00:00, 91.44it/s]Loading weights:  78%|███████▊  | 248/320 [00:03<00:00, 84.64it/s]Loading weights:  81%|████████  | 258/320 [00:03<00:00, 70.42it/s]Loading weights:  83%|████████▎ | 266/320 [00:03<00:00, 71.41it/s]Loading weights:  87%|████████▋ | 277/320 [00:03<00:00, 79.11it/s]Loading weights:  90%|████████▉ | 287/320 [00:03<00:00, 82.43it/s]Loading weights:  92%|█████████▎| 296/320 [00:03<00:00, 75.33it/s]Loading weights:  95%|█████████▌| 305/320 [00:03<00:00, 78.37it/s]Loading weights:  98%|█████████▊| 314/320 [00:04<00:00, 68.79it/s]Loading weights: 100%|██████████| 320/320 [00:04<00:00, 76.81it/s]
-[transformers] `causal_conv1d_fn` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
-[transformers] `causal_conv1d_update` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
-  20/900  22s
-  40/900  29s
-  60/900  36s
-  80/900  42s
-  100/900  49s
-  120/900  56s
-  140/900  63s
-  160/900  70s
-  180/900  76s
-  200/900  84s
-  220/900  91s
-  240/900  97s
-  260/900  104s
-  280/900  110s
-  300/900  118s
-  320/900  125s
-  340/900  133s
-  360/900  139s
-  380/900  146s
-  400/900  153s
-  420/900  161s
-  440/900  167s
-  460/900  174s
-  480/900  181s
-  500/900  188s
-  520/900  195s
-  540/900  202s
-  560/900  209s
-  580/900  216s
-  600/900  223s
-  620/900  230s
-  640/900  237s
-  660/900  245s
-  680/900  251s
-  700/900  258s
-  720/900  265s
-  740/900  272s
-  760/900  279s
-  780/900  286s
-  800/900  292s
-  820/900  299s
-  840/900  306s
-  860/900  312s
-  880/900  319s
-  900/900  326s
-
-== Qwen/Qwen3.5-2B+Qwen_Qwen3.5-2B_base_full_n1200  (900 claims, local+Qwen_Qwen3.5-2B_base_full_n1200_n900_titles.jsonl) ==
-  format adherence      1.000   json=1.00  verdict=1.00  evidence=1.00  confidence=1.00
-  label accuracy        0.688
-  FEVER score           0.528
-  evidence F1 (non-NEI) 0.540
-  recall SUPPORTED        0.717  (n=300)
-  recall REFUTED          0.830  (n=300)
-  recall NOT_ENOUGH_INFO  0.517  (n=300)
-  ECE stated_conf       0.282   (available 1.00)
-      [0.9,1.0)  n=900  conf=0.97  acc=0.69
-  ECE token_conf        0.283   (available 1.00)
-      [0.5,0.6)  n=13   conf=0.54  acc=0.38
-      [0.6,0.7)  n=15   conf=0.66  acc=0.40
-      [0.7,0.8)  n=26   conf=0.75  acc=0.42
-      [0.8,0.9)  n=28   conf=0.85  acc=0.36
-      [0.9,1.0)  n=818  conf=0.99  acc=0.72
-  non-NEI, gold in  context: n=517  acc=0.799  FEVER=0.619
-  non-NEI, gold NOT in context: n=83   acc=0.614  FEVER=0.000
-  tokens in/out         1365 / 28 per claim
-  providers             {'local': 900}

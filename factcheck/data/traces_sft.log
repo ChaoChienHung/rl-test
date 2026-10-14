@@ -1,60 +1,0 @@
-Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
-0 done, 900 to go -> /mnt/c/Users/ky/Desktop/rl-test/factcheck/src/../data/fever/../traces/fever_dev_fixed-Qwen_Qwen3.5-2B_n6000_n900.jsonl
-Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]Loading weights:   0%|          | 1/320 [00:00<00:41,  7.70it/s]Loading weights:  24%|██▍       | 76/320 [00:00<00:00, 393.34it/s]Loading weights:  46%|████▋     | 148/320 [00:00<00:00, 530.17it/s]Loading weights:  71%|███████   | 226/320 [00:00<00:00, 617.83it/s]Loading weights:  95%|█████████▌| 305/320 [00:00<00:00, 667.51it/s]Loading weights: 100%|██████████| 320/320 [00:00<00:00, 573.78it/s]
-[transformers] `causal_conv1d_fn` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
-[transformers] `causal_conv1d_update` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
-  20/900  14s
-  40/900  21s
-  60/900  28s
-  80/900  34s
-  100/900  41s
-  120/900  48s
-  140/900  55s
-  160/900  62s
-  180/900  69s
-  200/900  76s
-  220/900  83s
-  240/900  90s
-  260/900  96s
-  280/900  103s
-  300/900  111s
-  320/900  118s
-  340/900  126s
-  360/900  133s
-  380/900  140s
-  400/900  147s
-  420/900  155s
-  440/900  161s
-  460/900  168s
-  480/900  176s
-  500/900  183s
-  520/900  190s
-  540/900  197s
-  560/900  204s
-  580/900  211s
-  600/900  218s
-  620/900  225s
-  640/900  232s
-  660/900  240s
-  680/900  247s
-  700/900  253s
-  720/900  261s
-  740/900  268s
-  760/900  275s
-  780/900  282s
-  800/900  288s
-  820/900  295s
-  840/900  302s
-  860/900  309s
-  880/900  316s
-  900/900  323s
-
-== fever_dev_fixed-Qwen_Qwen3.5-2B_n6000_n900.jsonl  (900 claims) ==
-  label accuracy   0.759
-  FEVER score      0.667
-  valid verdict    1.000
-  recall SUPPORTED        0.827  (n=300)
-  recall REFUTED          0.727  (n=300)
-  recall NOT_ENOUGH_INFO  0.723  (n=300)
-  seconds/claim    0.36
-  vs stage 0 (local+Qwen_Qwen3.5-2B_n6000_n900_titles.jsonl): stage-0 acc 0.759 on the same 900 claims, same verdict on 1.000

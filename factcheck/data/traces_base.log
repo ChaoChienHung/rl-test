@@ -1,60 +1,0 @@
-Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
-0 done, 900 to go -> /mnt/c/Users/ky/Desktop/rl-test/factcheck/src/../data/fever/../traces/fever_dev_fixed-base_n900.jsonl
-Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]Loading weights:   0%|          | 1/320 [00:00<00:34,  9.28it/s]Loading weights:  31%|███▏      | 100/320 [00:00<00:00, 566.23it/s]Loading weights:  67%|██████▋   | 213/320 [00:00<00:00, 817.64it/s]Loading weights:  98%|█████████▊| 313/320 [00:00<00:00, 887.01it/s]Loading weights: 100%|██████████| 320/320 [00:00<00:00, 769.95it/s]
-[transformers] `causal_conv1d_fn` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
-[transformers] `causal_conv1d_update` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
-  20/900  19s
-  40/900  35s
-  60/900  48s
-  80/900  60s
-  100/900  70s
-  120/900  81s
-  140/900  94s
-  160/900  108s
-  180/900  117s
-  200/900  128s
-  220/900  141s
-  240/900  153s
-  260/900  165s
-  280/900  175s
-  300/900  188s
-  320/900  202s
-  340/900  219s
-  360/900  231s
-  380/900  246s
-  400/900  260s
-  420/900  272s
-  440/900  284s
-  460/900  297s
-  480/900  309s
-  500/900  319s
-  520/900  336s
-  540/900  349s
-  560/900  360s
-  580/900  371s
-  600/900  386s
-  620/900  399s
-  640/900  414s
-  660/900  428s
-  680/900  441s
-  700/900  452s
-  720/900  465s
-  740/900  478s
-  760/900  488s
-  780/900  500s
-  800/900  511s
-  820/900  524s
-  840/900  536s
-  860/900  549s
-  880/900  561s
-  900/900  575s
-
-== fever_dev_fixed-base_n900.jsonl  (900 claims) ==
-  label accuracy   0.461
-  FEVER score      0.343
-  valid verdict    0.946
-  recall SUPPORTED        0.943  (n=300)
-  recall REFUTED          0.303  (n=300)
-  recall NOT_ENOUGH_INFO  0.137  (n=300)
-  seconds/claim    0.64
-  vs stage 0 (local_n900_titles.jsonl): stage-0 acc 0.459 on the same 900 claims, same verdict on 0.969

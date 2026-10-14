@@ -1,13 +1,13 @@
 # TODO
 
-Current work is verifier evaluation on the `rl` branch. These tasks replace the old proposal's dated week-by-week schedule; completed SFT and GRPO runs are documented in [factcheck/docs/sft-probe.md](factcheck/docs/sft-probe.md) and [factcheck/docs/grpo-results.md](factcheck/docs/grpo-results.md).
+Current work is verifier evaluation on the `rl` branch. These tasks replace the old proposal's dated week-by-week schedule; completed SFT and GRPO runs are documented in [docs/sft-probe.md](docs/sft-probe.md) and [docs/grpo-results.md](docs/grpo-results.md).
 
 ## P0 — comparable verifier evaluation (RL-1, AG-3)
 
 - [ ] Freeze disjoint train, prompt-development, calibration and holdout claim IDs, then publish the split manifest and leakage check. The committed 5,895-row SFT train set and matched 1,200-row subset have zero ID overlap with the archived 900 dev claims; the remaining splits are not frozen.
-- [ ] Run the direct-JSON and zero-shot evidence-chain scripts on the same FEVER dev IDs and title retrieval: 30-claim smoke tests, then 900 claims. Store predictions, metrics, logs and manifests under `factcheck/results/eval/`.
+- [ ] Run the direct-JSON and zero-shot evidence-chain scripts on the same FEVER dev IDs and title retrieval: 30-claim smoke tests, then 900 claims. Store predictions, metrics and manifests under `results/eval/<version>/<run>/`; store terminal logs under `experiments/<version>/runs/<run>/artifacts/logs/`.
 - [ ] Record per claim: gold, verdict, evidence IDs, retrieval condition, reasoning if present, stated confidence, verdict-token probability, tokens and latency. Check evidence citations by hand; a valid E-ID alone does not prove support.
-- [ ] Report accuracy, FEVER score, evidence F1, label recall, Brier, ECE, risk–coverage and evidence-in-context strata with one evaluator. `factcheck/src/eval_saved_runs.py` already replays the archived outputs.
+- [ ] Report accuracy, FEVER score, evidence F1, label recall, Brier, ECE, risk–coverage and evidence-in-context strata with one evaluator. `src/eval_saved_runs.py` already replays the archived outputs.
 - [ ] Reproduce the SFT baseline with the original adapter or retrain it; the LoRA weights are not committed.
 
 ## P1 — prompt and inference controls (RL-1)
