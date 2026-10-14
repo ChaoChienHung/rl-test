@@ -12,7 +12,7 @@ This is the team RL branch for a fact verifier. Read `README.md` for the directo
 
 ## Editing and running
 
-- Run Python modules from the repository root with `python -m ...` where a module is available. Keep Slurm submission commands rooted here. `RESULTS_ROOT` moves the evaluation results root while retaining condition/run subdirectories; `RESULT_DIR` selects one exact new run directory. Set only one of them. Inspect the current SoC partition and resource limits before submitting.
+- Run Python modules from the repository root with `python -m ...` where a module is available. Keep Slurm submission commands rooted here. `EVAL_CONDITION` names an evaluation condition and its results folder; `RESULTS_ROOT` moves the evaluation results root while retaining condition/run subdirectories; `RESULT_DIR` selects one exact new run directory. Set only one of the two path overrides. Inspect the current SoC partition and resource limits before submitting.
 - Preserve historical `meta.json` values and prediction rows as records of the original run. Update current code and documentation paths rather than rewriting their provenance.
 - Compare experiments with the same claim IDs, model, retrieval condition and evaluator. Record seed, revision, resources, predictions, metrics and logs for each run.
 - Update `README.md`, `verifier/TODO.md` and relevant `verifier/docs/` pages when commands, layout or experiment assumptions change.

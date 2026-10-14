@@ -61,6 +61,14 @@ Reply with only one JSON object, nothing else:
 - evidence: ids of the sentences that justify the verdict, at most 5. Use [] for NOT_ENOUGH_INFO.
 - confidence: the probability that your verdict is correct."""
 
+COT_SFT_SYSTEM = """You are a fact-checker. You get a claim and numbered evidence sentences from Wikipedia.
+Use only the given evidence. In 1-3 short sentences, explain why the shown sentences support or refute the claim, or why they are insufficient. Cite prompt-local E ids and do not invent evidence or use outside knowledge.
+
+Reply with only one JSON object, nothing else:
+{"reasoning": "brief evidence-based explanation with E ids", "verdict": "SUPPORTED" | "REFUTED" | "NOT_ENOUGH_INFO", "evidence": ["E3", ...]}
+
+- evidence: ids of the sentences that justify the verdict, at most 5. Use [] for NOT_ENOUGH_INFO."""
+
 COT_CHAIN_SYSTEM = """You are a fact-checker. You get a claim and numbered evidence sentences from Wikipedia.
 Reason step by step using only the evidence shown. In the reasoning field: (1) identify the checkable parts of the claim, (2) match each relevant part to E ids and quote or paraphrase what those sentences say, (3) resolve contradictions or missing support, and (4) explain why the final verdict follows. Keep the chain concise. Do not invent evidence or use outside knowledge.
 
@@ -284,7 +292,7 @@ class OpenRouterModel:
 
 # ---------------------------------------------------------------- run
 
-def score(claim, ctx, gen):
+def score(claim, ctx, gen, require_confidence=True):
     obj, ok = parse(gen["text"])
     reasoning = obj.get("reasoning") if isinstance(obj.get("reasoning"), str) else None
     reasoning_ids = re.findall(r"\bE\d+\b", reasoning or "")
@@ -302,7 +310,8 @@ def score(claim, ctx, gen):
         "evidence_f1": evidence_f1(gold_ids, [f"{p}:{l}" for p, l in cited]) if gs else None,
         "stated_conf": obj.get("confidence") if ok["confidence"] else None,
         "token_conf": probs[pred] if probs and pred else None, "label_probs": probs,
-        "format_ok": all(ok.values()), "format": ok,
+        "format_ok": all(value for key, value in ok.items() if require_confidence or key != "confidence"),
+        "format": ok, "confidence_required": require_confidence,
         "gold_page_retrieved": ctx["gold_page_retrieved"], "gold_in_context": ctx["gold_in_context"],
         "n_shown": len(ctx["shown"]), "cited": cited,
         "provider": gen["provider"], "in_tokens": gen["in_tokens"], "out_tokens": gen["out_tokens"],
@@ -336,9 +345,9 @@ def run(model_name, n, retrieval="bm25", chunk=20, adapter=None, output=None,
     print(f"{len(done)} done, {len(claims)} to go -> {path}")
     if not claims:
         return path
-    system_prompt = {"direct": SYSTEM, "reasoning": REASONING_SYSTEM,
+    system_prompt = {"direct": SYSTEM, "reasoning": REASONING_SYSTEM, "cot_sft": COT_SFT_SYSTEM,
                      "cot_chain": COT_CHAIN_SYSTEM}[prompt_style]
-    max_new_tokens = {"direct": 160, "reasoning": 320, "cot_chain": 512}[prompt_style]
+    max_new_tokens = {"direct": 160, "reasoning": 320, "cot_sft": 320, "cot_chain": 512}[prompt_style]
     if model_name.startswith("local"):
         base = model_name.split(":", 1)[1] if ":" in model_name else None
         if adapter and not base:
@@ -358,7 +367,9 @@ def run(model_name, n, retrieval="bm25", chunk=20, adapter=None, output=None,
         with open(path, "a", encoding="utf-8") as f:
             for c, x, g in zip(batch, ctxs, gens):
                 f.write(json.dumps({"model": model.name, "retrieval": retrieval,
-                                    "prompt_style": prompt_style, **score(c, x, g)}, ensure_ascii=False) + "\n")
+                                    "prompt_style": prompt_style,
+                                    **score(c, x, g, require_confidence=prompt_style != "cot_sft")},
+                                   ensure_ascii=False) + "\n")
         print(f"  {i + len(batch)}/{len(claims)}  {time.time() - t0:.0f}s", flush=True)
     return path
 

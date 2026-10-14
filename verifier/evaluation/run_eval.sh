@@ -1,12 +1,25 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# THINKING selects evidence-chain prompting; model-internal thinking stays disabled.
+# THINKING is the historical on/off switch. PROMPT_STYLE selects an exact style.
+# Model-internal thinking stays disabled in all three conditions.
 thinking="${THINKING:-off}"
-case "$thinking" in
-  off) style=direct; condition=direct-baseline ;;
-  on) style=cot_chain; condition=cot-baseline ;;
-  *) echo "THINKING must be on or off" >&2; exit 2 ;;
+if [[ -n "${PROMPT_STYLE:-}" ]]; then
+  case "$PROMPT_STYLE" in
+    direct|cot_chain|cot_sft) style="$PROMPT_STYLE" ;;
+    *) echo "PROMPT_STYLE must be direct, cot_chain, or cot_sft" >&2; exit 2 ;;
+  esac
+else
+  case "$thinking" in
+    off) style=direct ;;
+    on) style=cot_chain ;;
+    *) echo "THINKING must be on or off" >&2; exit 2 ;;
+  esac
+fi
+case "$style" in
+  direct) condition=direct-baseline ;;
+  cot_chain) condition=cot-baseline ;;
+  cot_sft) condition=cot-sft ;;
 esac
 
 cd "${SLURM_SUBMIT_DIR:?submit from the repo root}"
@@ -44,6 +57,13 @@ PY
   condition="checkpoint-${condition%-baseline}"
 fi
 
+if [[ -n "${EVAL_CONDITION:-}" ]]; then
+  [[ "$EVAL_CONDITION" =~ ^[A-Za-z0-9][A-Za-z0-9_-]*$ ]] || {
+    echo "EVAL_CONDITION must use letters, digits, underscore or dash" >&2; exit 2;
+  }
+  condition="$EVAL_CONDITION"
+fi
+
 if [[ -n "${RESULT_DIR:-}" && -n "${RESULTS_ROOT:-}" ]]; then
   echo "Set either RESULT_DIR (exact run directory) or RESULTS_ROOT (parent of condition/run), not both" >&2
   exit 2
@@ -65,7 +85,7 @@ metrics="$result_dir/metrics.json"
 log="$result_dir/logs/run.log"
 commit="$(git rev-parse HEAD)"
 {
-  echo "job=$job_id run=$run_name commit=$commit n=$n thinking=$thinking retrieval=titles model=$model checkpoints=${checkpoints:-none} result_dir=$result_dir"
+  echo "job=$job_id run=$run_name commit=$commit n=$n thinking=$thinking prompt_style=$style retrieval=titles model=$model checkpoints=${checkpoints:-none} result_dir=$result_dir"
   echo "started_at=$(date -u +%FT%TZ)"
   srun python -m verifier.evaluation.eval_verifier --model local --n "$n" --retrieval titles \
     --prompt-style "$style" --output "$output" "${adapter_args[@]}"

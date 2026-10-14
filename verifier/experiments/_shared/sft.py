@@ -66,7 +66,7 @@ def build_examples(n, seed, chunk=200):
     return rows
 
 
-def train(model_name, rows, out, qlora, max_steps, lr, rank, seed):
+def train(model_name, rows, out, qlora, max_steps, lr, rank, seed, system_prompt=SYSTEM):
     import torch
     from datasets import Dataset
     from peft import LoraConfig
@@ -77,7 +77,7 @@ def train(model_name, rows, out, qlora, max_steps, lr, rank, seed):
     # Same template call as eval_verifier.LocalModel, so training matches inference.
     def to_text(r):
         prompt = tok.apply_chat_template(
-            [{"role": "system", "content": SYSTEM}, {"role": "user", "content": r["prompt"]}],
+            [{"role": "system", "content": system_prompt}, {"role": "user", "content": r["prompt"]}],
             tokenize=False, add_generation_prompt=True, enable_thinking=False)
         return {"prompt": prompt, "completion": r["completion"] + tok.eos_token}
     ds = Dataset.from_list([to_text(r) for r in rows])

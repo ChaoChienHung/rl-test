@@ -1,6 +1,6 @@
 import unittest
 
-from utils.build_cot_sft_data import request_for, response_text, select_rows, soclaas_url, validate
+from utils.build_cot_sft_data import parse_teacher_answer, request_for, response_text, select_rows, soclaas_url, validate
 
 
 ROW = {
@@ -26,6 +26,15 @@ class CotDataTests(unittest.TestCase):
         self.assertEqual(validate(ROW, {**answer, "reasoning": "E2 is relevant to the claim about the sky.",
                                         "cited_evidence": ["E2"]}),
                          "gold_evidence_not_explained")
+        self.assertIsNone(validate(ROW, {**answer, "reasoning": "E1 states the sky is blue; E2 is unrelated."}))
+        self.assertEqual(validate(ROW, {**answer, "reasoning": "The shown evidence says the sky is blue."}),
+                         "citation_mismatch")
+
+    def test_markdown_fenced_json_is_parsed_without_accepting_trailing_text(self):
+        self.assertEqual(parse_teacher_answer('```json\n{"relation":"supports"}\n```'),
+                         {"relation": "supports"})
+        with self.assertRaises(ValueError):
+            parse_teacher_answer('```json\n{"relation":"supports"}\n``` extra')
 
     def test_balanced_selection_is_deterministic(self):
         rows = [{"id": f"{label}-{i}", "gold": label} for label in

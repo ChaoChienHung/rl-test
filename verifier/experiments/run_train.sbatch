@@ -36,8 +36,9 @@ if [[ -n "${SFT_CHECKPOINTS:-}" ]]; then
 fi
 if [[ -n "${TRAIN_DATA:-}" ]]; then
   case "$train_script" in
+    verifier/experiments/cot_sft_*/train.py) args+=(--data "$TRAIN_DATA") ;;
     verifier/experiments/grpo_qwen_*/train.py) args+=(--data "$TRAIN_DATA") ;;
-    *) echo "TRAIN_DATA applies only to single-turn GRPO training" >&2; exit 2 ;;
+    *) echo "TRAIN_DATA applies only to CoT SFT or single-turn GRPO training" >&2; exit 2 ;;
   esac
 fi
 echo "job=$SLURM_JOB_ID commit=$(git rev-parse HEAD) script=$train_script run=$run_name seed=$seed output_root=${OUTPUT_ROOT:-verifier/experiments}"

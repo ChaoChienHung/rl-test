@@ -246,6 +246,13 @@ def response_text(body, provider="gemini"):
     return "".join(part.get("text", "") for part in candidates[0].get("content", {}).get("parts", []))
 
 
+def parse_teacher_answer(text):
+    """Accept JSON alone or inside one complete Markdown JSON code fence."""
+    text = text.strip()
+    fenced = re.fullmatch(r"```(?:json)?\s*\n(.*?)\n```", text, re.IGNORECASE | re.DOTALL)
+    return json.loads(fenced.group(1) if fenced else text)
+
+
 def validate(row, answer):
     if not isinstance(answer, dict):
         return "invalid_json"
@@ -263,7 +270,8 @@ def validate(row, answer):
         return "duplicate_or_too_many_citations"
     shown = set(re.findall(r"(?m)^E\d+\b", row["prompt"]))
     mentioned = set(EID.findall(reasoning))
-    if not set(cited) <= shown or not mentioned <= shown or mentioned != set(cited):
+    if (not set(cited) <= shown or not mentioned <= shown or not set(cited) <= mentioned
+            or (mentioned and not cited)):
         return "citation_mismatch"
     gold_eids = set(json.loads(row["completion"])["evidence"])
     if row["gold"] != "NOT_ENOUGH_INFO" and not gold_eids <= mentioned:
@@ -293,7 +301,7 @@ def collect(args):
             for key in ("promptTokenCount", "candidatesTokenCount", "thoughtsTokenCount", "totalTokenCount"):
                 usage[key] += (body.get("usageMetadata") or {}).get(key, 0)
         try:
-            answer = json.loads(response_text(body, provider))
+            answer = parse_teacher_answer(response_text(body, provider))
             reason = validate(row, answer)
         except (ValueError, TypeError, KeyError):
             answer, reason = None, "invalid_json_or_incomplete"

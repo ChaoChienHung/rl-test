@@ -2,7 +2,7 @@
 
 import unittest
 
-from verifier.model import REASONING_SYSTEM, adapter_label, score
+from verifier.model import COT_SFT_SYSTEM, REASONING_SYSTEM, adapter_label, score
 
 
 class ReasoningScoreTest(unittest.TestCase):
@@ -37,6 +37,21 @@ class ReasoningScoreTest(unittest.TestCase):
                               '"evidence":["E1"],"confidence":0.8}',
                       "tokens": [], "provider": "test", "in_tokens": 10, "out_tokens": 30}
         self.assertFalse(score(claim, context, generation)["reasoning_citations_valid"])
+
+    def test_cot_sft_format_does_not_require_unsupported_confidence_label(self):
+        claim = {"id": 7, "claim": "Ada wrote a book.", "label": "SUPPORTS",
+                 "evidence": [[[0, 0, "Ada", 0]]]}
+        context = {"shown": [("E1", "Ada", 0, "Ada wrote a book.")],
+                   "gold_page_retrieved": True, "gold_in_context": True}
+        generation = {"text": '{"reasoning":"E1 directly supports the claim.",'
+                              '"verdict":"SUPPORTED","evidence":["E1"]}',
+                      "tokens": [], "provider": "test", "in_tokens": 10, "out_tokens": 30}
+        result = score(claim, context, generation, require_confidence=False)
+        self.assertTrue(result["format_ok"])
+        self.assertFalse(result["confidence_required"])
+        self.assertIsNone(result["stated_conf"])
+        self.assertFalse(score(claim, context, generation)["format_ok"])
+        self.assertNotIn('"confidence"', COT_SFT_SYSTEM)
 
 
 if __name__ == "__main__":
