@@ -9,7 +9,7 @@ This repository studies evidence-grounded claim verification on FEVER. A verifie
 
 | Path | What it contains |
 |---|---|
-| [`run.sbatch`](run.sbatch) | One-command Slurm array for six Base/SFT × prompt evaluations at a 1024-token output cap |
+| [`run.sbatch`](run.sbatch) | Two-job GRPO array for the current fixed 1,200-claim split comparison |
 | [`verifier/TODO.md`](verifier/TODO.md) | Current priorities and experiment checklist |
 | [`verifier/docs/`](verifier/docs/) | Data guide, experiment results, architecture and background |
 | [`verifier/data/train/`](verifier/data/train/) | Committed SFT and GRPO training examples |
@@ -30,7 +30,7 @@ Detailed document map: [data and downloads](verifier/docs/data.md), [system plan
 - **Base model (untrained Qwen3.5-2B)**: On the same 900 dev claims with title retrieval, direct prompting scored 45.9% accuracy / 33.8% FEVER; `cot_chain` scored 60.8% / 51.1%; `cot_brief` scored 61.8% / 48.6%. The direct run used a 160-token output cap, while CoT used 512; 46 direct outputs hit the cap and were invalid. Retest with matched caps before attributing the full gap to reasoning.
 - **SFT (2B LoRA, 5,895 claims)**: Direct prompting scored 74.1% accuracy / 65.9% FEVER; `cot_chain` scored 71.4% / 62.4%; `cot_brief` scored 74.6% / 63.9%. Brief reasoning largely removed truncation, but still reduced NEI recall and FEVER score relative to direct prompting.
 - **Matched 1024-token evaluation**: On 900 dev claims, Base `direct` / long CoT / brief CoT reached 47.6% / 62.8% / 61.8% accuracy. SFT `run2` reached 74.6% / 71.4% / 74.6%; its direct prompt had the highest FEVER score (66.3%). See the comparison below and the local, Git-ignored `verifier/INSIGHT.md`.
-- **Next experiments**: Run the fixed SFT/GRPO split comparison with [`verifier/experiments/submit_split_comparison.sh`](verifier/experiments/submit_split_comparison.sh). Validate promising gains on an untouched holdout. See [`verifier/TODO.md`](verifier/TODO.md) for execution details.
+- **Next experiments**: For the split comparison submitted on 2026-10-15, the two SFT jobs were already running on SoC. Submit only the two GRPO jobs with [`run.sbatch`](run.sbatch), then evaluate the resulting adapters on an untouched holdout. See [`verifier/TODO.md`](verifier/TODO.md) for execution details.
 
 Detailed metric comparisons, per-claim error cases, and calibration analyses are tracked in `verifier/INSIGHT.md`.
 
@@ -158,15 +158,19 @@ The committed `pilot1` data has 227 accepted examples. The separate `full1` teac
 
 The fixed 1,200 claims in `verifier/data/train/sft/fever-oracle-matched-grpo-1200/` are excluded from the new 4,695-claim SFT set. The two sets have no claim-ID overlap and together contain all 5,895 prepared oracle prompts. Verify the committed split with `python -m utils.build_disjoint_sft_grpo_split --check`; its hashes and label counts are in `verifier/data/train/sft/fever-oracle-disjoint-4695/split_manifest.json`.
 
-On a SoC **login node**, after pulling this branch and confirming the existing `run2` adapter is present, submit all four jobs from the repo root:
+The two SFT arms have already been submitted on SoC. After pulling this branch, submit **only the two GRPO jobs** from a SoC login node. Find the running 4,695-row SFT job ID with `squeue -u "$USER"`; substitute that numeric ID below:
 
 ```bash
 cd "$HOME/rl-test"
-test -s verifier/experiments/sft-direct-from-base-qwen3p5-2b-train5895/runs/run2/artifacts/checkpoints/adapter_model.safetensors
-RUN_TAG=split1-seed0 bash verifier/experiments/submit_split_comparison.sh
+squeue -u "$USER"
+unseen_sft_job=123456  # replace with the running 4,695-row SFT job ID
+grpo_job=$(sbatch --parsable --dependency="afterok:$unseen_sft_job" \
+  --export=ALL,RUN_TAG=split1-seed0 run.sbatch)
+echo "GRPO array: $grpo_job"
+squeue -j "$grpo_job"
 ```
 
-The submit script starts three independent jobs and submits the fourth with `afterok` on the new 4,695-claim SFT job. All second-stage jobs use the **same fixed 1,200 rows**. Use a fresh `RUN_TAG` if repeating the comparison.
+The two-task array waits for the 4,695-row SFT job to finish successfully. Task 0 starts from the already-trained 5,895-row SFT `run2`; task 1 starts from the 4,695-row SFT checkpoint under its **old configuration name** (`sft_qwen_3.5-2b_disjoint_n4695`), where the in-flight job writes it. Both use the **same fixed 1,200 rows**. `RUN_TAG` must match the tag used for the running SFT jobs (default `split1-seed0`); set `SFT_RUN_NAME` if the 4,695-row run has a different name. The renamed checkpoint path is a fallback if the old path is absent. Use `verifier/experiments/submit_split_comparison.sh` only for a fresh comparison when no SFT arm has been submitted.
 
 | Job | Starting checkpoint | Training rows | Output run |
 |---|---|---:|---|
@@ -175,7 +179,7 @@ The submit script starts three independent jobs and submits the fourth with `aft
 | Unseen → SFT | Qwen3.5-2B base | complementary 4,695 | `sft-direct-from-base-qwen3p5-2b-disjoint4695/runs/<tag>-unseen-sft/` |
 | Unseen → GRPO | adapter from the preceding job | fixed 1,200 | `grpo-direct-from-sft-qwen3p5-2b-train1200-kl0/runs/<tag>-unseen-grpo/` |
 
-Each run saves its LoRA adapter to `artifacts/checkpoints/`, `meta.json` and `logs/train_log.json`; Slurm writes `slurm-train-verifier-<job-id>.out` at the repo root. Check `squeue -u "$USER"` and `sacct -j <job-id> --format=JobID,State,ExitCode,Elapsed,MaxRSS`. If the 4,695-row SFT fails, its dependent GRPO job will not run. The GRPO configurations here are **direct JSON** with a 96-token training completion cap, not CoT GRPO.
+Each run saves its LoRA adapter to `artifacts/checkpoints/`, `meta.json` and `logs/train_log.json`; this array writes `slurm-grpo-split-<job-id>_<task-id>.out` at the repo root. Check `squeue -j "$grpo_job"` and `sacct -j "$grpo_job" --format=JobID,State,ExitCode,Elapsed,MaxRSS`. If the 4,695-row SFT fails, neither GRPO task starts. The GRPO configurations here are **direct JSON** with a 96-token training completion cap, not CoT GRPO.
 
 The disjoint path has 5,895 unique claim exposures across its two stages. The seen path deliberately trains on 1,200 claims twice. Compare each child against its own starting checkpoint on the same dev IDs; compare the two seen-claim continuations to distinguish GRPO from additional SFT. The seen and unseen paths have different first-stage SFT data sizes, so their raw scores alone do not isolate the effect of overlap.
 
@@ -183,9 +187,9 @@ The disjoint path has 5,895 unique claim exposures across its two stages. The se
 
 Evaluation jobs load dev claims, query the BM25 index and SQLite cache, generate predictions, and score accuracy and FEVER metrics.
 
-### 1. Matched 1024-token evaluation sweep (`run.sbatch`)
+### Completed 1024-token evaluation sweep
 
-Launches six Slurm array tasks (at most two concurrent) on the same frozen 900 dev claims, title retrieval and evaluator. All use `MAX_NEW_TOKENS=1024`:
+The six completed runs used the same frozen 900 dev claims, title retrieval, evaluator, and `MAX_NEW_TOKENS=1024`. Their results remain under `verifier/evaluation/results/`; the root `run.sbatch` now runs the current GRPO pair. For a new evaluation, use `verifier/evaluation/run.sbatch` below.
 
 | Task | Model | Prompt | Result condition |
 |---:|---|---|---|
@@ -203,19 +207,9 @@ Launches six Slurm array tasks (at most two concurrent) on the same frozen 900 d
 
 Result conditions use lowercase hyphens: `<model>-<prompt>-cap<output-tokens>`. The untrained model uses `baseline`; `cot-long` is the result label for `PROMPT_STYLE=cot_chain`, and `cot-brief` maps to `cot_brief`. Historical results also use `cap160` or `cap512`: `baseline-direct-cap160`, `baseline-cot-long-cap512`, `baseline-cot-brief-cap512`, `sft-direct-cap160`, `sft-cot-long-cap512`, and `sft-cot-brief-cap512`. Their manifests retain original condition/run names and original run paths; prediction rows and logs are unchanged.
 
-After pulling the updated branch on SoC, verify the SFT adapter exists and submit from the repo root:
+Each completed run has predictions, metrics, manifest, and log under `verifier/evaluation/results/<result-condition>/<run-name>/`. At 1024 tokens, SFT long CoT had 44 capped outputs and 48 format failures, while Base direct had 130 format failures with only 3 capped outputs. These are different failure modes. Base direct/long and brief CoT were generated from different code revisions; brief CoT was also developed after inspecting these dev claims. Treat this as a development-set comparison and validate on an untouched holdout.
 
-```bash
-cd "$HOME/rl-test"
-test -s verifier/experiments/sft-direct-from-base-qwen3p5-2b-train5895/runs/run2/artifacts/checkpoints/adapter_model.safetensors
-job=$(sbatch --parsable --export=ALL,RUN_NAME=repeat1 run.sbatch)
-echo "1024-token sweep: $job"
-squeue -j "$job"
-```
-
-Each task writes to `verifier/evaluation/results/<result-condition>/<run-name>/` with predictions, metrics, manifest and log. The original sweep is already complete under `run1`; choose an unused `RUN_NAME` for a repeat. Slurm logs are `slurm-verifier-cap1024-<job-id>_<task-id>.out` in the repo root. Check completion with `sacct -j "$job" --format=JobID,JobName,State,ExitCode,Elapsed`; use `RESULTS_ROOT` to move the result tree. At 1024 tokens, SFT long CoT still had 44 capped outputs and 48 format failures, while Base direct had 130 format failures with only 3 capped outputs. These are different failure modes. The runs hold the output cap fixed, but Base direct/long and brief CoT were generated from different code revisions; brief CoT was also developed after inspecting these dev claims. Treat this as a development-set comparison and validate on an untouched holdout.
-
-### 2. Single evaluation run (`verifier/evaluation/run.sbatch`)
+### Single evaluation run (`verifier/evaluation/run.sbatch`)
 
 Submit single evaluation conditions via `verifier/evaluation/run.sbatch`:
 
@@ -251,7 +245,7 @@ sbatch --partition=gpu --gpus=a100-40:1 --time=03:00:00 --export=ALL,N_CLAIMS=90
 
 ```
 
-### 3. Inspecting results & offline scoring
+### Inspecting results & offline scoring
 
 Each run directory contains `predictions.jsonl`, `metrics.json`, and `manifest.json`:
 
