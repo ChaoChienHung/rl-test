@@ -1,0 +1,18 @@
+{
+  "job_id": "951033",
+  "run_name": "cot-grpo1",
+  "commit": "919ab83d56f91438b7dd7b35f1d1d0b354aa6270",
+  "model": "Qwen/Qwen3.5-2B",
+  "checkpoints": "verifier/experiments/sft-direct-from-sft5895-qwen3p5-2b-1200-samples/runs/split1-seed0-seen-sft/artifacts/checkpoints",
+  "thinking": "off",
+  "native_thinking": false,
+  "prompt_style": "direct",
+  "retrieval": "titles",
+  "max_new_tokens": 1024,
+  "condition": "sft-continued1200-direct-cap1024",
+  "result_dir": "verifier/evaluation/results/sft-continued1200-direct-cap1024/cot-grpo1",
+  "n_claims": 900,
+  "predictions": "verifier/evaluation/results/sft-continued1200-direct-cap1024/cot-grpo1/predictions.jsonl",
+  "metrics": "verifier/evaluation/results/sft-continued1200-direct-cap1024/cot-grpo1/metrics.json",
+  "log": "verifier/evaluation/results/sft-continued1200-direct-cap1024/cot-grpo1/logs/run.log"
+}
