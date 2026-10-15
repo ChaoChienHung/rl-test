@@ -41,6 +41,14 @@ run_name="${RUN_NAME:-job-$job_id}"
 
 checkpoints="${CHECKPOINTS:-}"
 adapter_args=()
+generation_args=()
+if [[ -n "${MAX_NEW_TOKENS:-}" ]]; then
+  [[ "$MAX_NEW_TOKENS" =~ ^[1-9][0-9]*$ ]] || {
+    echo "MAX_NEW_TOKENS must be a positive integer" >&2
+    exit 2
+  }
+  generation_args=(--max-new-tokens "$MAX_NEW_TOKENS")
+fi
 model="Qwen/Qwen3.5-2B"
 if [[ -n "$checkpoints" ]]; then
   [[ -f "$checkpoints/adapter_config.json" ]] || { echo "Missing $checkpoints/adapter_config.json" >&2; exit 2; }
@@ -86,10 +94,10 @@ metrics="$result_dir/metrics.json"
 log="$result_dir/logs/run.log"
 commit="$(git rev-parse HEAD)"
 {
-  echo "job=$job_id run=$run_name commit=$commit n=$n thinking=$thinking prompt_style=$style retrieval=titles model=$model checkpoints=${checkpoints:-none} result_dir=$result_dir"
+  echo "job=$job_id run=$run_name commit=$commit n=$n thinking=$thinking prompt_style=$style max_new_tokens=${MAX_NEW_TOKENS:-default} retrieval=titles model=$model checkpoints=${checkpoints:-none} result_dir=$result_dir"
   echo "started_at=$(date -u +%FT%TZ)"
   srun python -m verifier.evaluation.eval_verifier --model local --n "$n" --retrieval titles \
-    --prompt-style "$style" --output "$output" "${adapter_args[@]}"
+    --prompt-style "$style" --output "$output" "${generation_args[@]}" "${adapter_args[@]}"
   if [[ "$n" == 900 ]]; then
     python - "$output" verifier/data/eval/fever-dev-900-ids.json <<'PY'
 import json
@@ -106,17 +114,20 @@ PY
   echo "finished_at=$(date -u +%FT%TZ)"
   echo "predictions=$output metrics=$metrics"
 } 2>&1 | tee "$log"
-python - "$result_dir/manifest.json" "$job_id" "$run_name" "$commit" "$model" "$checkpoints" "$thinking" "$style" "$n" "$output" "$metrics" "$log" "$condition" "$result_dir" <<'PY'
+python - "$result_dir/manifest.json" "$job_id" "$run_name" "$commit" "$model" "$checkpoints" "$thinking" "$style" "$n" "$output" "$metrics" "$log" "$condition" "$result_dir" "${MAX_NEW_TOKENS:-}" <<'PY'
 import json
 import sys
 from pathlib import Path
 
 (_, manifest, job_id, run_name, commit, model, checkpoints, thinking,
- style, n, predictions, metrics, log, condition, result_dir) = sys.argv
+ style, n, predictions, metrics, log, condition, result_dir, max_new_tokens) = sys.argv
 record = {
     'job_id': job_id, 'run_name': run_name, 'commit': commit,
     'model': model, 'checkpoints': checkpoints or None,
     'thinking': thinking, 'prompt_style': style, 'retrieval': 'titles',
+    'max_new_tokens': int(max_new_tokens) if max_new_tokens else {
+        'direct': 160, 'cot_chain': 512, 'cot_brief': 512, 'cot_sft': 320,
+    }[style],
     'condition': condition, 'result_dir': result_dir,
     'n_claims': int(n), 'predictions': predictions, 'metrics': metrics,
     'log': log,

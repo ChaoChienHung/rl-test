@@ -331,7 +331,7 @@ def score(claim, ctx, gen, require_confidence=True):
 
 
 def run(model_name, n, retrieval="bm25", chunk=20, adapter=None, output=None,
-        prompt_style="direct"):
+        prompt_style="direct", max_new_tokens=None):
     """model_name: "local" (LOCAL_MODEL), "local:<hf id>" for another local
     base, or an OpenRouter id. adapter: LoRA checkpoint dir from an SFT run; its base
     model is read from adapter_config.json unless "local:<hf id>" is given."""
@@ -355,8 +355,11 @@ def run(model_name, n, retrieval="bm25", chunk=20, adapter=None, output=None,
         return path
     system_prompt = {"direct": SYSTEM, "reasoning": REASONING_SYSTEM, "cot_sft": COT_SFT_SYSTEM,
                      "cot_chain": COT_CHAIN_SYSTEM, "cot_brief": COT_BRIEF_SYSTEM}[prompt_style]
-    max_new_tokens = {"direct": 160, "reasoning": 320, "cot_sft": 320,
-                      "cot_chain": 512, "cot_brief": 512}[prompt_style]
+    if max_new_tokens is None:
+        max_new_tokens = {"direct": 160, "reasoning": 320, "cot_sft": 320,
+                          "cot_chain": 512, "cot_brief": 512}[prompt_style]
+    if max_new_tokens <= 0:
+        raise ValueError("max_new_tokens must be positive")
     if model_name.startswith("local"):
         base = model_name.split(":", 1)[1] if ":" in model_name else None
         if adapter and not base:

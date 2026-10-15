@@ -11,6 +11,7 @@ def main():
     parser.add_argument("--n", type=int, default=50)
     parser.add_argument("--retrieval", choices=["bm25", "titles", "oracle"], default="bm25")
     parser.add_argument("--prompt-style", choices=["direct", "reasoning", "cot_chain", "cot_brief", "cot_sft"], default="direct")
+    parser.add_argument("--max-new-tokens", type=int, help="override the prompt style's output-token cap")
     parser.add_argument("--adapter", help="LoRA checkpoint dir from an SFT run (local models only)")
     parser.add_argument("--output", help="write to this JSONL file instead of the default (resume by claim id if it exists)")
     parser.add_argument("--summarize", help="only print metrics for an existing results file")
@@ -20,7 +21,8 @@ def main():
         summarize(args.summarize)
     else:
         path = run(args.model, args.n, args.retrieval, adapter=args.adapter,
-                   output=args.output, prompt_style=args.prompt_style)
+                   output=args.output, prompt_style=args.prompt_style,
+                   max_new_tokens=args.max_new_tokens)
         summarize(path, *prices.get(args.model, (None, None)))
 
 

@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
-#SBATCH --job-name=cot-brief-retest
-#SBATCH --partition=gpu
-#SBATCH --time=03:00:00
+#SBATCH --job-name=verifier-cap1024
+#SBATCH --partition=gpu-long
+#SBATCH --time=06:00:00
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=24G
 #SBATCH --gpus=a100-40:1
 #SBATCH --exclude=xgpe2
-#SBATCH --array=0-1
+#SBATCH --array=0-5%2
 #SBATCH --output=slurm-%x-%A_%a.out
 
-# Next experiment: matched 900-claim cot_brief retests of the base model
-# (task 0) and the completed no-CoT SFT adapter (task 1).
+# Matched 900-claim evaluation: Base/SFT x direct/cot_chain/cot_brief,
+# all with the same 1024-token generation cap.
 set -euo pipefail
 cd "${SLURM_SUBMIT_DIR:?Submit from the repository root}"
 test -f verifier/evaluation/run_eval.sh || {
@@ -18,26 +18,46 @@ test -f verifier/evaluation/run_eval.sh || {
   exit 2
 }
 
+if [[ -n "${RESULT_DIR:-}" ]]; then
+  echo "RESULT_DIR selects one exact directory and cannot be used for this array; use RESULTS_ROOT" >&2
+  exit 2
+fi
+
+sft_checkpoints="${SFT_CHECKPOINTS:-verifier/experiments/sft_qwen_3.5-2b_n6000/runs/run2/artifacts/checkpoints}"
+[[ -f "$sft_checkpoints/adapter_config.json" ]] || {
+  echo "Missing SFT adapter config: $sft_checkpoints/adapter_config.json" >&2
+  exit 2
+}
+[[ -s "$sft_checkpoints/adapter_model.safetensors" || -s "$sft_checkpoints/adapter_model.bin" ]] || {
+  echo "Missing SFT adapter weights in $sft_checkpoints" >&2
+  exit 2
+}
+
 export N_CLAIMS=900
-export PROMPT_STYLE=cot_brief
+export MAX_NEW_TOKENS=1024
 export THINKING=off
-export RUN_NAME="${RUN_NAME:-prompt-retest1}"
-unset RESULT_DIR
+export RUN_NAME="${RUN_NAME:-run1}"
 
 case "${SLURM_ARRAY_TASK_ID:?}" in
-  0)
-    unset CHECKPOINTS
-    export EVAL_CONDITION=base-cot-brief-eval
-    ;;
-  1)
-    export CHECKPOINTS="${SFT_CHECKPOINTS:-verifier/experiments/sft_qwen_3.5-2b_n6000/runs/run2/artifacts/checkpoints}"
-    export EVAL_CONDITION=sft-cot-brief-eval
-    ;;
+  0) variant=base; style=direct ;;
+  1) variant=base; style=cot_chain ;;
+  2) variant=base; style=cot_brief ;;
+  3) variant=sft; style=direct ;;
+  4) variant=sft; style=cot_chain ;;
+  5) variant=sft; style=cot_brief ;;
   *)
     echo "Unexpected array task: $SLURM_ARRAY_TASK_ID" >&2
     exit 2
     ;;
 esac
 
-echo "array=${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID} condition=$EVAL_CONDITION run=$RUN_NAME"
+export PROMPT_STYLE="$style"
+export EVAL_CONDITION="${variant}-${style}-cap1024"
+if [[ "$variant" == sft ]]; then
+  export CHECKPOINTS="$sft_checkpoints"
+else
+  unset CHECKPOINTS
+fi
+
+echo "array=${SLURM_ARRAY_JOB_ID}_${SLURM_ARRAY_TASK_ID} condition=$EVAL_CONDITION run=$RUN_NAME cap=$MAX_NEW_TOKENS"
 bash verifier/evaluation/run_eval.sh

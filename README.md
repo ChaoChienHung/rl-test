@@ -9,7 +9,7 @@ This repository studies evidence-grounded claim verification on FEVER. A verifie
 
 | Path | What it contains |
 |---|---|
-| [`run.sbatch`](run.sbatch) | One-command Slurm array for the base & SFT `cot_brief` retest |
+| [`run.sbatch`](run.sbatch) | One-command Slurm array for six Base/SFT × prompt evaluations at a 1024-token output cap |
 | [`verifier/TODO.md`](verifier/TODO.md) | Current priorities and experiment checklist |
 | [`verifier/docs/`](verifier/docs/) | Data guide, experiment results, architecture and background |
 | [`verifier/data/train/`](verifier/data/train/) | Committed SFT and GRPO training examples |
@@ -27,9 +27,9 @@ Detailed document map: [data and downloads](verifier/docs/data.md), [system plan
 ## Current status
 
 - **Retrieval**: Title retrieval reached 0.875 FEVER page recall@5.
-- **Base model (untrained Qwen3.5-2B)**: On 900 dev claims with title retrieval, direct prompting scored 45.9% accuracy / 33.8% FEVER score; zero-shot evidence-chain (`cot_chain`) scored 60.8% accuracy / 51.1% FEVER score.
-- **SFT (2B LoRA, 5,895 claims)**: Direct prompting scored 74.1% accuracy / 65.9% FEVER score. Zero-shot `cot_chain` scored 71.4% accuracy / 62.4% FEVER score, suffering from 512-token truncations and NEI recall drops.
-- **Next experiment**: Run [`run.sbatch`](run.sbatch) on SoC to test `cot_brief` (concise <=50 words evidence reasoning) on both base and SFT models. See [`verifier/TODO.md`](verifier/TODO.md) for execution details.
+- **Base model (untrained Qwen3.5-2B)**: On the same 900 dev claims with title retrieval, direct prompting scored 45.9% accuracy / 33.8% FEVER; `cot_chain` scored 60.8% / 51.1%; `cot_brief` scored 61.8% / 48.6%. The direct run used a 160-token output cap, while CoT used 512; 46 direct outputs hit the cap and were invalid. Retest with matched caps before attributing the full gap to reasoning.
+- **SFT (2B LoRA, 5,895 claims)**: Direct prompting scored 74.1% accuracy / 65.9% FEVER; `cot_chain` scored 71.4% / 62.4%; `cot_brief` scored 74.6% / 63.9%. Brief reasoning largely removed truncation, but still reduced NEI recall and FEVER score relative to direct prompting.
+- **Next experiments**: Run the matched 1024-output-token sweep with [`run.sbatch`](run.sbatch), then validate promising prompt gains on an untouched holdout. The separate direct-JSON GRPO run can proceed while CoT SFT teacher data is generated. See [`verifier/TODO.md`](verifier/TODO.md) for execution details.
 
 Detailed metric comparisons, per-claim error cases, and calibration analyses are tracked in `verifier/INSIGHT.md`.
 
@@ -136,32 +136,80 @@ cot_sft_job=$(sbatch --parsable --partition=gpu --gpus=a100-40:1 --time=03:00:00
 unset TRAIN_SCRIPT
 ```
 
-### 3. GRPO training
+### 3. GRPO from the completed no-CoT SFT checkpoint
 
-Requires an existing SFT adapter checkpoint:
+This is a **direct-JSON GRPO** run: it starts from the 5,895-example SFT `run2` adapter, trains on 1,200 FEVER **train** oracle prompts with 8 sampled completions per prompt, and retains the historical full reward and 96-token completion cap. It does not train CoT. The previous full GRPO run took about 3 hours, so use `gpu-long` with enough time for startup and checkpoint saving. On SoC, verify the adapter weights are present and run a three-step smoke test before the full run:
 
 ```bash
-export TRAIN_SCRIPT=verifier/experiments/grpo_qwen_3.5-2b_full_n1200/train.py
-export SFT_CHECKPOINTS=verifier/experiments/sft_qwen_3.5-2b_n6000/runs/run2/artifacts/checkpoints
-sbatch --export=ALL,RUN_NAME=run2,SEED=1 verifier/experiments/run_train.sbatch
-unset TRAIN_SCRIPT SFT_CHECKPOINTS
+cd "$HOME/rl-test"
+sft=verifier/experiments/sft_qwen_3.5-2b_n6000/runs/run2/artifacts/checkpoints
+test -s "$sft/adapter_model.safetensors" && echo 'SFT adapter: OK'
+
+smoke_job=$(sbatch --parsable --partition=gpu --gpus=a100-40:1 \
+  --exclude=xgpe2 --time=00:30:00 \
+  --export=ALL,TRAIN_SCRIPT=verifier/experiments/grpo_qwen_3.5-2b_full_n16_smoke/train.py,SFT_CHECKPOINTS="$sft",RUN_NAME=from-sft-run2-seed0,SEED=0 \
+  verifier/experiments/run_train.sbatch)
+echo "GRPO smoke job: $smoke_job"
+squeue -j "$smoke_job"
 ```
+
+After the smoke job leaves the queue, check `sacct -j "$smoke_job" --format=JobID,State,ExitCode,Elapsed`. Once it is `COMPLETED` with exit code `0:0`, submit the full run:
+
+```bash
+cd "$HOME/rl-test"
+sft=verifier/experiments/sft_qwen_3.5-2b_n6000/runs/run2/artifacts/checkpoints
+train_job=$(sbatch --parsable --partition=gpu-long --gpus=a100-40:1 \
+  --exclude=xgpe2 --time=06:00:00 \
+  --export=ALL,TRAIN_SCRIPT=verifier/experiments/grpo_qwen_3.5-2b_full_n1200/train.py,SFT_CHECKPOINTS="$sft",RUN_NAME=from-sft-run2-seed0,SEED=0 \
+  verifier/experiments/run_train.sbatch)
+echo "GRPO job: $train_job"
+squeue -j "$train_job"
+```
+
+The smoke and full runs write to their respective `grpo_qwen_3.5-2b_full_n16_smoke/` and `grpo_qwen_3.5-2b_full_n1200/` experiment directories, each under `runs/from-sft-run2-seed0/artifacts/`. Check `sacct -j "$train_job" --format=JobID,State,ExitCode,Elapsed,MaxRSS`, `slurm-train-verifier-<job-id>.out`, and `artifacts/logs/train_log.json` (`frac_reward_zero_std` shows how often a prompt's sampled answers have no reward spread). Use a new `RUN_NAME` for any repeat.
+
+After training **completes successfully**, compare the GRPO adapter against the saved SFT `run2` evaluations on the same 900 dev IDs and title retrieval:
+
+```bash
+grpo=verifier/experiments/grpo_qwen_3.5-2b_full_n1200/runs/from-sft-run2-seed0/artifacts/checkpoints
+test -s "$grpo/adapter_model.safetensors" && echo 'GRPO adapter: OK'
+eval_job=$(sbatch --parsable --partition=gpu --gpus=a100-40:1 \
+  --exclude=xgpe2 --time=01:30:00 \
+  --export=ALL,N_CLAIMS=900,RUN_NAME=from-sft-run2-seed0,PROMPT_STYLE=direct,CHECKPOINTS="$grpo",EVAL_CONDITION=grpo-sft-direct-eval \
+  verifier/evaluation/run.sbatch)
+echo "GRPO direct eval job: $eval_job"
+```
+
+The result goes to `verifier/evaluation/results/grpo-sft-direct-eval/from-sft-run2-seed0/`. Its matched no-GRPO control is `verifier/evaluation/results/sft-direct-eval1/` (667/900 accuracy, 593/900 FEVER, 0.038 token ECE). Compare accuracy, FEVER, NEI recall, evidence F1, token ECE and format on all 900 claims. This run changes **training**, not the evaluation prompt; CoT GRPO needs a separate prompt/reward configuration and a longer completion cap.
 
 ## Evaluation on SoC
 
 Evaluation jobs load dev claims, query the BM25 index and SQLite cache, generate predictions, and score accuracy and FEVER metrics.
 
-### 1. One-command array retest (`run.sbatch`)
+### 1. Matched 1024-token evaluation sweep (`run.sbatch`)
 
-Launches a two-task Slurm array to evaluate both the base model (task 0) and the SFT `run2` adapter (task 1) using the concise `cot_brief` prompt on the frozen 900 dev claims:
+Launches six Slurm array tasks (at most two concurrent) on the same frozen 900 dev claims, title retrieval and evaluator. All use `MAX_NEW_TOKENS=1024`:
+
+| Task | Model | Prompt | Result condition |
+|---:|---|---|---|
+| 0 | Base | `direct` | `base-direct-cap1024` |
+| 1 | Base | `cot_chain` | `base-cot_chain-cap1024` |
+| 2 | Base | `cot_brief` | `base-cot_brief-cap1024` |
+| 3 | SFT `run2` | `direct` | `sft-direct-cap1024` |
+| 4 | SFT `run2` | `cot_chain` | `sft-cot_chain-cap1024` |
+| 5 | SFT `run2` | `cot_brief` | `sft-cot_brief-cap1024` |
+
+After pulling the updated branch on SoC, verify the SFT adapter exists and submit from the repo root:
 
 ```bash
 cd "$HOME/rl-test"
+test -s verifier/experiments/sft_qwen_3.5-2b_n6000/runs/run2/artifacts/checkpoints/adapter_model.safetensors
 job=$(sbatch --parsable run.sbatch)
-echo "Array job: $job (task 0: base, task 1: SFT)"
+echo "1024-token sweep: $job"
 squeue -j "$job"
 ```
-Results write to `verifier/evaluation/results/base-cot-brief-eval/prompt-retest1/` and `sft-cot-brief-eval/prompt-retest1/`.
+
+Each task writes to `verifier/evaluation/results/<result-condition>/run1/` with predictions, metrics, manifest and log. Slurm logs are `slurm-verifier-cap1024-<job-id>_<task-id>.out` in the repo root. Check completion with `sacct -j "$job" --format=JobID,JobName,State,ExitCode,Elapsed`. Use `sbatch --export=ALL,RUN_NAME=run2 run.sbatch` for a repeat, or `RESULTS_ROOT` to move the result tree. A larger output cap can expose repetitive generations and increase GPU time; inspect capped outputs and per-claim reasoning along with aggregate metrics. Comparing the six new runs holds the cap fixed. The older 160/512-token runs remain useful historical references, but their differences also include the cap change.
 
 ### 2. Single evaluation run (`verifier/evaluation/run.sbatch`)
 
@@ -169,13 +217,14 @@ Submit single evaluation conditions via `verifier/evaluation/run.sbatch`:
 
 ```text
 [RESULTS_ROOT=ROOT_PATH | RESULT_DIR=RUN_PATH] sbatch [--partition=PARTITION] [--gpus=GPU_TYPE:1] [--time=HH:MM:SS] \
-  --export=ALL[,N_CLAIMS=COUNT][,RUN_NAME=NAME][,THINKING=on|off | ,PROMPT_STYLE=STYLE][,CHECKPOINTS=ADAPTER_PATH][,EVAL_CONDITION=NAME] \
+  --export=ALL[,N_CLAIMS=COUNT][,RUN_NAME=NAME][,THINKING=on|off | ,PROMPT_STYLE=STYLE][,MAX_NEW_TOKENS=COUNT][,CHECKPOINTS=ADAPTER_PATH][,EVAL_CONDITION=NAME] \
   verifier/evaluation/run.sbatch
 ```
 
 **Key options:**
 - `N_CLAIMS`: Number of dev claims (default: 900; smoke test: 30).
 - `PROMPT_STYLE`: `direct` (short JSON), `cot_chain` (explicit chain), `cot_brief` (<=50 words reasoning), or `cot_sft` (confidence-free CoT adapter).
+- `MAX_NEW_TOKENS`: Optional positive output-token cap. Defaults: `direct=160`, `cot_chain=512`, `cot_brief=512`, `cot_sft=320`. This is not the model's total context window; set a distinct result directory for each cap.
 - `CHECKPOINTS`: Path to adapter checkpoint directory (e.g. `verifier/experiments/sft_qwen_3.5-2b_n6000/runs/run2/artifacts/checkpoints`). Omit to evaluate the untrained base model.
 - `RUN_NAME`: Unique run identifier (e.g. `run1`, `run2`).
 - `EVAL_CONDITION`: Result subdirectory name under `verifier/evaluation/results/`.
@@ -194,6 +243,7 @@ sbatch --partition=gpu --gpus=a100-40:1 --time=03:00:00 --export=ALL,N_CLAIMS=90
 adapter=verifier/experiments/sft_qwen_3.5-2b_n6000/runs/run2/artifacts/checkpoints
 sbatch --partition=gpu --gpus=a100-40:1 --time=01:30:00 --export=ALL,N_CLAIMS=900,RUN_NAME=run2,THINKING=off,CHECKPOINTS="$adapter",EVAL_CONDITION=sft-direct-eval verifier/evaluation/run.sbatch
 sbatch --partition=gpu --gpus=a100-40:1 --time=03:00:00 --export=ALL,N_CLAIMS=900,RUN_NAME=run2,THINKING=on,CHECKPOINTS="$adapter",EVAL_CONDITION=sft-cot-eval verifier/evaluation/run.sbatch
+
 ```
 
 ### 3. Inspecting results & offline scoring

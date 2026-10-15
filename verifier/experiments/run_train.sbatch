@@ -30,7 +30,17 @@ if [[ -n "${OUTPUT_ROOT:-}" ]]; then
 fi
 if [[ -n "${SFT_CHECKPOINTS:-}" ]]; then
   case "$train_script" in
-    verifier/experiments/grpo_*/train.py) args+=(--sft "$SFT_CHECKPOINTS") ;;
+    verifier/experiments/grpo_*/train.py)
+      [[ -f "$SFT_CHECKPOINTS/adapter_config.json" ]] || {
+        echo "Missing SFT adapter config: $SFT_CHECKPOINTS/adapter_config.json" >&2
+        exit 2
+      }
+      [[ -s "$SFT_CHECKPOINTS/adapter_model.safetensors" || -s "$SFT_CHECKPOINTS/adapter_model.bin" ]] || {
+        echo "Missing SFT adapter weights in $SFT_CHECKPOINTS" >&2
+        exit 2
+      }
+      args+=(--sft "$SFT_CHECKPOINTS")
+      ;;
     *) echo "SFT_CHECKPOINTS applies only to GRPO training" >&2; exit 2 ;;
   esac
 fi
