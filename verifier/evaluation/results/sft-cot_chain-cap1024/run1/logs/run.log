@@ -14,3 +14,64 @@ started_at=2026-10-15T04:14:54Z
   120/900  445s
   140/900  538s
   160/900  604s
+  180/900  702s
+  200/900  797s
+  220/900  833s
+  240/900  893s
+  260/900  925s
+  280/900  947s
+  300/900  1077s
+  320/900  1102s
+  340/900  1130s
+  360/900  1158s
+  380/900  1219s
+  400/900  1320s
+  420/900  1382s
+  440/900  1411s
+  460/900  1471s
+  480/900  1493s
+  500/900  1553s
+  520/900  1580s
+  540/900  1651s
+  560/900  1678s
+  580/900  1703s
+  600/900  1768s
+  620/900  1899s
+  640/900  1960s
+  660/900  2027s
+  680/900  2056s
+  700/900  2118s
+  720/900  2146s
+  740/900  2208s
+  760/900  2271s
+  780/900  2364s
+  800/900  2429s
+  820/900  2502s
+  840/900  2527s
+  860/900  2589s
+  880/900  2650s
+  900/900  2748s
+
+== Qwen/Qwen3.5-2B+sft_qwen_3.5-2b_n6000_run2  (900 claims, predictions.jsonl) ==
+  format adherence      0.947   json=0.95  verdict=0.95  evidence=0.95  confidence=0.95
+  label accuracy        0.714
+  FEVER score           0.624
+  evidence F1 (non-NEI) 0.644
+  recall SUPPORTED        0.833  (n=300)
+  recall REFUTED          0.747  (n=300)
+  recall NOT_ENOUGH_INFO  0.563  (n=300)
+  ECE stated_conf       0.245   (available 0.95)
+      [0.9,1.0)  n=852  conf=1.00  acc=0.75
+  ECE token_conf        0.169   (available 0.95)
+      [0.4,0.5)  n=5    conf=0.50  acc=0.80
+      [0.5,0.6)  n=30   conf=0.56  acc=0.50
+      [0.6,0.7)  n=24   conf=0.65  acc=0.62
+      [0.7,0.8)  n=68   conf=0.76  acc=0.53
+      [0.8,0.9)  n=84   conf=0.86  acc=0.61
+      [0.9,1.0)  n=641  conf=0.98  acc=0.81
+  non-NEI, gold in  context: n=517  acc=0.836  FEVER=0.760
+  non-NEI, gold NOT in context: n=83   acc=0.506  FEVER=0.000
+  tokens in/out         1432 / 130 per claim
+  providers             {'local': 900}
+finished_at=2026-10-15T05:01:38Z
+predictions=verifier/evaluation/results/sft-cot_chain-cap1024/run1/predictions.jsonl metrics=verifier/evaluation/results/sft-cot_chain-cap1024/run1/metrics.json
