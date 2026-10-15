@@ -1,0 +1,16 @@
+{
+  "job_id": "947258",
+  "run_name": "sft-eval1",
+  "commit": "d3d677bde751babfb7d33598af908e4f03e37a18",
+  "model": "Qwen/Qwen3.5-2B",
+  "checkpoints": "verifier/experiments/sft_qwen_3.5-2b_n6000/runs/run2/artifacts/checkpoints",
+  "thinking": "on",
+  "prompt_style": "cot_chain",
+  "retrieval": "titles",
+  "condition": "checkpoint-cot",
+  "result_dir": "verifier/evaluation/results/checkpoint-cot/sft-eval1",
+  "n_claims": 900,
+  "predictions": "verifier/evaluation/results/checkpoint-cot/sft-eval1/predictions.jsonl",
+  "metrics": "verifier/evaluation/results/checkpoint-cot/sft-eval1/metrics.json",
+  "log": "verifier/evaluation/results/checkpoint-cot/sft-eval1/logs/run.log"
+}
