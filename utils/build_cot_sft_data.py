@@ -270,8 +270,10 @@ def validate(row, answer):
         return "duplicate_or_too_many_citations"
     shown = set(re.findall(r"(?m)^E\d+\b", row["prompt"]))
     mentioned = set(EID.findall(reasoning))
+    # NEI may describe visible context that fails to establish the claim while
+    # citing no supporting evidence. Its final FEVER evidence target stays [].
     if (not set(cited) <= shown or not mentioned <= shown or not set(cited) <= mentioned
-            or (mentioned and not cited)):
+            or (mentioned and not cited and row["gold"] != "NOT_ENOUGH_INFO")):
         return "citation_mismatch"
     gold_eids = set(json.loads(row["completion"])["evidence"])
     if row["gold"] != "NOT_ENOUGH_INFO" and not gold_eids <= mentioned:
@@ -281,6 +283,7 @@ def validate(row, answer):
 
 def collect(args):
     out = Path(args.out)
+    result_dir = Path(args.result_dir) if args.result_dir else out
     manifest = json.loads((out / "manifest.json").read_text(encoding="utf-8"))
     provider = manifest.get("provider", "gemini")
     source = read_jsonl(out / "source_rows.jsonl")
@@ -314,20 +317,23 @@ def collect(args):
                          "completion": json.dumps(completion, ensure_ascii=False)})
     if len(received) != len(source):
         raise ValueError(f"only {len(received)}/{len(source)} responses saved; finish `run` before `collect`")
-    cot_sft_path = out / "cot_sft_labeled_prompts.jsonl"
-    if cot_sft_path.exists() or (out / "rejected.jsonl").exists():
+    cot_sft_path = result_dir / "cot_sft_labeled_prompts.jsonl"
+    if any((result_dir / name).exists() for name in
+           ("cot_sft_labeled_prompts.jsonl", "rejected.jsonl", "summary.json")):
         raise FileExistsError("Collected output already exists; use a fresh directory")
+    result_dir.mkdir(parents=True, exist_ok=True)
     write_jsonl(cot_sft_path, accepted)
-    write_jsonl(out / "rejected.jsonl", rejected)
+    write_jsonl(result_dir / "rejected.jsonl", rejected)
     summary = {
+        "source_run": str(out), "validation_rule": "nei_visible_context_refs_v2",
         "source_rows": len(source), "received": len(received), "accepted": len(accepted),
         "rejected": len(rejected), "rejection_reasons": dict(collections.Counter(x["reason"] for x in rejected)),
         "usage": dict(usage),
     }
-    (out / "summary.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
+    (result_dir / "summary.json").write_text(json.dumps(summary, indent=2) + "\n", encoding="utf-8")
     print(f"Accepted {len(accepted)}/{len(source)}; rejected {len(rejected)}")
     print(f"CoT SFT data: {cot_sft_path}")
-    print(f"Token usage: {dict(usage)}; details: {out / 'summary.json'}")
+    print(f"Token usage: {dict(usage)}; details: {result_dir / 'summary.json'}")
     print("Automated checks cannot prove that every explanation is semantically faithful.")
 
 
@@ -348,7 +354,9 @@ def main():
     sending.add_argument("--out", required=True)
     sending.add_argument("--max-requests", type=int, default=0, help="0 sends all remaining rows")
     sending.add_argument("--delay", type=float, help="seconds between requests (default: SoCLaaS 1, Gemini 10)")
-    sub.add_parser("collect").add_argument("--out", required=True)
+    collection = sub.add_parser("collect")
+    collection.add_argument("--out", required=True)
+    collection.add_argument("--result-dir", help="fresh directory for validated outputs; preserves an earlier collection")
     args = ap.parse_args()
     if args.command == "prepare" and args.provider == "gemini" and not args.model:
         args.model = MODEL
