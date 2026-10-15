@@ -1,0 +1,81 @@
+job=946584 run=run1 commit=1aafaaad04500b43fac5f5e87e0eefa0a2bd4291 n=900 thinking=off retrieval=titles model=Qwen/Qwen3.5-2B checkpoints=none
+started_at=2026-10-14T16:28:11Z
+0 done, 900 to go -> verifier/evaluation/results/direct-baseline/run1/predictions.jsonl
+Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]Loading weights:   0%|          | 1/320 [00:01<10:26,  1.96s/it]Loading weights:   4%|▍         | 12/320 [00:02<00:39,  7.70it/s]Loading weights:   5%|▌         | 17/320 [00:02<00:26, 11.22it/s]Loading weights:   8%|▊         | 26/320 [00:02<00:15, 18.98it/s]Loading weights:  10%|█         | 32/320 [00:02<00:12, 22.44it/s]Loading weights:  13%|█▎        | 41/320 [00:02<00:09, 30.10it/s]Loading weights:  15%|█▍        | 47/320 [00:02<00:09, 29.15it/s]Loading weights:  19%|█▉        | 60/320 [00:03<00:06, 42.41it/s]Loading weights:  21%|██        | 66/320 [00:03<00:05, 43.09it/s]Loading weights:  23%|██▎       | 75/320 [00:03<00:05, 48.36it/s]Loading weights:  25%|██▌       | 81/320 [00:03<00:05, 44.23it/s]Loading weights:  29%|██▉       | 92/320 [00:03<00:03, 57.23it/s]Loading weights:  31%|███       | 99/320 [00:03<00:05, 40.35it/s]Loading weights:  36%|███▌      | 114/320 [00:04<00:03, 56.01it/s]Loading weights:  38%|███▊      | 122/320 [00:04<00:03, 52.73it/s]Loading weights:  41%|████      | 131/320 [00:04<00:03, 59.38it/s]Loading weights:  43%|████▎     | 138/320 [00:04<00:03, 52.09it/s]Loading weights:  46%|████▌     | 146/320 [00:04<00:03, 51.80it/s]Loading weights:  48%|████▊     | 152/320 [00:04<00:03, 43.13it/s]Loading weights:  50%|████▉     | 159/320 [00:04<00:03, 47.72it/s]Loading weights:  53%|█████▎    | 171/320 [00:05<00:02, 57.66it/s]Loading weights:  56%|█████▌    | 178/320 [00:05<00:02, 59.07it/s]Loading weights:  58%|█████▊    | 185/320 [00:05<00:02, 55.59it/s]Loading weights:  60%|█████▉    | 191/320 [00:05<00:02, 53.59it/s]Loading weights:  62%|██████▏   | 199/320 [00:05<00:02, 55.26it/s]Loading weights:  64%|██████▍   | 205/320 [00:05<00:02, 44.24it/s]Loading weights:  66%|██████▋   | 212/320 [00:05<00:02, 48.64it/s]Loading weights:  70%|███████   | 224/320 [00:06<00:01, 58.84it/s]Loading weights:  72%|███████▏  | 231/320 [00:06<00:01, 60.20it/s]Loading weights:  74%|███████▍  | 238/320 [00:06<00:01, 57.58it/s]Loading weights:  76%|███████▋  | 244/320 [00:06<00:01, 56.97it/s]Loading weights:  79%|███████▉  | 252/320 [00:06<00:01, 57.16it/s]Loading weights:  81%|████████  | 258/320 [00:06<00:01, 45.19it/s]Loading weights:  83%|████████▎ | 265/320 [00:06<00:01, 49.05it/s]Loading weights:  86%|████████▋ | 276/320 [00:07<00:00, 62.56it/s]Loading weights:  88%|████████▊ | 283/320 [00:07<00:00, 56.67it/s]Loading weights:  91%|█████████ | 291/320 [00:07<00:00, 56.12it/s]Loading weights:  93%|█████████▎| 297/320 [00:07<00:00, 55.17it/s]Loading weights:  95%|█████████▌| 304/320 [00:07<00:00, 58.69it/s]Loading weights:  97%|█████████▋| 311/320 [00:07<00:00, 42.33it/s]Loading weights:  99%|█████████▉| 317/320 [00:07<00:00, 44.73it/s]Loading weights: 100%|██████████| 320/320 [00:07<00:00, 40.22it/s]
+[transformers] `causal_conv1d_fn` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+[transformers] `chunk_gated_delta_rule` is falling back to its reference PyTorch implementation because `flash-linear-attention` is not installed. This is correct but much slower; install `flash-linear-attention` for the optimized kernel.
+[transformers] `causal_conv1d_update` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+[transformers] `fused_recurrent_gated_delta_rule` is falling back to its reference PyTorch implementation because `flash-linear-attention` is not installed. This is correct but much slower; install `flash-linear-attention` for the optimized kernel.
+  20/900  31s
+  40/900  56s
+  60/900  80s
+  80/900  101s
+  100/900  118s
+  120/900  134s
+  140/900  155s
+  160/900  180s
+  180/900  195s
+  200/900  215s
+  220/900  236s
+  240/900  254s
+  260/900  275s
+  280/900  290s
+  300/900  313s
+  320/900  339s
+  340/900  366s
+  360/900  386s
+  380/900  413s
+  400/900  431s
+  420/900  451s
+  440/900  471s
+  460/900  493s
+  480/900  515s
+  500/900  532s
+  520/900  557s
+  540/900  580s
+  560/900  598s
+  580/900  617s
+  600/900  641s
+  620/900  663s
+  640/900  689s
+  660/900  713s
+  680/900  739s
+  700/900  756s
+  720/900  781s
+  740/900  810s
+  760/900  826s
+  780/900  847s
+  800/900  867s
+  820/900  886s
+  840/900  905s
+  860/900  927s
+  880/900  948s
+  900/900  970s
+
+== Qwen/Qwen3.5-2B  (900 claims, predictions.jsonl) ==
+  format adherence      0.837   json=0.94  verdict=0.94  evidence=0.84  confidence=0.94
+  label accuracy        0.459
+  FEVER score           0.338
+  evidence F1 (non-NEI) 0.425
+  recall SUPPORTED        0.930  (n=300)
+  recall REFUTED          0.307  (n=300)
+  recall NOT_ENOUGH_INFO  0.140  (n=300)
+  ECE stated_conf       0.52   (available 0.94)
+      [0.0,0.1)  n=69   conf=0.00  acc=0.57
+      [0.1,0.2)  n=2    conf=0.10  acc=0.50
+      [0.5,0.6)  n=5    conf=0.50  acc=0.40
+      [0.9,1.0)  n=769  conf=1.00  acc=0.48
+  ECE token_conf        0.308   (available 0.94)
+      [0.3,0.4)  n=9    conf=0.37  acc=0.11
+      [0.4,0.5)  n=75   conf=0.45  acc=0.35
+      [0.5,0.6)  n=104  conf=0.55  acc=0.38
+      [0.6,0.7)  n=97   conf=0.65  acc=0.33
+      [0.7,0.8)  n=88   conf=0.75  acc=0.32
+      [0.8,0.9)  n=103  conf=0.85  acc=0.47
+      [0.9,1.0)  n=373  conf=0.97  acc=0.64
+  non-NEI, gold in  context: n=517  acc=0.634  FEVER=0.507
+  non-NEI, gold NOT in context: n=83   acc=0.518  FEVER=0.000
+  tokens in/out         1365 / 54 per claim
+  providers             {'local': 900}
+finished_at=2026-10-14T16:45:09Z
+predictions=verifier/evaluation/results/direct-baseline/run1/predictions.jsonl metrics=verifier/evaluation/results/direct-baseline/run1/metrics.json

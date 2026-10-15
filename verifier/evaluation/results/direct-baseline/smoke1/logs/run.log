@@ -1,0 +1,36 @@
+job=946549 run=smoke1 commit=1aafaaad04500b43fac5f5e87e0eefa0a2bd4291 n=30 thinking=off retrieval=titles model=Qwen/Qwen3.5-2B checkpoints=none
+started_at=2026-10-14T16:21:52Z
+0 done, 30 to go -> verifier/evaluation/results/direct-baseline/smoke1/predictions.jsonl
+Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]Loading weights:   0%|          | 1/320 [00:02<12:07,  2.28s/it]Loading weights:   4%|▍         | 12/320 [00:02<00:47,  6.48it/s]Loading weights:   7%|▋         | 22/320 [00:02<00:22, 13.01it/s]Loading weights:   9%|▉         | 28/320 [00:02<00:18, 15.97it/s]Loading weights:  12%|█▎        | 40/320 [00:02<00:10, 25.80it/s]Loading weights:  14%|█▍        | 46/320 [00:03<00:10, 26.13it/s]Loading weights:  17%|█▋        | 53/320 [00:03<00:08, 31.43it/s]Loading weights:  20%|██        | 64/320 [00:03<00:05, 43.30it/s]Loading weights:  22%|██▏       | 71/320 [00:03<00:05, 42.43it/s]Loading weights:  25%|██▍       | 79/320 [00:03<00:05, 45.43it/s]Loading weights:  27%|██▋       | 85/320 [00:03<00:04, 47.04it/s]Loading weights:  29%|██▉       | 93/320 [00:03<00:04, 49.32it/s]Loading weights:  31%|███       | 99/320 [00:04<00:05, 41.08it/s]Loading weights:  33%|███▎      | 106/320 [00:04<00:04, 45.81it/s]Loading weights:  37%|███▋      | 117/320 [00:04<00:03, 59.39it/s]Loading weights:  39%|███▉      | 124/320 [00:04<00:03, 54.03it/s]Loading weights:  41%|████▏     | 132/320 [00:04<00:03, 53.26it/s]Loading weights:  43%|████▎     | 138/320 [00:04<00:03, 52.41it/s]Loading weights:  46%|████▌     | 146/320 [00:05<00:03, 52.91it/s]Loading weights:  48%|████▊     | 152/320 [00:05<00:03, 43.69it/s]Loading weights:  50%|████▉     | 159/320 [00:05<00:03, 48.29it/s]Loading weights:  53%|█████▎    | 170/320 [00:05<00:02, 54.43it/s]Loading weights:  55%|█████▌    | 176/320 [00:05<00:02, 54.20it/s]Loading weights:  58%|█████▊    | 185/320 [00:05<00:02, 56.61it/s]Loading weights:  60%|█████▉    | 191/320 [00:05<00:02, 55.54it/s]Loading weights:  62%|██████▏   | 199/320 [00:06<00:02, 55.32it/s]Loading weights:  64%|██████▍   | 205/320 [00:06<00:02, 43.21it/s]Loading weights:  66%|██████▋   | 212/320 [00:06<00:02, 47.48it/s]Loading weights:  70%|██████▉   | 223/320 [00:06<00:01, 61.13it/s]Loading weights:  72%|███████▏  | 230/320 [00:06<00:01, 55.19it/s]Loading weights:  74%|███████▍  | 238/320 [00:06<00:01, 55.56it/s]Loading weights:  76%|███████▋  | 244/320 [00:06<00:01, 54.41it/s]Loading weights:  79%|███████▉  | 252/320 [00:07<00:01, 53.56it/s]Loading weights:  81%|████████  | 258/320 [00:07<00:01, 42.25it/s]Loading weights:  82%|████████▎ | 264/320 [00:07<00:01, 44.09it/s]Loading weights:  86%|████████▋ | 276/320 [00:07<00:00, 59.51it/s]Loading weights:  88%|████████▊ | 283/320 [00:07<00:00, 53.71it/s]Loading weights:  90%|█████████ | 289/320 [00:07<00:00, 54.79it/s]Loading weights:  92%|█████████▏| 295/320 [00:07<00:00, 48.02it/s]Loading weights:  95%|█████████▌| 305/320 [00:08<00:00, 53.13it/s]Loading weights:  97%|█████████▋| 311/320 [00:08<00:00, 43.11it/s]Loading weights:  99%|█████████▉| 318/320 [00:08<00:00, 46.86it/s]Loading weights: 100%|██████████| 320/320 [00:08<00:00, 37.98it/s]
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[transformers] `causal_conv1d_fn` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+[transformers] `chunk_gated_delta_rule` is falling back to its reference PyTorch implementation because `flash-linear-attention` is not installed. This is correct but much slower; install `flash-linear-attention` for the optimized kernel.
+[transformers] `causal_conv1d_update` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+[transformers] `fused_recurrent_gated_delta_rule` is falling back to its reference PyTorch implementation because `flash-linear-attention` is not installed. This is correct but much slower; install `flash-linear-attention` for the optimized kernel.
+  20/30  38s
+  30/30  51s
+
+== Qwen/Qwen3.5-2B  (30 claims, predictions.jsonl) ==
+  format adherence      0.800   json=0.97  verdict=0.97  evidence=0.80  confidence=0.97
+  label accuracy        0.400
+  FEVER score           0.233
+  evidence F1 (non-NEI) 0.367
+  recall SUPPORTED        0.900  (n=10)
+  recall REFUTED          0.200  (n=10)
+  recall NOT_ENOUGH_INFO  0.100  (n=10)
+  ECE stated_conf       0.621   (available 0.97)
+      [0.0,0.1)  n=1    conf=0.00  acc=1.00
+      [0.9,1.0)  n=28   conf=1.00  acc=0.39
+  ECE token_conf        0.414   (available 0.97)
+      [0.4,0.5)  n=2    conf=0.45  acc=0.50
+      [0.5,0.6)  n=3    conf=0.56  acc=0.33
+      [0.6,0.7)  n=1    conf=0.62  acc=0.00
+      [0.7,0.8)  n=6    conf=0.76  acc=0.17
+      [0.8,0.9)  n=4    conf=0.85  acc=0.50
+      [0.9,1.0)  n=13   conf=0.97  acc=0.54
+  non-NEI, gold in  context: n=17   acc=0.471  FEVER=0.353
+  non-NEI, gold NOT in context: n=3    acc=1.000  FEVER=0.000
+  tokens in/out         1318 / 55 per claim
+  providers             {'local': 30}
+finished_at=2026-10-14T16:23:34Z
+predictions=verifier/evaluation/results/direct-baseline/smoke1/predictions.jsonl metrics=verifier/evaluation/results/direct-baseline/smoke1/metrics.json

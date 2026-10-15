@@ -1,0 +1,84 @@
+job=948157 run=prompt-retest1 commit=3b2b8d85dbce2a40987f86abc8c9a0763f479ad6 n=900 thinking=off prompt_style=cot_brief retrieval=titles model=Qwen/Qwen3.5-2B checkpoints=none result_dir=verifier/evaluation/results/base-cot-brief-eval/prompt-retest1
+started_at=2026-10-15T02:15:09Z
+0 done, 900 to go -> verifier/evaluation/results/base-cot-brief-eval/prompt-retest1/predictions.jsonl
+Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]Loading weights:   0%|          | 1/320 [00:00<00:32,  9.91it/s]Loading weights:  16%|█▋        | 52/320 [00:00<00:00, 301.79it/s]Loading weights:  31%|███       | 98/320 [00:00<00:00, 371.10it/s]Loading weights:  45%|████▌     | 144/320 [00:00<00:00, 400.44it/s]Loading weights:  58%|█████▊    | 187/320 [00:00<00:00, 406.17it/s]Loading weights:  74%|███████▍  | 236/320 [00:00<00:00, 434.05it/s]Loading weights:  88%|████████▊ | 280/320 [00:00<00:00, 420.39it/s]Loading weights: 100%|██████████| 320/320 [00:00<00:00, 394.82it/s]
+[transformers] `causal_conv1d_fn` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+[transformers] `chunk_gated_delta_rule` is falling back to its reference PyTorch implementation because `flash-linear-attention` is not installed. This is correct but much slower; install `flash-linear-attention` for the optimized kernel.
+[transformers] `causal_conv1d_update` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+[transformers] `fused_recurrent_gated_delta_rule` is falling back to its reference PyTorch implementation because `flash-linear-attention` is not installed. This is correct but much slower; install `flash-linear-attention` for the optimized kernel.
+  20/900  38s
+  40/900  69s
+  60/900  95s
+  80/900  121s
+  100/900  152s
+  120/900  180s
+  140/900  206s
+  160/900  233s
+  180/900  260s
+  200/900  296s
+  220/900  323s
+  240/900  349s
+  260/900  377s
+  280/900  406s
+  300/900  432s
+  320/900  461s
+  340/900  488s
+  360/900  533s
+  380/900  560s
+  400/900  586s
+  420/900  619s
+  440/900  644s
+  460/900  669s
+  480/900  697s
+  500/900  723s
+  520/900  748s
+  540/900  777s
+  560/900  806s
+  580/900  832s
+  600/900  857s
+  620/900  884s
+  640/900  909s
+  660/900  937s
+  680/900  964s
+  700/900  992s
+  720/900  1023s
+  740/900  1056s
+  760/900  1085s
+  780/900  1114s
+  800/900  1143s
+  820/900  1167s
+  840/900  1194s
+  860/900  1224s
+  880/900  1258s
+  900/900  1286s
+
+== Qwen/Qwen3.5-2B  (900 claims, predictions.jsonl) ==
+  format adherence      0.998   json=1.00  verdict=1.00  evidence=1.00  confidence=1.00
+  label accuracy        0.618
+  FEVER score           0.486
+  evidence F1 (non-NEI) 0.473
+  recall SUPPORTED        0.847  (n=300)
+  recall REFUTED          0.727  (n=300)
+  recall NOT_ENOUGH_INFO  0.280  (n=300)
+  ECE stated_conf       0.337   (available 1.00)
+      [0.0,0.1)  n=27   conf=0.00  acc=0.44
+      [0.2,0.3)  n=1    conf=0.20  acc=1.00
+      [0.3,0.4)  n=5    conf=0.30  acc=0.40
+      [0.5,0.6)  n=79   conf=0.50  acc=0.63
+      [0.6,0.7)  n=1    conf=0.60  acc=0.00
+      [0.7,0.8)  n=2    conf=0.72  acc=0.50
+      [0.8,0.9)  n=54   conf=0.80  acc=0.50
+      [0.9,1.0)  n=730  conf=0.99  acc=0.63
+  ECE token_conf        0.331   (available 1.00)
+      [0.4,0.5)  n=6    conf=0.46  acc=0.67
+      [0.5,0.6)  n=29   conf=0.56  acc=0.28
+      [0.6,0.7)  n=35   conf=0.65  acc=0.57
+      [0.7,0.8)  n=18   conf=0.74  acc=0.28
+      [0.8,0.9)  n=56   conf=0.87  acc=0.54
+      [0.9,1.0)  n=755  conf=0.99  acc=0.65
+  non-NEI, gold in  context: n=517  acc=0.809  FEVER=0.683
+  non-NEI, gold NOT in context: n=83   acc=0.651  FEVER=0.000
+  tokens in/out         1408 / 93 per claim
+  providers             {'local': 900}
+finished_at=2026-10-15T02:37:11Z
+predictions=verifier/evaluation/results/base-cot-brief-eval/prompt-retest1/predictions.jsonl metrics=verifier/evaluation/results/base-cot-brief-eval/prompt-retest1/metrics.json
