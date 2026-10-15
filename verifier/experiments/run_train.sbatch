@@ -20,7 +20,31 @@ case "$train_script" in
   verifier/experiments/*/train.py) ;;
   *) echo "TRAIN_SCRIPT must be a verifier/experiments/<config>/train.py path" >&2; exit 2 ;;
 esac
+resolve_renamed_path() {
+  python -c 'import sys; from utils.experiment_layout import current_experiment_path; print(current_experiment_path(sys.argv[1]))' "$1"
+}
+if [[ ! -f "$train_script" ]]; then
+  resolved_script="$(resolve_renamed_path "$train_script")"
+  if [[ "$resolved_script" != "$train_script" ]]; then
+    echo "Renamed training script: $train_script -> $resolved_script"
+    train_script="$resolved_script"
+  fi
+fi
 test -f "$train_script" || { echo "Missing training script: $train_script" >&2; exit 2; }
+if [[ -n "${SFT_CHECKPOINTS:-}" ]]; then
+  resolved_checkpoint="$(resolve_renamed_path "$SFT_CHECKPOINTS")"
+  if [[ "$resolved_checkpoint" != "$SFT_CHECKPOINTS" ]]; then
+    echo "Renamed SFT checkpoint path: $SFT_CHECKPOINTS -> $resolved_checkpoint"
+    SFT_CHECKPOINTS="$resolved_checkpoint"
+  fi
+fi
+if [[ -n "${INIT_CHECKPOINTS:-}" ]]; then
+  resolved_checkpoint="$(resolve_renamed_path "$INIT_CHECKPOINTS")"
+  if [[ "$resolved_checkpoint" != "$INIT_CHECKPOINTS" ]]; then
+    echo "Renamed initial checkpoint path: $INIT_CHECKPOINTS -> $resolved_checkpoint"
+    INIT_CHECKPOINTS="$resolved_checkpoint"
+  fi
+fi
 run_name="${RUN_NAME:-job-${SLURM_JOB_ID:?}}"
 seed="${SEED:-0}"
 [[ "$seed" =~ ^[0-9]+$ ]] || { echo "SEED must be a nonnegative integer" >&2; exit 2; }

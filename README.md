@@ -117,7 +117,7 @@ python -m utils.migrate_training_runs --apply  # move without overwriting
 test -s verifier/experiments/sft-direct-from-base-qwen3p5-2b-train5895/runs/run2/artifacts/checkpoints/adapter_model.safetensors
 ```
 
-The script skips files already present at the destination, reports any different-content conflicts, and never overwrites them. Saved evaluation manifests retain their original checkpoint path in `original_checkpoints` and use the current path in `checkpoints`.
+The script skips files already present at the destination, reports any different-content conflicts, and never overwrites them. The current `run_train.sbatch` also translates former `TRAIN_SCRIPT`, `SFT_CHECKPOINTS` and `INIT_CHECKPOINTS` paths to their renamed configuration directories. This applies to newly submitted jobs after pulling the change; a job submitted before the launcher changed keeps its old Slurm script and must be resubmitted if it failed. Saved evaluation manifests retain their original checkpoint path in `original_checkpoints` and use the current path in `checkpoints`.
 
 ### 1. Standard no-CoT SFT (Qwen3.5-2B)
 

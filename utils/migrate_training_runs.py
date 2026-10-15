@@ -9,24 +9,11 @@ import filecmp
 import shutil
 from pathlib import Path
 
+from .experiment_layout import LEGACY_CONFIG_NAMES
+
 
 ROOT = Path(__file__).resolve().parents[1] / "verifier" / "experiments"
-RENAMED = {
-    "cot_sft_qwen_3.5-2b_oracle_pilot300": "sft-cot-from-base-qwen3p5-2b-pilot300",
-    "grpo_mt_qwen_3.5-2b_mt_base_full_n16": "grpo-multiturn-from-base-qwen3p5-2b-smoke16-kl004",
-    "grpo_qwen_3.5-2b_base_full_n1200": "grpo-direct-from-base-qwen3p5-2b-train1200-kl004",
-    "grpo_qwen_3.5-2b_full_n1200": "grpo-direct-from-sft-qwen3p5-2b-train1200-kl0",
-    "grpo_qwen_3.5-2b_full_n1200_kl": "grpo-direct-from-sft-qwen3p5-2b-filtered1200-kl004",
-    "grpo_qwen_3.5-2b_full_n1200_kl05": "grpo-direct-from-sft-qwen3p5-2b-filtered1200-kl05",
-    "grpo_qwen_3.5-2b_full_n16_smoke": "grpo-direct-from-sft-qwen3p5-2b-smoke16-kl0",
-    "sft_qwen_3.5-2b_continue_n1200": "sft-direct-from-sft-qwen3p5-2b-train1200",
-    "sft_qwen_3.5-2b_disjoint_n4695": "sft-direct-from-base-qwen3p5-2b-disjoint4695",
-    "sft_qwen_3.5-2b_n1200_from_qwen_3.5-2b_n6000": "sft-direct-from-base-qwen3p5-2b-matched1200",
-    "sft_qwen_3.5-2b_n60": "sft-direct-from-base-qwen3p5-2b-smoke60",
-    "sft_qwen_3.5-2b_n6000": "sft-direct-from-base-qwen3p5-2b-train5895",
-    "sft_qwen_3.5-4b_n6000_qlora": "sft-direct-from-base-qwen3p5-4b-train5895-qlora",
-    "sft_qwen_3.5-4b_n60_qlora": "sft-direct-from-base-qwen3p5-4b-smoke60-qlora",
-}
+RENAMED = LEGACY_CONFIG_NAMES
 
 
 def main():
