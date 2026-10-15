@@ -1,0 +1,21 @@
+{
+  "job_id": "948147",
+  "run_name": "prompt-retest1",
+  "commit": "3b2b8d85dbce2a40987f86abc8c9a0763f479ad6",
+  "model": "Qwen/Qwen3.5-2B",
+  "checkpoints": "verifier/experiments/sft_qwen_3.5-2b_n6000/runs/run2/artifacts/checkpoints",
+  "thinking": "off",
+  "prompt_style": "cot_brief",
+  "retrieval": "titles",
+  "condition": "sft-cot-brief-cap512",
+  "result_dir": "verifier/evaluation/results/sft-cot-brief-cap512/prompt-retest1",
+  "n_claims": 900,
+  "predictions": "verifier/evaluation/results/sft-cot-brief-cap512/prompt-retest1/predictions.jsonl",
+  "metrics": "verifier/evaluation/results/sft-cot-brief-cap512/prompt-retest1/metrics.json",
+  "log": "verifier/evaluation/results/sft-cot-brief-cap512/prompt-retest1/logs/run.log",
+  "original_condition": "sft-cot-brief-eval",
+  "original_result_dir": "verifier/evaluation/results/sft-cot-brief-eval/prompt-retest1",
+  "original_run_name": "prompt-retest1",
+  "max_new_tokens": 512,
+  "max_new_tokens_source": "verifier/model.py default at run commit"
+}

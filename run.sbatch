@@ -39,9 +39,9 @@ export THINKING=off
 export RUN_NAME="${RUN_NAME:-run1}"
 
 case "${SLURM_ARRAY_TASK_ID:?}" in
-  0) variant=base; style=direct; label=direct ;;
-  1) variant=base; style=cot_chain; label=cot-long ;;
-  2) variant=base; style=cot_brief; label=cot-brief ;;
+  0) variant=baseline; style=direct; label=direct ;;
+  1) variant=baseline; style=cot_chain; label=cot-long ;;
+  2) variant=baseline; style=cot_brief; label=cot-brief ;;
   3) variant=sft; style=direct; label=direct ;;
   4) variant=sft; style=cot_chain; label=cot-long ;;
   5) variant=sft; style=cot_brief; label=cot-brief ;;

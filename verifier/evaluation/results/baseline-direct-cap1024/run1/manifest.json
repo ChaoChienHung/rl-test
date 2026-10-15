@@ -1,0 +1,20 @@
+{
+  "job_id": "948488",
+  "run_name": "run1",
+  "commit": "ac0f0ba2e586bd4d9c57fc6aac9414deaf95033e",
+  "model": "Qwen/Qwen3.5-2B",
+  "checkpoints": null,
+  "thinking": "off",
+  "prompt_style": "direct",
+  "retrieval": "titles",
+  "max_new_tokens": 1024,
+  "condition": "baseline-direct-cap1024",
+  "result_dir": "verifier/evaluation/results/baseline-direct-cap1024/run1",
+  "n_claims": 900,
+  "predictions": "verifier/evaluation/results/baseline-direct-cap1024/run1/predictions.jsonl",
+  "metrics": "verifier/evaluation/results/baseline-direct-cap1024/run1/metrics.json",
+  "log": "verifier/evaluation/results/baseline-direct-cap1024/run1/logs/run.log",
+  "original_condition": "base-direct-cap1024",
+  "original_result_dir": "verifier/evaluation/results/base-direct-cap1024/run1",
+  "original_run_name": "run1"
+}
