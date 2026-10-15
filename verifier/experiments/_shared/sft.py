@@ -67,7 +67,7 @@ def build_examples(n, seed, chunk=200):
 
 
 def train(model_name, rows, out, qlora, max_steps, lr, rank, seed, system_prompt=SYSTEM,
-          init_adapter=None):
+          init_adapter=None, enable_thinking=False):
     import torch
     from datasets import Dataset
     from peft import LoraConfig, PeftModel
@@ -79,7 +79,7 @@ def train(model_name, rows, out, qlora, max_steps, lr, rank, seed, system_prompt
     def to_text(r):
         prompt = tok.apply_chat_template(
             [{"role": "system", "content": system_prompt}, {"role": "user", "content": r["prompt"]}],
-            tokenize=False, add_generation_prompt=True, enable_thinking=False)
+            tokenize=False, add_generation_prompt=True, enable_thinking=enable_thinking)
         return {"prompt": prompt, "completion": r["completion"] + tok.eos_token}
     ds = Dataset.from_list([to_text(r) for r in rows])
     n_long = sum(len(tok(r["prompt"] + r["completion"]).input_ids) > MAX_LEN for r in ds)

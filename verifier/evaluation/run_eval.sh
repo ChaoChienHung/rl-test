@@ -67,11 +67,35 @@ PY
   condition="${condition/baseline-/checkpoint-}"
 fi
 
-condition="${condition}-cap${MAX_NEW_TOKENS:-$default_cap}"
+if [[ -n "${EVAL_MODEL:-}" ]]; then
+  [[ "$EVAL_MODEL" =~ ^[A-Za-z0-9][A-Za-z0-9_.-]*$ ]] || {
+    echo "EVAL_MODEL must use letters, digits, underscore, dot or dash" >&2; exit 2;
+  }
+  eval_model="$EVAL_MODEL"
+elif [[ -n "$checkpoints" ]]; then
+  eval_model="$(python - "$checkpoints" <<'PY'
+import sys
+from pathlib import Path
+p = Path(sys.argv[1]).resolve()
+parts = p.parts
+if "experiments" in parts:
+    idx = parts.index("experiments")
+    if idx + 1 < len(parts):
+        print(parts[idx + 1])
+        sys.exit(0)
+print(p.parent.name)
+PY
+)"
+else
+  eval_model="base-qwen3p5-2b"
+fi
+
+style_hyphen="${style//_/-}"
+condition="${style_hyphen}-cap${MAX_NEW_TOKENS:-$default_cap}"
 
 if [[ -n "${EVAL_CONDITION:-}" ]]; then
-  [[ "$EVAL_CONDITION" =~ ^[A-Za-z0-9][A-Za-z0-9_-]*$ ]] || {
-    echo "EVAL_CONDITION must use letters, digits, underscore or dash" >&2; exit 2;
+  [[ "$EVAL_CONDITION" =~ ^[A-Za-z0-9][A-Za-z0-9_.-]*$ ]] || {
+    echo "EVAL_CONDITION must use letters, digits, underscore, dot or dash" >&2; exit 2;
   }
   condition="$EVAL_CONDITION"
 fi
@@ -85,7 +109,11 @@ if [[ -n "${RESULT_DIR:-}" ]]; then
   [[ -n "$result_dir" && "$result_dir" != "." ]] || { echo "RESULT_DIR must name a new run directory" >&2; exit 2; }
 else
   results_root="${RESULTS_ROOT:-verifier/evaluation/results}"
-  result_dir="${results_root%/}/$condition/$run_name"
+  if [[ -n "${FLAT_RESULTS:-}" ]]; then
+    result_dir="${results_root%/}/$condition/$run_name"
+  else
+    result_dir="${results_root%/}/$eval_model/$condition/$run_name"
+  fi
 fi
 if [[ -e "$result_dir" || -L "$result_dir" ]]; then
   echo "Result directory already exists: $result_dir (choose another RUN_NAME or RESULT_DIR)" >&2
@@ -117,16 +145,16 @@ PY
   echo "finished_at=$(date -u +%FT%TZ)"
   echo "predictions=$output metrics=$metrics"
 } 2>&1 | tee "$log"
-python - "$result_dir/manifest.json" "$job_id" "$run_name" "$commit" "$model" "$checkpoints" "$thinking" "$style" "$n" "$output" "$metrics" "$log" "$condition" "$result_dir" "${MAX_NEW_TOKENS:-}" <<'PY'
+python - "$result_dir/manifest.json" "$job_id" "$run_name" "$commit" "$model" "$checkpoints" "$thinking" "$style" "$n" "$output" "$metrics" "$log" "$condition" "$result_dir" "${MAX_NEW_TOKENS:-}" "$eval_model" <<'PY'
 import json
 import sys
 from pathlib import Path
 
 (_, manifest, job_id, run_name, commit, model, checkpoints, thinking,
- style, n, predictions, metrics, log, condition, result_dir, max_new_tokens) = sys.argv
+ style, n, predictions, metrics, log, condition, result_dir, max_new_tokens, eval_model) = sys.argv
 record = {
     'job_id': job_id, 'run_name': run_name, 'commit': commit,
-    'model': model, 'checkpoints': checkpoints or None,
+    'model': model, 'eval_model': eval_model, 'checkpoints': checkpoints or None,
     'thinking': 'on' if style == 'cot_native' else thinking,
     'native_thinking': style == 'cot_native',
     'prompt_style': style, 'retrieval': 'titles',
