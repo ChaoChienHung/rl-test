@@ -38,3 +38,44 @@ started_at=2026-10-15T03:20:16Z
   600/900  781s
   620/900  841s
   640/900  875s
+  660/900  936s
+  680/900  967s
+  700/900  985s
+  720/900  1018s
+  740/900  1088s
+  760/900  1104s
+  780/900  1129s
+  800/900  1166s
+  820/900  1192s
+  840/900  1214s
+  860/900  1249s
+  880/900  1278s
+  900/900  1302s
+
+== Qwen/Qwen3.5-2B  (900 claims, predictions.jsonl) ==
+  format adherence      0.856   json=0.99  verdict=0.99  evidence=0.86  confidence=0.98
+  label accuracy        0.476
+  FEVER score           0.346
+  evidence F1 (non-NEI) 0.429
+  recall SUPPORTED        0.963  (n=300)
+  recall REFUTED          0.323  (n=300)
+  recall NOT_ENOUGH_INFO  0.140  (n=300)
+  ECE stated_conf       0.52   (available 0.98)
+      [0.0,0.1)  n=68   conf=0.00  acc=0.53
+      [0.1,0.2)  n=4    conf=0.10  acc=0.50
+      [0.5,0.6)  n=7    conf=0.50  acc=0.57
+      [0.9,1.0)  n=805  conf=1.00  acc=0.47
+  ECE token_conf        0.311   (available 0.99)
+      [0.3,0.4)  n=11   conf=0.37  acc=0.09
+      [0.4,0.5)  n=84   conf=0.45  acc=0.32
+      [0.5,0.6)  n=98   conf=0.55  acc=0.38
+      [0.6,0.7)  n=118  conf=0.65  acc=0.36
+      [0.7,0.8)  n=88   conf=0.76  acc=0.31
+      [0.8,0.9)  n=103  conf=0.85  acc=0.49
+      [0.9,1.0)  n=388  conf=0.97  acc=0.63
+  non-NEI, gold in  context: n=517  acc=0.658  FEVER=0.520
+  non-NEI, gold NOT in context: n=83   acc=0.554  FEVER=0.000
+  tokens in/out         1365 / 61 per claim
+  providers             {'local': 900}
+finished_at=2026-10-15T03:42:55Z
+predictions=verifier/evaluation/results/base-direct-cap1024/run1/predictions.jsonl metrics=verifier/evaluation/results/base-direct-cap1024/run1/metrics.json
