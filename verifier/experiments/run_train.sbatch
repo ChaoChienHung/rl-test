@@ -44,6 +44,19 @@ if [[ -n "${SFT_CHECKPOINTS:-}" ]]; then
     *) echo "SFT_CHECKPOINTS applies only to GRPO training" >&2; exit 2 ;;
   esac
 fi
+if [[ -n "${INIT_CHECKPOINTS:-}" ]]; then
+  case "$train_script" in
+    verifier/experiments/sft_*/train.py) ;;
+    *) echo "INIT_CHECKPOINTS applies only to SFT training" >&2; exit 2 ;;
+  esac
+  [[ -f "$INIT_CHECKPOINTS/adapter_config.json" ]] || {
+    echo "Missing initial adapter config: $INIT_CHECKPOINTS/adapter_config.json" >&2; exit 2;
+  }
+  [[ -s "$INIT_CHECKPOINTS/adapter_model.safetensors" || -s "$INIT_CHECKPOINTS/adapter_model.bin" ]] || {
+    echo "Missing initial adapter weights in $INIT_CHECKPOINTS" >&2; exit 2;
+  }
+  args+=(--init-adapter "$INIT_CHECKPOINTS")
+fi
 if [[ -n "${TRAIN_DATA:-}" ]]; then
   case "$train_script" in
     verifier/experiments/cot_sft_*/train.py) args+=(--data "$TRAIN_DATA") ;;

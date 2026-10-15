@@ -1,0 +1,28 @@
+{
+  "split": "fever-oracle-disjoint-sft4695-grpo1200",
+  "selection": "Existing seed-0 1,200-row GRPO subset; SFT is its claim-ID complement in the 5,895-row source.",
+  "source": "verifier/data/train/sft/fever-oracle-full/labeled_prompts.jsonl",
+  "source_sha256": "7000f6afa554c1c2cc33f61b97fc5f0a06d1b4336131bd769ff1cf5aafc8ade0",
+  "sft": "verifier/data/train/sft/fever-oracle-disjoint-4695/labeled_prompts.jsonl",
+  "sft_sha256": "65c7dc10d90c988a03f68b169e466f84da6540cda06290527dcdce307074434a",
+  "grpo": "verifier/data/train/sft/fever-oracle-matched-grpo-1200/labeled_prompts.jsonl",
+  "grpo_sha256": "5b11c17c09a8685cc0a783976a225e0257666a5b826aa157351b0a780fe39bfb",
+  "counts": {
+    "source": 5895,
+    "sft": 4695,
+    "grpo": 1200
+  },
+  "labels": {
+    "sft": {
+      "REFUTED": 1545,
+      "NOT_ENOUGH_INFO": 1593,
+      "SUPPORTED": 1557
+    },
+    "grpo": {
+      "SUPPORTED": 383,
+      "REFUTED": 410,
+      "NOT_ENOUGH_INFO": 407
+    }
+  },
+  "dev_claim_id_overlap": 0
+}

@@ -86,3 +86,7 @@ results are in the per-claim JSONL, `meta.json`, structured `train_log.json`
 or the experiment documents. Future raw terminal logs under `verifier/data/` are
 ignored; new SoC job logs belong under their experiment run's
 `artifacts/logs/` for training, or under `verifier/evaluation/results/<condition>/<run>/logs/` for evaluation; terminal logs are ignored.
+
+## 5. Fixed SFT/GRPO claim split
+
+`python -m utils.build_disjoint_sft_grpo_split --check` verifies the frozen 5,895-row oracle set and its claim-disjoint 4,695/1,200 split. The 1,200-row side reuses `sft/fever-oracle-matched-grpo-1200/labeled_prompts.jsonl`; the 4,695-row complement is `sft/fever-oracle-disjoint-4695/labeled_prompts.jsonl`. `split_manifest.json` records SHA-256 hashes, row and label counts, and zero overlap with the frozen 900 dev IDs. To regenerate the 4,695-row side from those committed inputs, run `python -m utils.build_disjoint_sft_grpo_split` from the repo root.

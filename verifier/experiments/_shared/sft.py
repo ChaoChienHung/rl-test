@@ -66,10 +66,11 @@ def build_examples(n, seed, chunk=200):
     return rows
 
 
-def train(model_name, rows, out, qlora, max_steps, lr, rank, seed, system_prompt=SYSTEM):
+def train(model_name, rows, out, qlora, max_steps, lr, rank, seed, system_prompt=SYSTEM,
+          init_adapter=None):
     import torch
     from datasets import Dataset
-    from peft import LoraConfig
+    from peft import LoraConfig, PeftModel
     from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
     from trl import SFTConfig, SFTTrainer
 
@@ -90,6 +91,8 @@ def train(model_name, rows, out, qlora, max_steps, lr, rank, seed, system_prompt
             load_in_4bit=True, bnb_4bit_quant_type="nf4",
             bnb_4bit_compute_dtype=torch.bfloat16, bnb_4bit_use_double_quant=True)
     model = AutoModelForCausalLM.from_pretrained(model_name, **kw)
+    if init_adapter:
+        model = PeftModel.from_pretrained(model, init_adapter, is_trainable=True)
 
     # transformers 5 folded warmup_ratio into warmup_steps (a float < 1 is a ratio)
     warmup = ({"warmup_ratio": 0.03} if "warmup_ratio" in SFTConfig.__dataclass_fields__
@@ -103,9 +106,10 @@ def train(model_name, rows, out, qlora, max_steps, lr, rank, seed, system_prompt
         completion_only_loss=True, logging_steps=10,
         save_strategy="no", report_to="none", dataset_num_proc=1,
     )
-    lora = LoraConfig(r=rank, lora_alpha=2 * rank, lora_dropout=0.05,
-                      target_modules="all-linear", task_type="CAUSAL_LM")
-    trainer = SFTTrainer(model=model, args=cfg, train_dataset=ds, processing_class=tok, peft_config=lora)
+    peft_args = {} if init_adapter else {"peft_config": LoraConfig(
+        r=rank, lora_alpha=2 * rank, lora_dropout=0.05,
+        target_modules="all-linear", task_type="CAUSAL_LM")}
+    trainer = SFTTrainer(model=model, args=cfg, train_dataset=ds, processing_class=tok, **peft_args)
     trainer.model.print_trainable_parameters()
     t0 = time.time()
     trainer.train()
@@ -133,23 +137,42 @@ if __name__ == "__main__":
     ap.add_argument("--subset-of", default=None,
                     help="SFT data dir: train on the first n-train of its examples after a seeded shuffle, "
                          "the same claims grpo_verifier.load_rows picks (a matched SFT-vs-GRPO run)")
+    ap.add_argument("--data", default=None,
+                    help="prepared SFT data dir containing exactly n-train labeled_prompts.jsonl rows")
+    ap.add_argument("--init-adapter", default=None,
+                    help="resume SFT from an existing LoRA adapter (continue training its weights)")
     ap.add_argument("--experiment-name", default=None,
                     help="preserve a historical experiment configuration name when data storage is renamed")
     a = ap.parse_args()
+    if a.data and a.subset_of:
+        ap.error("--data and --subset-of cannot be combined")
+    if a.init_adapter:
+        adapter = Path(a.init_adapter)
+        if not (adapter / "adapter_config.json").is_file() or not any(
+            (adapter / name).is_file() for name in ("adapter_model.safetensors", "adapter_model.bin")
+        ):
+            ap.error(f"missing adapter config or weights in {adapter}")
+        if a.qlora:
+            ap.error("--init-adapter with --qlora is not supported")
 
     tag = f"_from_{os.path.basename(os.path.normpath(a.subset_of))}" if a.subset_of else ""
     name = a.experiment_name or f"{a.model.replace('/', '_')}_n{a.n_train}{'_qlora' if a.qlora else ''}{tag}"
-    if a.subset_of:
-        dataset_name = f"fever-oracle-matched-grpo-{a.n_train}"
-    elif a.n_train == 60:
-        dataset_name = "fever-oracle-smoke-60"
-    elif a.n_train == 6000:
-        dataset_name = "fever-oracle-full"
+    if a.data:
+        data_path = os.path.join(a.data, "labeled_prompts.jsonl")
+        if not os.path.isfile(data_path):
+            ap.error(f"missing prepared SFT data: {data_path}")
     else:
-        dataset_name = f"fever-oracle-{a.n_train}"
-    data_out = os.path.join(OUT_DIR, dataset_name)
-    os.makedirs(data_out, exist_ok=True)
-    data_path = os.path.join(data_out, "labeled_prompts.jsonl")
+        if a.subset_of:
+            dataset_name = f"fever-oracle-matched-grpo-{a.n_train}"
+        elif a.n_train == 60:
+            dataset_name = "fever-oracle-smoke-60"
+        elif a.n_train == 6000:
+            dataset_name = "fever-oracle-full"
+        else:
+            dataset_name = f"fever-oracle-{a.n_train}"
+        data_out = os.path.join(OUT_DIR, dataset_name)
+        os.makedirs(data_out, exist_ok=True)
+        data_path = os.path.join(data_out, "labeled_prompts.jsonl")
     if a.subset_of and not os.path.exists(data_path):
         import random
         with open(os.path.join(a.subset_of, "labeled_prompts.jsonl"), encoding="utf-8") as f:
@@ -162,6 +185,8 @@ if __name__ == "__main__":
         with open(data_path, encoding="utf-8") as f:
             rows = [json.loads(line) for line in f]
         print(f"reusing {len(rows)} examples from {data_path}")
+        if a.data and (len(rows) != a.n_train or len({str(r['id']) for r in rows}) != len(rows)):
+            ap.error(f"prepared SFT data must contain {a.n_train} unique claim IDs")
     else:
         rows = build_examples(a.n_train, a.seed)
         with open(data_path, "w", encoding="utf-8") as f:
@@ -173,10 +198,11 @@ if __name__ == "__main__":
         raise SystemExit(f"run already exists: {artifacts}; use --run-name for a new run")
     checkpoint_dir = artifacts / "checkpoints"
     checkpoint_dir.mkdir(parents=True)
-    secs, peak_gb = train(a.model, rows, str(checkpoint_dir), a.qlora, a.max_steps, a.lr, a.rank, a.seed)
+    secs, peak_gb = train(a.model, rows, str(checkpoint_dir), a.qlora, a.max_steps, a.lr, a.rank,
+                          a.seed, init_adapter=a.init_adapter)
     meta = {"model": a.model, "n_train": len(rows), "qlora": a.qlora, "max_steps": a.max_steps,
             "lr": a.lr, "rank": a.rank, "seed": a.seed, "subset_of": a.subset_of, "train_seconds": round(secs),
-            "peak_gpu_gb": round(peak_gb, 2)}
+            "data": a.data, "init_adapter": a.init_adapter, "peak_gpu_gb": round(peak_gb, 2)}
     with open(artifacts / "meta.json", "w", encoding="utf-8") as f:
         json.dump(meta, f, indent=1)
     print(json.dumps(meta, indent=1))

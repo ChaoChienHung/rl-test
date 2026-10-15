@@ -9,6 +9,12 @@
       "description": "Gold-page evidence prompts for 2B/4B SFT; 6000 requested, 5895 usable."
     },
     {
+      "name": "sft-oracle-disjoint-4695",
+      "path": "sft/fever-oracle-disjoint-4695/labeled_prompts.jsonl",
+      "observed_rows": 4695,
+      "description": "Complement of the fixed 1200-row GRPO claim set within the 5895-row oracle source; split_manifest.json records hashes and label counts."
+    },
+    {
       "name": "sft-oracle-smoke-60",
       "path": "sft/fever-oracle-smoke-60/labeled_prompts.jsonl",
       "observed_rows": 60,
