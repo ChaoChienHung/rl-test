@@ -107,14 +107,14 @@ test -f verifier/data/fever/bm25_index/doc_ids.json && echo 'BM25: OK' || echo '
 
 ## Training on SoC
 
-Submit training jobs from the repository root using `verifier/experiments/run_train.sbatch`. Artifacts (`checkpoints/`, `meta.json`, `logs/train_log.json`) are written under `verifier/experiments/<config>/runs/<run-name>/artifacts/`. Configuration names follow `<method>-<output>-from-<start>-<model>-<data>[-<setting>]`; for example, `sft5895-direct-from-base-qwen3p5-2b`. `qwen3p5` means Qwen3.5; `train5895` counts actual training rows. `pilot300` means 300 teacher requests, of which 227 were accepted. `filtered1200` means reward-spread filtering of a 1,200-claim pool. `kl004` and `kl05` mean KL beta 0.04 and 0.5. Each `train.py` writes to its own configuration folder, and `RUN_NAME` chooses the repeat.
+Submit training jobs from the repository root using `verifier/experiments/run_train.sbatch`. Artifacts (`checkpoints/`, `meta.json`, `logs/train_log.json`) are written under `verifier/experiments/<config>/runs/<run-name>/artifacts/`. Configuration names follow `<method>-<output>-from-<start>-<model>[-<setting>]-<count>-samples`; for example, `sft-direct-from-base-qwen3p5-2b-5895-samples` or `grpo-cot-from-sft4695-qwen3p5-2b-no-calibration-kl0-1200-samples`. The final count is the number of training rows. `from-sft4695` identifies the starting SFT adapter, not the GRPO row count. `qwen3p5` means Qwen3.5; `pilot300` means 300 teacher requests, of which 227 were accepted; `pool1200` means a 1,200-row pool filtered to the final `926-samples`. `kl004` and `kl05` mean KL beta 0.04 and 0.5. Each `train.py` writes to its own configuration folder, and `RUN_NAME` chooses the repeat.
 
 If your SoC checkout predates the training-directory rename, wait for running training jobs to finish, pull this branch, then move any Git-ignored run files (including adapter weights and new job logs) into their new paths:
 
 ```bash
 python -m utils.migrate_training_runs          # preview
 python -m utils.migrate_training_runs --apply  # move without overwriting
-test -s verifier/experiments/sft5895-direct-from-base-qwen3p5-2b/runs/run2/artifacts/checkpoints/adapter_model.safetensors
+test -s verifier/experiments/sft-direct-from-base-qwen3p5-2b-5895-samples/runs/run2/artifacts/checkpoints/adapter_model.safetensors
 ```
 
 The script skips files already present at the destination, reports any different-content conflicts, and never overwrites them. The current `run_train.sbatch` also translates former `TRAIN_SCRIPT`, `SFT_CHECKPOINTS` and `INIT_CHECKPOINTS` paths to their renamed configuration directories. This applies to newly submitted jobs after pulling the change; a job submitted before the launcher changed keeps its old Slurm script and must be resubmitted if it failed. Saved evaluation manifests retain their original checkpoint path in `original_checkpoints` and use the current path in `checkpoints`.
@@ -128,7 +128,7 @@ cd "$HOME/rl-test"
 job_id=$(sbatch --parsable --partition=gpu --gpus=a100-40:1 --time=03:00:00 --export=ALL,RUN_NAME=run3,SEED=0 verifier/experiments/run_train.sbatch)
 echo "no-CoT SFT job: $job_id"
 squeue -j "$job_id"
-# Checkpoint: verifier/experiments/sft5895-direct-from-base-qwen3p5-2b/runs/run3/artifacts/checkpoints/
+# Checkpoint: verifier/experiments/sft-direct-from-base-qwen3p5-2b-5895-samples/runs/run3/artifacts/checkpoints/
 ```
 
 ### 2. CoT SFT Pilot (with SoCLaaS)
@@ -145,45 +145,47 @@ python -m utils.build_cot_sft_data collect --out verifier/data/train/sft/fever-o
 # This produces a CoT SFT adapter; it is not CoT GRPO.
 test -f verifier/data/train/sft/fever-oracle-cot-soclaas/pilot1/cot_sft_labeled_prompts.jsonl
 test -x .venv/bin/python
-export TRAIN_SCRIPT=verifier/experiments/sft227-cot-from-base-qwen3p5-2b-pilot300/train.py
+export TRAIN_SCRIPT=verifier/experiments/sft-cot-from-base-qwen3p5-2b-pilot300-227-samples/train.py
 cot_sft_job=$(sbatch --parsable --partition=gpu --gpus=a100-40:1 --exclude=xgpe2 --time=03:00:00 --export=ALL,RUN_NAME=pilot1,SEED=0 verifier/experiments/run_train.sbatch)
 unset TRAIN_SCRIPT
 echo "CoT SFT pilot job: $cot_sft_job"
 squeue -j "$cot_sft_job"
 ```
 
-The committed `pilot1` data has 227 accepted examples. The separate `full1` teacher batch has 5,895 requested rows but, in the current local snapshot, only 2,132 responses and no collected training file. No CoT SFT or CoT GRPO checkpoint is recorded in this repository yet. Existing `grpo-direct-*` scripts train short direct JSON completions with a 96-token cap.
+The committed `pilot1` data has 227 accepted examples. The separate `full1` teacher batch has 5,895 requested rows but, in the current local snapshot, only 2,132 responses and no collected training file. No CoT SFT or CoT GRPO checkpoint is recorded in this repository yet. Existing `grpo-direct-*` scripts train short direct JSON completions with a 96-token cap. The new `grpo-cot-*` scripts use Qwen native thinking and a 1024-token completion cap; they start from the two direct SFT adapters, so this is separate from CoT SFT.
 
 ### 3. Fixed 4,695/1,200 split comparison
 
 The fixed 1,200 claims in `verifier/data/train/sft/fever-oracle-matched-grpo-1200/` are excluded from the new 4,695-claim SFT set. The two sets have no claim-ID overlap and together contain all 5,895 prepared oracle prompts. Verify the committed split with `python -m utils.build_disjoint_sft_grpo_split --check`; its hashes and label counts are in `verifier/data/train/sft/fever-oracle-disjoint-4695/split_manifest.json`.
 
-The two SFT arms have completed on SoC. The root `run.sbatch` now submits two independent tasks: evaluate the 1,200-row SFT continuation, and train GRPO from the disjoint 4,695-row SFT checkpoint. After pulling this branch, confirm both adapter directories contain `adapter_config.json` and `adapter_model.safetensors`, then submit from a SoC login node:
+The two SFT arms have completed on SoC. The root `run.sbatch` submits three array tasks: evaluate the continued SFT adapter, train native-thinking CoT GRPO from the existing 5,895-row SFT adapter, and train the same CoT GRPO configuration from the disjoint 4,695-row SFT adapter. Both GRPO tasks use the fixed 1,200-row second-stage set. After pulling this branch and migrating any local weights as above, confirm all three adapter directories contain `adapter_config.json` and `adapter_model.safetensors`, then submit from a SoC login node:
 
 ```bash
 cd "$HOME/rl-test"
-continued=verifier/experiments/sft1200-direct-from-sft5895-qwen3p5-2b/runs/split1-seed0-seen-sft/artifacts/checkpoints
-disjoint=verifier/experiments/sft4695-direct-from-base-qwen3p5-2b-disjoint/runs/split1-seed0-unseen-sft/artifacts/checkpoints
-if [[ -f "$continued/adapter_config.json" && -s "$continued/adapter_model.safetensors" && \
+continued=verifier/experiments/sft-direct-from-sft5895-qwen3p5-2b-1200-samples/runs/split1-seed0-seen-sft/artifacts/checkpoints
+disjoint=verifier/experiments/sft-direct-from-base-qwen3p5-2b-disjoint-4695-samples/runs/split1-seed0-unseen-sft/artifacts/checkpoints
+existing=verifier/experiments/sft-direct-from-base-qwen3p5-2b-5895-samples/runs/run2/artifacts/checkpoints
+if [[ -f "$existing/adapter_config.json" && -s "$existing/adapter_model.safetensors" && \
+      -f "$continued/adapter_config.json" && -s "$continued/adapter_model.safetensors" && \
       -f "$disjoint/adapter_config.json" && -s "$disjoint/adapter_model.safetensors" ]]; then
   job=$(sbatch --parsable --export=ALL,RUN_TAG=split1-seed0 run.sbatch)
   echo "Follow-up array: $job"
   squeue -j "$job"
 else
-  echo "One or both renamed SFT checkpoint directories are incomplete"
+  echo "One or more SFT checkpoint directories are incomplete"
 fi
 ```
 
-Task 0 evaluates the continued SFT adapter on the frozen 900 dev claims with title retrieval, a direct prompt and a 1024-token output cap. Results go to `verifier/evaluation/results/sft-continued1200-direct-cap1024/<RUN_TAG>/`. Task 1 starts GRPO from the disjoint 4,695-row SFT adapter on the same fixed 1,200 training rows, writing to `verifier/experiments/grpo1200-direct-from-sft5895-qwen3p5-2b-kl0/runs/<RUN_TAG>-unseen-grpo/`. Both tasks require the **new configuration paths** shown above. `RUN_TAG` defaults to `split1-seed0`; use `CONTINUED_SFT_RUN_NAME` or `DISJOINT_SFT_RUN_NAME` if either source run differs. Use a new `RUN_TAG` for a repeat so results are not overwritten. Use `verifier/experiments/submit_split_comparison.sh` only for a fresh four-job comparison.
+Task 0 evaluates the continued SFT adapter on the frozen 900 dev claims with title retrieval, a direct prompt and a 1024-token output cap. Results go to `verifier/evaluation/results/sft-continued1200-direct-cap1024/<RUN_TAG>/`. Tasks 1 and 2 train CoT GRPO from the 5,895-row and disjoint 4,695-row SFT adapters respectively. Their final JSON includes verdict and evidence; reward checks verdict, evidence and output format, without confidence calibration. `RUN_TAG` defaults to `split1-seed0`; use `CONTINUED_SFT_RUN_NAME` or `DISJOINT_SFT_RUN_NAME` if either source run differs. Use a new `RUN_TAG` for a repeat so results are not overwritten. Use `verifier/experiments/submit_split_comparison.sh` only for a fresh four-job comparison.
 
 | Job | Starting checkpoint | Training rows | Output run |
 |---|---|---:|---|
-| Seen → SFT | existing 5,895-row SFT `run2` | fixed 1,200 | `sft1200-direct-from-sft5895-qwen3p5-2b/runs/<tag>-seen-sft/` |
-| Seen → GRPO | existing 5,895-row SFT `run2` | fixed 1,200 | `grpo1200-direct-from-sft5895-qwen3p5-2b-kl0/runs/<tag>-seen-grpo/` |
-| Unseen → SFT | Qwen3.5-2B base | complementary 4,695 | `sft4695-direct-from-base-qwen3p5-2b-disjoint/runs/<tag>-unseen-sft/` |
-| Unseen → GRPO | adapter from the preceding job | fixed 1,200 | `grpo1200-direct-from-sft5895-qwen3p5-2b-kl0/runs/<tag>-unseen-grpo/` |
+| Seen → SFT | existing 5,895-row SFT `run2` | fixed 1,200 | `sft-direct-from-sft5895-qwen3p5-2b-1200-samples/runs/<tag>-seen-sft/` |
+| Seen → CoT GRPO | existing 5,895-row SFT `run2` | fixed 1,200 | `grpo-cot-from-sft5895-qwen3p5-2b-no-calibration-kl0-1200-samples/runs/<tag>-seen-cot-grpo/` |
+| Unseen → SFT | Qwen3.5-2B base | complementary 4,695 | `sft-direct-from-base-qwen3p5-2b-disjoint-4695-samples/runs/<tag>-unseen-sft/` |
+| Unseen → CoT GRPO | disjoint 4,695-row SFT adapter | fixed 1,200 | `grpo-cot-from-sft4695-qwen3p5-2b-no-calibration-kl0-1200-samples/runs/<tag>-unseen-cot-grpo/` |
 
-The GRPO run saves its LoRA adapter to `artifacts/checkpoints/`, `meta.json` and `logs/train_log.json`; the SFT evaluation saves predictions, metrics, manifest and logs in its results folder. This array writes `slurm-split-followup-<job-id>_<task-id>.out` at the repo root. Check `squeue -j "$job"` and `sacct -j "$job" --format=JobID,State,ExitCode,Elapsed,MaxRSS`. The GRPO configuration here is **direct JSON** with a 96-token training completion cap, not CoT GRPO.
+Each GRPO run saves its LoRA adapter to `artifacts/checkpoints/`, `meta.json` and `logs/train_log.json`; the SFT evaluation saves predictions, metrics, manifest and logs in its results folder. This array writes `slurm-split-followup-<job-id>_<task-id>.out` at the repo root. Check `squeue -j "$job"` and `sacct -j "$job" --format=JobID,State,ExitCode,Elapsed,MaxRSS`. The new CoT GRPO configurations have a 1024-token training completion cap. Their GPU runtime has not yet been measured.
 
 The disjoint path has 5,895 unique claim exposures across its two stages. The seen path deliberately trains on 1,200 claims twice. Compare each child against its own starting checkpoint on the same dev IDs; compare the two seen-claim continuations to distinguish GRPO from additional SFT. The seen and unseen paths have different first-stage SFT data sizes, so their raw scores alone do not isolate the effect of overlap.
 
@@ -225,9 +227,9 @@ Submit single evaluation conditions via `verifier/evaluation/run.sbatch`:
 
 **Key options:**
 - `N_CLAIMS`: Number of dev claims (default: 900; smoke test: 30).
-- `PROMPT_STYLE`: `direct` (short JSON), `cot_chain` (explicit chain), `cot_brief` (<=50 words reasoning), or `cot_sft` (confidence-free CoT adapter).
-- `MAX_NEW_TOKENS`: Optional positive output-token cap. Defaults: `direct=160`, `cot_chain=512`, `cot_brief=512`, `cot_sft=320`. This is not the model's total context window; set a distinct result directory for each cap.
-- `CHECKPOINTS`: Path to adapter checkpoint directory (e.g. `verifier/experiments/sft5895-direct-from-base-qwen3p5-2b/runs/run2/artifacts/checkpoints`). Omit to evaluate the untrained base model.
+- `PROMPT_STYLE`: `direct` (short JSON), `cot_chain` (explicit chain), `cot_brief` (<=50 words reasoning), `cot_sft` (confidence-free CoT adapter), or `cot_native` (Qwen native thinking, final JSON without confidence).
+- `MAX_NEW_TOKENS`: Optional positive output-token cap. Defaults: `direct=160`, `cot_chain=512`, `cot_brief=512`, `cot_sft=320`, `cot_native=1024`. This is not the model's total context window; set a distinct result directory for each cap.
+- `CHECKPOINTS`: Path to adapter checkpoint directory (e.g. `verifier/experiments/sft-direct-from-base-qwen3p5-2b-5895-samples/runs/run2/artifacts/checkpoints`). Omit to evaluate the untrained base model.
 - `RUN_NAME`: Unique run identifier (e.g. `run1`, `run2`).
 - `EVAL_CONDITION`: Result subdirectory name under `verifier/evaluation/results/`.
 - Without `EVAL_CONDITION`, the result name is `baseline-<prompt>-cap<tokens>` for the untrained model or `checkpoint-<prompt>-cap<tokens>` for an adapter. Set an explicit `sft-*` condition when the adapter is known to be SFT.
@@ -243,9 +245,13 @@ sbatch --partition=gpu --gpus=a100-40:1 --time=01:30:00 --export=ALL,N_CLAIMS=90
 sbatch --partition=gpu --gpus=a100-40:1 --time=03:00:00 --export=ALL,N_CLAIMS=900,RUN_NAME=run2,THINKING=on verifier/evaluation/run.sbatch
 
 # SFT checkpoint: direct vs cot_chain (900 claims)
-adapter=verifier/experiments/sft5895-direct-from-base-qwen3p5-2b/runs/run2/artifacts/checkpoints
+adapter=verifier/experiments/sft-direct-from-base-qwen3p5-2b-5895-samples/runs/run2/artifacts/checkpoints
 sbatch --partition=gpu --gpus=a100-40:1 --time=01:30:00 --export=ALL,N_CLAIMS=900,RUN_NAME=run2,THINKING=off,CHECKPOINTS="$adapter",EVAL_CONDITION=sft-direct-cap160 verifier/evaluation/run.sbatch
 sbatch --partition=gpu --gpus=a100-40:1 --time=03:00:00 --export=ALL,N_CLAIMS=900,RUN_NAME=run2,THINKING=on,CHECKPOINTS="$adapter",EVAL_CONDITION=sft-cot-long-cap512 verifier/evaluation/run.sbatch
+
+# After either CoT GRPO run finishes, use its actual run name and checkpoint directory:
+adapter=verifier/experiments/grpo-cot-from-sft4695-qwen3p5-2b-no-calibration-kl0-1200-samples/runs/split1-seed0-unseen-cot-grpo/artifacts/checkpoints
+sbatch --partition=gpu --gpus=a100-40:1 --time=03:00:00 --export=ALL,N_CLAIMS=900,RUN_NAME=run1,PROMPT_STYLE=cot_native,MAX_NEW_TOKENS=1024,CHECKPOINTS="$adapter",EVAL_CONDITION=grpo-cot-from-sft4695-cap1024 verifier/evaluation/run.sbatch
 
 ```
 
@@ -268,17 +274,19 @@ python -m unittest verifier.tests.test_score_predictions verifier.tests.test_eva
 
 | Configuration in `verifier/experiments/` | Description |
 |---|---|
-| `sft60-direct-from-base-qwen3p5-2b` | 2B no-CoT SFT, 60-claim smoke run |
-| `sft5895-direct-from-base-qwen3p5-2b` | 2B no-CoT SFT, 5,895 usable FEVER claims (main SFT baseline) |
-| `sft4695-direct-from-base-qwen3p5-2b-disjoint` | 2B no-CoT SFT on the 4,695 claims outside the fixed GRPO set |
-| `sft1200-direct-from-sft5895-qwen3p5-2b` | Continue the existing 5,895-claim SFT adapter on the fixed 1,200 claims |
-| `sft227-cot-from-base-qwen3p5-2b-pilot300` | 2B CoT SFT on 227 accepted SoCLaaS explanations |
-| `sft1200-direct-from-base-qwen3p5-2b-matched` | 2B SFT on the 1,200-claim subset matched to GRPO |
-| `sft60-direct-from-base-qwen3p5-4b-qlora` | 4B QLoRA SFT, 60-claim smoke run |
-| `sft5895-direct-from-base-qwen3p5-4b-qlora` | 4B QLoRA SFT, same 5,895 examples as 2B |
-| `grpo16-direct-from-sft5895-qwen3p5-2b-kl0` | 2B single-turn GRPO, 16-claim smoke run |
-| `grpo1200-direct-from-sft5895-qwen3p5-2b-kl0` | 2B single-turn GRPO from SFT, full reward, 1,200 claims, no KL |
-| `grpo1200-direct-from-base-qwen3p5-2b-kl004` | 2B single-turn GRPO from base, full reward, 1,200 claims, KL beta 0.04 |
-| `grpo926-direct-from-sft5895-qwen3p5-2b-pool1200-kl004` | 2B GRPO from SFT, 1,200-claim pool with reward-spread filtering, KL beta 0.04 |
-| `grpo926-direct-from-sft5895-qwen3p5-2b-pool1200-kl05` | Same filtered setup with KL beta 0.5 |
-| `grpo16-multiturn-from-base-qwen3p5-2b-kl004` | Multi-turn GRPO from base with search/verify actions, 16-claim trial |
+| `sft-direct-from-base-qwen3p5-2b-60-samples` | 2B no-CoT SFT, 60-claim smoke run |
+| `sft-direct-from-base-qwen3p5-2b-5895-samples` | 2B no-CoT SFT, 5,895 usable FEVER claims (main SFT baseline) |
+| `sft-direct-from-base-qwen3p5-2b-disjoint-4695-samples` | 2B no-CoT SFT on the 4,695 claims outside the fixed GRPO set |
+| `sft-direct-from-sft5895-qwen3p5-2b-1200-samples` | Continue the existing 5,895-claim SFT adapter on the fixed 1,200 claims |
+| `sft-cot-from-base-qwen3p5-2b-pilot300-227-samples` | 2B CoT SFT on 227 accepted SoCLaaS explanations |
+| `sft-direct-from-base-qwen3p5-2b-matched-1200-samples` | 2B SFT on the 1,200-claim subset matched to GRPO |
+| `sft-direct-from-base-qwen3p5-4b-qlora-60-samples` | 4B QLoRA SFT, 60-claim smoke run |
+| `sft-direct-from-base-qwen3p5-4b-qlora-5895-samples` | 4B QLoRA SFT, same 5,895 examples as 2B |
+| `grpo-direct-from-sft5895-qwen3p5-2b-kl0-16-samples` | 2B single-turn GRPO, 16-claim smoke run |
+| `grpo-direct-from-sft5895-qwen3p5-2b-kl0-1200-samples` | 2B single-turn GRPO from SFT, full reward, 1,200 claims, no KL |
+| `grpo-direct-from-base-qwen3p5-2b-kl004-1200-samples` | 2B single-turn GRPO from base, full reward, 1,200 claims, KL beta 0.04 |
+| `grpo-direct-from-sft5895-qwen3p5-2b-pool1200-kl004-926-samples` | 2B GRPO from SFT, 1,200-claim pool with reward-spread filtering, KL beta 0.04 |
+| `grpo-direct-from-sft5895-qwen3p5-2b-pool1200-kl05-926-samples` | Same filtered setup with KL beta 0.5 |
+| `grpo-multiturn-from-base-qwen3p5-2b-kl004-16-samples` | Multi-turn GRPO from base with search/verify actions, 16-claim trial |
+| `grpo-cot-from-sft5895-qwen3p5-2b-no-calibration-kl0-1200-samples` | Native-thinking CoT GRPO from the 5,895-row direct SFT adapter; 1,200 second-stage claims, no confidence reward or KL |
+| `grpo-cot-from-sft4695-qwen3p5-2b-no-calibration-kl0-1200-samples` | Same CoT GRPO from the disjoint 4,695-row direct SFT adapter |

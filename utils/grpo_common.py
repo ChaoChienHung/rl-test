@@ -18,7 +18,7 @@ SFT_DIR = os.path.join(DATA, "..", "train", "sft")
 OUT_DIR = os.path.join(DATA, "..", "train", "grpo")
 DEFAULT_SFT_DATA = os.path.join(SFT_DIR, "fever-oracle-full")
 DEFAULT_SFT = str(artifacts_dir("sft", "Qwen_Qwen3.5-2B_n6000",
-                                config_name="sft5895-direct-from-base-qwen3p5-2b") / "checkpoints")
+                                config_name="sft-direct-from-base-qwen3p5-2b-5895-samples") / "checkpoints")
 VERDICT = {"SUPPORTED": R.SUPPORTED, "REFUTED": R.REFUTED, "NOT_ENOUGH_INFO": R.NEI}
 FORMAT_FAIL = -2.0  # below the worst well-formed answer (about -1.5), so breaking format never pays
 

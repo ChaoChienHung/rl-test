@@ -13,7 +13,7 @@
 # native-thinking GRPO from the 5,895-row and disjoint 4,695-row SFT adapters.
 set -euo pipefail
 cd "${SLURM_SUBMIT_DIR:?Submit from the repository root}"
-test -f verifier/experiments/grpo1200-cot-from-sft5895-qwen3p5-2b-full-kl0/train.py || {
+test -f verifier/experiments/grpo-cot-from-sft5895-qwen3p5-2b-no-calibration-kl0-1200-samples/train.py || {
   echo "Submit from the repository root" >&2
   exit 2
 }
@@ -37,14 +37,14 @@ check_adapter() {
   }
 }
 
-case "${SLURM_ARRAY_TASK_ID:?Expected two array tasks}" in
+case "${SLURM_ARRAY_TASK_ID:?Expected three array tasks}" in
   0)
     sft_run_name="${CONTINUED_SFT_RUN_NAME:-${run_tag}-seen-sft}"
     [[ "$sft_run_name" =~ ^[A-Za-z0-9][A-Za-z0-9_-]*$ ]] || {
       echo "CONTINUED_SFT_RUN_NAME must use letters, digits, underscore or dash" >&2
       exit 2
     }
-    checkpoint="verifier/experiments/sft1200-direct-from-sft5895-qwen3p5-2b/runs/${sft_run_name}/artifacts/checkpoints"
+    checkpoint="verifier/experiments/sft-direct-from-sft5895-qwen3p5-2b-1200-samples/runs/${sft_run_name}/artifacts/checkpoints"
     check_adapter "$checkpoint"
     echo "Evaluate continued SFT: checkpoint=$checkpoint"
     export CHECKPOINTS="$checkpoint"
@@ -56,17 +56,17 @@ case "${SLURM_ARRAY_TASK_ID:?Expected two array tasks}" in
   1|2)
     if [[ "$SLURM_ARRAY_TASK_ID" == 1 ]]; then
       arm=seen
-      config=grpo1200-cot-from-sft5895-qwen3p5-2b-full-kl0
-      checkpoint=verifier/experiments/sft5895-direct-from-base-qwen3p5-2b/runs/run2/artifacts/checkpoints
+      config=grpo-cot-from-sft5895-qwen3p5-2b-no-calibration-kl0-1200-samples
+      checkpoint=verifier/experiments/sft-direct-from-base-qwen3p5-2b-5895-samples/runs/run2/artifacts/checkpoints
     else
       arm=unseen
-      config=grpo1200-cot-from-sft4695-qwen3p5-2b-full-kl0
+      config=grpo-cot-from-sft4695-qwen3p5-2b-no-calibration-kl0-1200-samples
       sft_run_name="${DISJOINT_SFT_RUN_NAME:-${run_tag}-unseen-sft}"
       [[ "$sft_run_name" =~ ^[A-Za-z0-9][A-Za-z0-9_-]*$ ]] || {
         echo "DISJOINT_SFT_RUN_NAME must use letters, digits, underscore or dash" >&2
         exit 2
       }
-      checkpoint="verifier/experiments/sft4695-direct-from-base-qwen3p5-2b-disjoint/runs/${sft_run_name}/artifacts/checkpoints"
+      checkpoint="verifier/experiments/sft-direct-from-base-qwen3p5-2b-disjoint-4695-samples/runs/${sft_run_name}/artifacts/checkpoints"
     fi
     check_adapter "$checkpoint"
     data=verifier/data/train/sft/fever-oracle-matched-grpo-1200

@@ -1,7 +1,7 @@
 """Which training claims give GRPO a signal: sample the SFT model 8 times per claim.
 
 GRPO learns only from groups whose completions score differently. The first
-full run (verifier/experiments/grpo1200-direct-from-sft5895-qwen3p5-2b-kl0/runs/run1) had ~88% of groups with zero
+full run (verifier/experiments/grpo-direct-from-sft5895-qwen3p5-2b-kl0-1200-samples/runs/run1) had ~88% of groups with zero
 reward spread, so it barely moved. This pass samples each training claim the
 way GRPO does (temperature 1, same prompt and reward) and records the spread,
 so the next run can train only on claims where the samples disagree.

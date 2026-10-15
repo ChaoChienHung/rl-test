@@ -1,5 +1,9 @@
 # Stage 1b: GRPO on the verifier, results so far
 
+This page records the historical direct-output GRPO runs. The native-thinking
+CoT GRPO configurations from the 5,895-row and disjoint 4,695-row SFT adapters
+are separate experiments; their training and evaluation results are pending.
+
 Single-turn GRPO with `verifier/experiments/_shared/grpo.py`: claim plus evidence in, the
 untrained baseline JSON out, scored by `core/reward.py` (full reward: correctness with
 harm weights, negative Brier calibration, evidence, format). All runs use
@@ -17,12 +21,12 @@ were recorded here.
 
 | Current configuration / run | Starts from | KL beta | Train claims | Steps | Train time | Peak GB |
 |---|---|---|---|---|---|---|
-| `grpo1200-direct-from-sft5895-qwen3p5-2b-kl0/run1` | SFT adapter (trained in place) | 0 | all 1,200 | 600 | 3.0 h | 13.6 |
-| `grpo1200-direct-from-base-qwen3p5-2b-kl004/run1` | base model | 0.04 | all 1,200 | 600 | 3.6 h | 13.5 |
-| `grpo926-direct-from-sft5895-qwen3p5-2b-pool1200-kl004/run1` | SFT merged, fresh LoRA | 0.04 | only those with reward spread | 200 | 1.0 h | 13.7 |
-| `grpo926-direct-from-sft5895-qwen3p5-2b-pool1200-kl004/run2` | same, seed 1 | 0.04 | only those with reward spread | 200 | 0.7 h | 13.6 |
-| `grpo926-direct-from-sft5895-qwen3p5-2b-pool1200-kl05/run1` | SFT merged, fresh LoRA | 0.5 | only those with reward spread | 200 | 0.8 h | 13.6 |
-| `grpo16-direct-from-sft5895-qwen3p5-2b-kl0/run1` | SFT adapter | 0 | 16 | 3 | 72 s | 9.7 |
+| `grpo-direct-from-sft5895-qwen3p5-2b-kl0-1200-samples/run1` | SFT adapter (trained in place) | 0 | all 1,200 | 600 | 3.0 h | 13.6 |
+| `grpo-direct-from-base-qwen3p5-2b-kl004-1200-samples/run1` | base model | 0.04 | all 1,200 | 600 | 3.6 h | 13.5 |
+| `grpo-direct-from-sft5895-qwen3p5-2b-pool1200-kl004-926-samples/run1` | SFT merged, fresh LoRA | 0.04 | only those with reward spread | 200 | 1.0 h | 13.7 |
+| `grpo-direct-from-sft5895-qwen3p5-2b-pool1200-kl004-926-samples/run2` | same, seed 1 | 0.04 | only those with reward spread | 200 | 0.7 h | 13.6 |
+| `grpo-direct-from-sft5895-qwen3p5-2b-pool1200-kl05-926-samples/run1` | SFT merged, fresh LoRA | 0.5 | only those with reward spread | 200 | 0.8 h | 13.6 |
+| `grpo-direct-from-sft5895-qwen3p5-2b-kl0-16-samples/run1` | SFT adapter | 0 | 16 | 3 | 72 s | 9.7 |
 
 The saved `meta.json` files retain the original experiment IDs and training settings.
 
@@ -93,7 +97,7 @@ model, and both have room to teach abstention.
 `verifier/experiments/_shared/grpo_multiturn.py`, defaults: base Qwen3.5-2B, 16 FEVER train claims,
 3 steps, 8 samples per claim, at most 2 searches, KL 0.04. The model gets
 only the claim and calls `search` itself; tool output is masked from the
-loss. Run: `verifier/experiments/grpo16-multiturn-from-base-qwen3p5-2b-kl004/runs/run1/artifacts/` (`meta.json`,
+loss. Run: `verifier/experiments/grpo-multiturn-from-base-qwen3p5-2b-kl004-16-samples/runs/run1/artifacts/` (`meta.json`,
 `train_log.json`, `rollouts.jsonl`).
 
 | | Result |

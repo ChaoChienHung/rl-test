@@ -127,7 +127,9 @@ from pathlib import Path
 record = {
     'job_id': job_id, 'run_name': run_name, 'commit': commit,
     'model': model, 'checkpoints': checkpoints or None,
-    'thinking': thinking, 'prompt_style': style, 'retrieval': 'titles',
+    'thinking': 'on' if style == 'cot_native' else thinking,
+    'native_thinking': style == 'cot_native',
+    'prompt_style': style, 'retrieval': 'titles',
     'max_new_tokens': int(max_new_tokens) if max_new_tokens else {
         'direct': 160, 'cot_chain': 512, 'cot_brief': 512, 'cot_sft': 320,
         'cot_native': 1024,

@@ -14,35 +14,35 @@ run_tag="${RUN_TAG:-split1-seed0}"
 [[ "$run_tag" =~ ^[A-Za-z0-9][A-Za-z0-9_-]*$ ]] || {
   echo 'RUN_TAG must use letters, digits, underscore or dash' >&2; exit 2;
 }
-existing_sft=verifier/experiments/sft5895-direct-from-base-qwen3p5-2b/runs/run2/artifacts/checkpoints
-new_sft=verifier/experiments/sft4695-direct-from-base-qwen3p5-2b-disjoint/runs/${run_tag}-unseen-sft/artifacts/checkpoints
+existing_sft=verifier/experiments/sft-direct-from-base-qwen3p5-2b-5895-samples/runs/run2/artifacts/checkpoints
+new_sft=verifier/experiments/sft-direct-from-base-qwen3p5-2b-disjoint-4695-samples/runs/${run_tag}-unseen-sft/artifacts/checkpoints
 grpo_data=verifier/data/train/sft/fever-oracle-matched-grpo-1200
 test -f "$existing_sft/adapter_config.json" && test -s "$existing_sft/adapter_model.safetensors" || {
   echo "Missing existing SFT adapter in $existing_sft" >&2; exit 2;
 }
 for output in \
-  "verifier/experiments/sft1200-direct-from-sft5895-qwen3p5-2b/runs/${run_tag}-seen-sft/artifacts" \
-  "verifier/experiments/grpo-cot-from-sft-qwen3p5-2b-train1200-full-kl0/runs/${run_tag}-seen-cot-grpo/artifacts" \
-  "verifier/experiments/sft4695-direct-from-base-qwen3p5-2b-disjoint/runs/${run_tag}-unseen-sft/artifacts" \
-  "verifier/experiments/grpo-cot-from-sft-qwen3p5-2b-train1200-full-kl0/runs/${run_tag}-unseen-cot-grpo/artifacts"; do
+  "verifier/experiments/sft-direct-from-sft5895-qwen3p5-2b-1200-samples/runs/${run_tag}-seen-sft/artifacts" \
+  "verifier/experiments/grpo-cot-from-sft5895-qwen3p5-2b-no-calibration-kl0-1200-samples/runs/${run_tag}-seen-cot-grpo/artifacts" \
+  "verifier/experiments/sft-direct-from-base-qwen3p5-2b-disjoint-4695-samples/runs/${run_tag}-unseen-sft/artifacts" \
+  "verifier/experiments/grpo-cot-from-sft4695-qwen3p5-2b-no-calibration-kl0-1200-samples/runs/${run_tag}-unseen-cot-grpo/artifacts"; do
   test ! -e "$output" || { echo "Run already exists: $output" >&2; exit 2; }
 done
 
 seen_sft_job=$(sbatch --parsable --partition=gpu --gpus=a100-40:1 \
   --exclude=xgpe2 --time=03:00:00 \
-  --export=ALL,TRAIN_SCRIPT=verifier/experiments/sft1200-direct-from-sft5895-qwen3p5-2b/train.py,RUN_NAME="${run_tag}-seen-sft",SEED=0,INIT_CHECKPOINTS="$existing_sft",SFT_CHECKPOINTS=,TRAIN_DATA= \
+  --export=ALL,TRAIN_SCRIPT=verifier/experiments/sft-direct-from-sft5895-qwen3p5-2b-1200-samples/train.py,RUN_NAME="${run_tag}-seen-sft",SEED=0,INIT_CHECKPOINTS="$existing_sft",SFT_CHECKPOINTS=,TRAIN_DATA= \
   verifier/experiments/run_train.sbatch)
 seen_grpo_job=$(sbatch --parsable --partition=gpu-long --gpus=a100-40:1 \
   --exclude=xgpe2 --time=1-00:00:00 \
-  --export=ALL,TRAIN_SCRIPT=verifier/experiments/grpo-cot-from-sft-qwen3p5-2b-train1200-full-kl0/train.py,RUN_NAME="${run_tag}-seen-cot-grpo",SEED=0,SFT_CHECKPOINTS="$existing_sft",TRAIN_DATA="$grpo_data",INIT_CHECKPOINTS= \
+  --export=ALL,TRAIN_SCRIPT=verifier/experiments/grpo-cot-from-sft5895-qwen3p5-2b-no-calibration-kl0-1200-samples/train.py,RUN_NAME="${run_tag}-seen-cot-grpo",SEED=0,SFT_CHECKPOINTS="$existing_sft",TRAIN_DATA="$grpo_data",INIT_CHECKPOINTS= \
   verifier/experiments/run_train.sbatch)
 unseen_sft_job=$(sbatch --parsable --partition=gpu --gpus=a100-40:1 \
   --exclude=xgpe2 --time=03:00:00 \
-  --export=ALL,TRAIN_SCRIPT=verifier/experiments/sft4695-direct-from-base-qwen3p5-2b-disjoint/train.py,RUN_NAME="${run_tag}-unseen-sft",SEED=0,INIT_CHECKPOINTS=,SFT_CHECKPOINTS=,TRAIN_DATA= \
+  --export=ALL,TRAIN_SCRIPT=verifier/experiments/sft-direct-from-base-qwen3p5-2b-disjoint-4695-samples/train.py,RUN_NAME="${run_tag}-unseen-sft",SEED=0,INIT_CHECKPOINTS=,SFT_CHECKPOINTS=,TRAIN_DATA= \
   verifier/experiments/run_train.sbatch)
 unseen_grpo_job=$(sbatch --parsable --partition=gpu-long --gpus=a100-40:1 \
   --exclude=xgpe2 --time=1-00:00:00 --dependency="afterok:$unseen_sft_job" \
-  --export=ALL,TRAIN_SCRIPT=verifier/experiments/grpo-cot-from-sft-qwen3p5-2b-train1200-full-kl0/train.py,RUN_NAME="${run_tag}-unseen-cot-grpo",SEED=0,SFT_CHECKPOINTS="$new_sft",TRAIN_DATA="$grpo_data",INIT_CHECKPOINTS= \
+  --export=ALL,TRAIN_SCRIPT=verifier/experiments/grpo-cot-from-sft4695-qwen3p5-2b-no-calibration-kl0-1200-samples/train.py,RUN_NAME="${run_tag}-unseen-cot-grpo",SEED=0,SFT_CHECKPOINTS="$new_sft",TRAIN_DATA="$grpo_data",INIT_CHECKPOINTS= \
   verifier/experiments/run_train.sbatch)
 
 printf 'Seen 1,200 -> continued SFT: %s\n' "$seen_sft_job"
