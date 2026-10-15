@@ -22,30 +22,37 @@ export TMPDIR="${TMPDIR:-$HOME/.pip-tmp}"
 mkdir -p "$TMPDIR"
 export TOKENIZERS_PARALLELISM=false
 
-run_tag="${RUN_TAG:-split1-seed0}"
+run_tag="${RUN_TAG:-cot-grpo1}"
 [[ "$run_tag" =~ ^[A-Za-z0-9][A-Za-z0-9_-]*$ ]] || {
   echo "RUN_TAG must use letters, digits, underscore or dash" >&2
   exit 2
 }
 
-check_adapter() {
-  local checkpoint="$1"
-  [[ -f "$checkpoint/adapter_config.json" &&
-     ( -s "$checkpoint/adapter_model.safetensors" || -s "$checkpoint/adapter_model.bin" ) ]] || {
-    echo "Missing completed adapter config or weights in $checkpoint" >&2
-    exit 2
-  }
+resolve_adapter() {
+  local checkpoint
+  for checkpoint in "$@"; do
+    if [[ -f "$checkpoint/adapter_config.json" &&
+          ( -s "$checkpoint/adapter_model.safetensors" || -s "$checkpoint/adapter_model.bin" ) ]]; then
+      printf '%s\n' "$checkpoint"
+      return 0
+    fi
+  done
+  printf 'Missing completed adapter; checked:\n' >&2
+  printf '  %s\n' "$@" >&2
+  return 2
 }
 
 case "${SLURM_ARRAY_TASK_ID:?Expected three array tasks}" in
   0)
-    sft_run_name="${CONTINUED_SFT_RUN_NAME:-${run_tag}-seen-sft}"
+    sft_run_name="${CONTINUED_SFT_RUN_NAME:-split1-seed0-seen-sft}"
     [[ "$sft_run_name" =~ ^[A-Za-z0-9][A-Za-z0-9_-]*$ ]] || {
       echo "CONTINUED_SFT_RUN_NAME must use letters, digits, underscore or dash" >&2
       exit 2
     }
-    checkpoint="verifier/experiments/sft-direct-from-sft5895-qwen3p5-2b-1200-samples/runs/${sft_run_name}/artifacts/checkpoints"
-    check_adapter "$checkpoint"
+    checkpoint="$(resolve_adapter \
+      "verifier/experiments/sft-direct-from-sft5895-qwen3p5-2b-1200-samples/runs/${sft_run_name}/artifacts/checkpoints" \
+      "verifier/experiments/sft-direct-from-sft-qwen3p5-2b-train1200/runs/${sft_run_name}/artifacts/checkpoints" \
+      "verifier/experiments/sft_qwen_3.5-2b_continue_n1200/runs/${sft_run_name}/artifacts/checkpoints")"
     echo "Evaluate continued SFT: checkpoint=$checkpoint"
     export CHECKPOINTS="$checkpoint"
     export EVAL_CONDITION=sft-continued1200-direct-cap1024
@@ -57,18 +64,24 @@ case "${SLURM_ARRAY_TASK_ID:?Expected three array tasks}" in
     if [[ "$SLURM_ARRAY_TASK_ID" == 1 ]]; then
       arm=seen
       config=grpo-cot-from-sft5895-qwen3p5-2b-no-calibration-kl0-1200-samples
-      checkpoint=verifier/experiments/sft-direct-from-base-qwen3p5-2b-5895-samples/runs/run2/artifacts/checkpoints
+      checkpoint="$(resolve_adapter \
+        verifier/experiments/sft-direct-from-base-qwen3p5-2b-5895-samples/runs/run2/artifacts/checkpoints \
+        verifier/experiments/sft-direct-from-base-qwen3p5-2b-train5895/runs/run2/artifacts/checkpoints \
+        verifier/experiments/sft-direct-from-base-qwen3p5-2b-train5895/runs/run2/artifacts/checkpoints/checkpoints \
+        verifier/experiments/sft_qwen_3.5-2b_n6000/runs/run2/artifacts/checkpoints)"
     else
       arm=unseen
       config=grpo-cot-from-sft4695-qwen3p5-2b-no-calibration-kl0-1200-samples
-      sft_run_name="${DISJOINT_SFT_RUN_NAME:-${run_tag}-unseen-sft}"
+      sft_run_name="${DISJOINT_SFT_RUN_NAME:-split1-seed0-unseen-sft}"
       [[ "$sft_run_name" =~ ^[A-Za-z0-9][A-Za-z0-9_-]*$ ]] || {
         echo "DISJOINT_SFT_RUN_NAME must use letters, digits, underscore or dash" >&2
         exit 2
       }
-      checkpoint="verifier/experiments/sft-direct-from-base-qwen3p5-2b-disjoint-4695-samples/runs/${sft_run_name}/artifacts/checkpoints"
+      checkpoint="$(resolve_adapter \
+        "verifier/experiments/sft-direct-from-base-qwen3p5-2b-disjoint-4695-samples/runs/${sft_run_name}/artifacts/checkpoints" \
+        "verifier/experiments/sft-direct-from-base-qwen3p5-2b-disjoint4695/runs/${sft_run_name}/artifacts/checkpoints" \
+        "verifier/experiments/sft_qwen_3.5-2b_disjoint_n4695/runs/${sft_run_name}/artifacts/checkpoints")"
     fi
-    check_adapter "$checkpoint"
     data=verifier/data/train/sft/fever-oracle-matched-grpo-1200
     test -f "$data/labeled_prompts.jsonl" || {
       echo "Missing fixed GRPO training data: $data/labeled_prompts.jsonl" >&2

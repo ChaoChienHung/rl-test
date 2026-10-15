@@ -40,3 +40,9 @@ verifier/experiments/**/artifacts/checkpoints/tokenizer_config.json
 verifier/experiments/**/artifacts/checkpoints/chat_template.jinja
 verifier/experiments/**/artifacts/checkpoints/training_args.bin
 verifier/experiments/**/artifacts/checkpoints/README.md
+verifier/experiments/**/*.safetensors
+verifier/experiments/**/*.bin
+verifier/experiments/**/artifacts/checkpoints/**/tokenizer.json
+verifier/experiments/**/artifacts/checkpoints/**/tokenizer_config.json
+verifier/experiments/**/artifacts/checkpoints/**/chat_template.jinja
+verifier/experiments/**/artifacts/checkpoints/**/README.md
