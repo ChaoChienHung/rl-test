@@ -1,4 +1,4 @@
-"""Train a separate Qwen3.5-2B LoRA adapter on validated CoT SFT pilot data."""
+"""Train a separate Qwen3.5-2B LoRA adapter on 5,500 validated and repaired CoT SFT data."""
 
 import argparse
 import collections
@@ -13,7 +13,7 @@ from utils.experiment_layout import ROOT, artifacts_dir
 from verifier.model import COT_SFT_SYSTEM
 
 
-DEFAULT_DATA = ROOT / "verifier/data/train/sft/fever-oracle-cot-soclaas/pilot1/cot_sft_labeled_prompts.jsonl"
+DEFAULT_DATA = ROOT / "verifier/data/train/sft/fever-oracle-cot-soclaas/cot_sft_labeled_prompts.jsonl"
 MODEL = "Qwen/Qwen3.5-2B"
 
 
@@ -53,7 +53,7 @@ def main():
     ap.add_argument("--max-steps", type=int, default=0, help="0 trains one epoch")
     args = ap.parse_args()
     rows, source_manifest, source_summary, data_hash = load_cot_data(args.data)
-    artifacts = artifacts_dir("cot_sft", "qwen_3.5-2b_oracle_pilot300", args.seed, args.run_name,
+    artifacts = artifacts_dir("cot_sft", "qwen_3.5-2b_oracle_5500", args.seed, args.run_name,
                               args.output_root, config_name=Path(__file__).parent.name)
     if artifacts.exists():
         raise SystemExit(f"run already exists: {artifacts}; choose a new run name")
@@ -64,7 +64,7 @@ def main():
     seconds, peak_gb = train(MODEL, rows, str(checkpoint_dir), False, args.max_steps,
                              1e-4, 16, args.seed, system_prompt=COT_SFT_SYSTEM)
     meta = {
-        "experiment": "sft-cot-from-base-qwen3p5-2b-pilot300-227-samples",
+        "experiment": "sft-cot-from-base-qwen3p5-2b-5500-samples",
         "model": MODEL, "teacher_provider": source_manifest["provider"],
         "teacher_model": source_manifest["model"], "teacher_summary": source_summary,
         "data_file": str(Path(args.data).resolve()), "data_sha256": data_hash,

@@ -1,0 +1,11 @@
+{
+  "dataset_name": "sft-direct-fever-oracle-matched-5500",
+  "count": 5500,
+  "label_counts": {
+    "SUPPORTED": 1840,
+    "NOT_ENOUGH_INFO": 1795,
+    "REFUTED": 1865
+  },
+  "source": "verifier/data/train/sft/fever-oracle-full/labeled_prompts.jsonl",
+  "sha256": "d256bd24df2fba044986217ee127565638fff5876be1724cae86bedb5ab4cd28"
+}

@@ -43,6 +43,18 @@
       "path": "grpo/fever-nei-sentences-removed-1200/labeled_prompts.jsonl",
       "observed_rows": 1200,
       "description": "Supported/refuted source claims with annotated evidence sentences removed; NEI target, potentially noisy."
+    },
+    {
+      "name": "sft-oracle-cot-repaired-5500",
+      "path": "sft/fever-oracle-cot-soclaas/cot_sft_labeled_prompts.jsonl",
+      "observed_rows": 5500,
+      "description": "5,500-sample CoT SFT set formed by 5,177 validation-v2 accepted rows plus 258 repaired citation-mismatch rows and 65 repaired NEI gold_not_justified rows."
+    },
+    {
+      "name": "sft-oracle-direct-5500",
+      "path": "sft/fever-oracle-direct-5500/labeled_prompts.jsonl",
+      "observed_rows": 5500,
+      "description": "Direct SFT oracle baseline on the exact same 5,500 claims as sft-oracle-cot-repaired-5500."
     }
   ]
 }

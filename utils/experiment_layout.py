@@ -54,6 +54,8 @@ LEGACY_CONFIG_NAMES = {
     "sft_qwen_3.5-2b_n6000": "sft-direct-from-base-qwen3p5-2b-5895-samples",
     "sft_qwen_3.5-4b_n6000_qlora": "sft-direct-from-base-qwen3p5-4b-qlora-5895-samples",
     "sft_qwen_3.5-4b_n60_qlora": "sft-direct-from-base-qwen3p5-4b-qlora-60-samples",
+    "cot_sft_qwen_3.5-2b_oracle_5500": "sft-cot-from-base-qwen3p5-2b-5500-samples",
+    "Qwen_Qwen3.5-2B_direct_n5500": "sft-direct-from-base-qwen3p5-2b-5500-samples",
 }
 
 

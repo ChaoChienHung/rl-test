@@ -115,7 +115,7 @@ def prepare(args):
         raise ValueError("per_class must be nonnegative")
     if args.provider == "soclaas" and not args.model:
         raise ValueError("Use `models` to list allowed SoCLaaS IDs, then pass --model")
-    out = Path(args.out or ((SOCLAAS_OUT if args.provider == "soclaas" else DEFAULT_OUT) / "pilot1"))
+    out = Path(args.out or ((SOCLAAS_OUT if args.provider == "soclaas" else DEFAULT_OUT) / "full1"))
     source_bytes = Path(args.source).read_bytes()
     source = read_jsonl(args.source)
     chosen = select_rows(source, args.per_class, args.seed)

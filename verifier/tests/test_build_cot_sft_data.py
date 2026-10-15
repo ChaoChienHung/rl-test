@@ -36,6 +36,34 @@ class CotDataTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             parse_teacher_answer('```json\n{"relation":"supports"}\n``` extra')
 
+    def test_nei_can_discuss_visible_context_without_supporting_citations(self):
+        row = {**ROW, "gold": "NOT_ENOUGH_INFO",
+               "completion": '{"verdict": "NOT_ENOUGH_INFO", "evidence": []}'}
+        answer = {"reasoning": "E2 only says Earth is a planet; it gives no answer to this claim.",
+                  "relation": "insufficient", "cited_evidence": [], "gold_justified": True}
+        self.assertIsNone(validate(row, answer))
+        self.assertEqual(validate(row, {**answer, "reasoning": "E9 does not answer the claim."}),
+                         "citation_mismatch")
+        self.assertEqual(validate(ROW, {**answer, "relation": "supports"}),
+                         "citation_mismatch")
+
+    def test_repaired_citation_and_nei_justification_pass_validation(self):
+        # Citation repair: teacher forgot to write E1 in prose
+        unrepaired = {"reasoning": "The shown sentence says the sky is blue.",
+                      "relation": "supports", "cited_evidence": ["E1"], "gold_justified": True}
+        self.assertEqual(validate(ROW, unrepaired), "citation_mismatch")
+        repaired = {**unrepaired, "reasoning": "The shown sentence says the sky is blue (E1)."}
+        self.assertIsNone(validate(ROW, repaired))
+
+        # NEI justification repair: teacher set gold_justified to False by mistake
+        row_nei = {**ROW, "gold": "NOT_ENOUGH_INFO",
+                   "completion": '{"verdict": "NOT_ENOUGH_INFO", "evidence": []}'}
+        unrepaired_nei = {"reasoning": "E2 only says Earth is a planet; it gives no answer to this claim.",
+                          "relation": "insufficient", "cited_evidence": [], "gold_justified": False}
+        self.assertEqual(validate(row_nei, unrepaired_nei), "gold_not_justified_by_context")
+        repaired_nei = {**unrepaired_nei, "gold_justified": True}
+        self.assertIsNone(validate(row_nei, repaired_nei))
+
     def test_balanced_selection_is_deterministic(self):
         rows = [{"id": f"{label}-{i}", "gold": label} for label in
                 ("SUPPORTED", "REFUTED", "NOT_ENOUGH_INFO") for i in range(3)]

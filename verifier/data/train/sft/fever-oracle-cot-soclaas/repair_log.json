@@ -1,0 +1,1940 @@
+[
+  {
+    "id": 27698,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 183996,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 90192,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 135598,
+    "gold": "SUPPORTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 97585,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 32157,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 116671,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 62655,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 114417,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 12333,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 116142,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 88264,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 191344,
+    "gold": "SUPPORTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 22637,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 56085,
+    "gold": "SUPPORTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 68399,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 187153,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 145728,
+    "gold": "SUPPORTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 170154,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 56878,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 1920,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 165173,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 211048,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 196506,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 178535,
+    "gold": "SUPPORTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 195759,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 106961,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 41919,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 138722,
+    "gold": "SUPPORTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 43043,
+    "gold": "SUPPORTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 17029,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 135492,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 168190,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 39231,
+    "gold": "SUPPORTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 70265,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 193263,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 47706,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 221368,
+    "gold": "SUPPORTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 173169,
+    "gold": "SUPPORTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 192476,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 102158,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 128259,
+    "gold": "SUPPORTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 178277,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 22722,
+    "gold": "SUPPORTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 98733,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 126633,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 149411,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 128966,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 155567,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 124574,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 106736,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 76664,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 210427,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 156534,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 215337,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 167006,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 18948,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 93362,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 79076,
+    "gold": "SUPPORTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 180878,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 103174,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 30814,
+    "gold": "SUPPORTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 104659,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 10225,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 76974,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 183885,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 173416,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 160615,
+    "gold": "SUPPORTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 149565,
+    "gold": "SUPPORTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 126624,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 157746,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 189248,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 76487,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 113243,
+    "gold": "SUPPORTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 164929,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 111661,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 59968,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 169512,
+    "gold": "SUPPORTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 45583,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 43891,
+    "gold": "SUPPORTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 11073,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 200587,
+    "gold": "SUPPORTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 4012,
+    "gold": "SUPPORTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 209447,
+    "gold": "SUPPORTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 141325,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 45906,
+    "gold": "SUPPORTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 63700,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 207586,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 2177,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 76191,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 91194,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 211129,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 187986,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 216210,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 23519,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 123615,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 65654,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 216661,
+    "gold": "SUPPORTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 62040,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 184449,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 201851,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 91953,
+    "gold": "SUPPORTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 161259,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 156082,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 94646,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 188126,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 88065,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 157456,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 33355,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 203218,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 177668,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 93705,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 201419,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 81190,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 142495,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 7669,
+    "gold": "SUPPORTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 145598,
+    "gold": "SUPPORTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 32857,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 179679,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 191008,
+    "gold": "SUPPORTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 31629,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 53104,
+    "gold": "SUPPORTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 65833,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 138315,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 67068,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 210818,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 93344,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 171367,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 134529,
+    "gold": "SUPPORTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 46865,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 68958,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 52886,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 33354,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 40504,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 103781,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 106282,
+    "gold": "SUPPORTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 153696,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 185815,
+    "gold": "SUPPORTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 46126,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 169673,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 208031,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 226615,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 79289,
+    "gold": "SUPPORTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 177796,
+    "gold": "SUPPORTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 105483,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 95734,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 88498,
+    "gold": "SUPPORTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 161125,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 79937,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 136730,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 64706,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 228766,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 54596,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 193763,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 222509,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 204147,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 51411,
+    "gold": "SUPPORTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 102780,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 104272,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 15690,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 106133,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 188945,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 177085,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 100425,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 134249,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 99555,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 111201,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 171283,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 73489,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 127901,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 147987,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 30011,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 44483,
+    "gold": "SUPPORTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 228395,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 128669,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 58020,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 120845,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 218880,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 185352,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 5721,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 180606,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 112727,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 116813,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 214514,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 220324,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 89285,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 142036,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 192630,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 7312,
+    "gold": "SUPPORTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 168563,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 112632,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 142592,
+    "gold": "SUPPORTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 36320,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 100241,
+    "gold": "SUPPORTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 140232,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 69785,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 83552,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 70672,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 28193,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 152942,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 155643,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 173488,
+    "gold": "SUPPORTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 72148,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 197963,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 19679,
+    "gold": "SUPPORTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 57901,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 47612,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 217246,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 106241,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 156289,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 213878,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 131833,
+    "gold": "SUPPORTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 6585,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 18931,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 36106,
+    "gold": "SUPPORTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 169514,
+    "gold": "SUPPORTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 124460,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 36973,
+    "gold": "SUPPORTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 66914,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 94336,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 185806,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 174185,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 148588,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 223508,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 85975,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 21928,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 179680,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 72377,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 109017,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 94970,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 68441,
+    "gold": "SUPPORTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 38600,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 144314,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 154553,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 28851,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 125809,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 118789,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 116586,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 39059,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 124124,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 226511,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 955,
+    "gold": "SUPPORTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 146223,
+    "gold": "SUPPORTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 182223,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 75225,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 78294,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 175285,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 135940,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 84218,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 112509,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 44120,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 52073,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 94322,
+    "gold": "SUPPORTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 67207,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 36366,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 188241,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 21849,
+    "gold": "REFUTED",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 219632,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "citation_append",
+    "original_reason": "citation_mismatch"
+  },
+  {
+    "id": 184168,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 206879,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 205493,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 112910,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 138197,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 159736,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 49089,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 222461,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 142996,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 192338,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 215189,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 78645,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 65270,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 162557,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 96217,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 123129,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 66949,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 80193,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 45671,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 228019,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 50648,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 146012,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 105380,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 220325,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 137431,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 74161,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 134691,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 83282,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 205818,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 176244,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 146933,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 4157,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 71814,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 16491,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 13411,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 196401,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 217526,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 69214,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 110002,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 122002,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 26584,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 220874,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 92414,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 1963,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 155820,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 23129,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 33077,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 134705,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 162789,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 86685,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 14795,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 57642,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 32996,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 11855,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 33831,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 145247,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 65996,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 225686,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 228876,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 193508,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 184962,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 31744,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 210523,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 79395,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  },
+  {
+    "id": 42332,
+    "gold": "NOT_ENOUGH_INFO",
+    "repair_type": "nei_gold_justified_true",
+    "original_reason": "gold_not_justified_by_context"
+  }
+]

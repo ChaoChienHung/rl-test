@@ -1,120 +1,87 @@
 #!/usr/bin/env bash
-#SBATCH --job-name=split-followup
+#SBATCH --job-name=sft-5500-comparison
 #SBATCH --partition=gpu-long
 #SBATCH --time=1-00:00:00
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=32G
 #SBATCH --gpus=a100-40:1
 #SBATCH --exclude=xgpe2
-#SBATCH --array=0-2%2
+#SBATCH --array=0-1%2
 #SBATCH --output=slurm-%x-%A_%a.out
 
-# Task 0 evaluates the 1,200-row SFT continuation. Tasks 1 and 2 train
-# native-thinking GRPO from the 5,895-row and disjoint 4,695-row SFT adapters.
+# Array Task 0 trains Direct SFT on the 5,500-claim matched dataset.
+# Array Task 1 trains CoT SFT on the 5,500-claim repaired teacher dataset.
 set -euo pipefail
 cd "${SLURM_SUBMIT_DIR:?Submit from the repository root}"
-test -f verifier/experiments/grpo-cot-from-sft5895-qwen3p5-2b-no-calibration-kl0-1200-samples/train.py || {
-  echo "Submit from the repository root" >&2
+test -f verifier/experiments/sft-direct-from-base-qwen3p5-2b-5500-samples/train.py || {
+  echo "Submit from the repository root (missing direct 5500 training script)" >&2
   exit 2
 }
+test -f verifier/experiments/sft-cot-from-base-qwen3p5-2b-5500-samples/train.py || {
+  echo "Submit from the repository root (missing CoT 5500 training script)" >&2
+  exit 2
+}
+
 source .venv/bin/activate
 export TMPDIR="${TMPDIR:-$HOME/.pip-tmp}"
 mkdir -p "$TMPDIR"
 export TOKENIZERS_PARALLELISM=false
 
-run_tag="${RUN_TAG:-cot-grpo1}"
+run_tag="${RUN_TAG:-run1}"
 [[ "$run_tag" =~ ^[A-Za-z0-9][A-Za-z0-9_-]*$ ]] || {
   echo "RUN_TAG must use letters, digits, underscore or dash" >&2
   exit 2
 }
 
-resolve_adapter() {
-  local canonical="$1" checkpoint weight_name source
-  for checkpoint in "$@"; do
-    if [[ -f "$checkpoint/adapter_config.json" &&
-          ( -s "$checkpoint/adapter_model.safetensors" || -s "$checkpoint/adapter_model.bin" ) ]]; then
-      printf '%s\n' "$checkpoint"
-      return 0
-    fi
-  done
-  # Git moves tracked adapter_config.json, while ignored weights can remain
-  # under the former SoC directory. Link the weight into the current layout.
-  if [[ -f "$canonical/adapter_config.json" ]]; then
-    for checkpoint in "$@"; do
-      for weight_name in adapter_model.safetensors adapter_model.bin; do
-        if [[ -s "$checkpoint/$weight_name" ]]; then
-          source="$(cd "$checkpoint" && pwd -P)/$weight_name"
-          if [[ ! -e "$canonical/$weight_name" && ! -L "$canonical/$weight_name" ]]; then
-            ln -s "$source" "$canonical/$weight_name"
-          fi
-          if [[ -s "$canonical/$weight_name" ]]; then
-            printf 'Linked existing adapter weight: %s -> %s\n' "$canonical/$weight_name" "$source" >&2
-            printf '%s\n' "$canonical"
-            return 0
-          fi
-        fi
-      done
-    done
-  fi
-  printf 'Missing completed adapter; checked:\n' >&2
-  printf '  %s\n' "$@" >&2
-  return 2
+seed="${SEED:-0}"
+[[ "$seed" =~ ^[0-9]+$ ]] || {
+  echo "SEED must be a nonnegative integer" >&2
+  exit 2
 }
 
-case "${SLURM_ARRAY_TASK_ID:?Expected three array tasks}" in
+case "${SLURM_ARRAY_TASK_ID:?Expected array task 0 or 1}" in
   0)
-    sft_run_name="${CONTINUED_SFT_RUN_NAME:-split1-seed0-seen-sft}"
-    [[ "$sft_run_name" =~ ^[A-Za-z0-9][A-Za-z0-9_-]*$ ]] || {
-      echo "CONTINUED_SFT_RUN_NAME must use letters, digits, underscore or dash" >&2
+    config="sft-direct-from-base-qwen3p5-2b-5500-samples"
+    run_name="${DIRECT_RUN_NAME:-${run_tag}}"
+    [[ "$run_name" =~ ^[A-Za-z0-9][A-Za-z0-9_-]*$ ]] || {
+      echo "DIRECT_RUN_NAME must use letters, digits, underscore or dash" >&2
       exit 2
     }
-    checkpoint="$(resolve_adapter \
-      "verifier/experiments/sft-direct-from-sft5895-qwen3p5-2b-1200-samples/runs/${sft_run_name}/artifacts/checkpoints" \
-      "verifier/experiments/sft-direct-from-sft-qwen3p5-2b-train1200/runs/${sft_run_name}/artifacts/checkpoints" \
-      "verifier/experiments/sft_qwen_3.5-2b_continue_n1200/runs/${sft_run_name}/artifacts/checkpoints")"
-    echo "Evaluate continued SFT: checkpoint=$checkpoint"
-    export CHECKPOINTS="$checkpoint"
-    export EVAL_CONDITION=sft-continued1200-direct-cap1024
-    export RUN_NAME="$run_tag"
-    export N_CLAIMS=900 PROMPT_STYLE=direct MAX_NEW_TOKENS=1024
-    bash verifier/evaluation/run_eval.sh
-    ;;
-  1|2)
-    if [[ "$SLURM_ARRAY_TASK_ID" == 1 ]]; then
-      arm=seen
-      config=grpo-cot-from-sft5895-qwen3p5-2b-no-calibration-kl0-1200-samples
-      checkpoint="$(resolve_adapter \
-        verifier/experiments/sft-direct-from-base-qwen3p5-2b-5895-samples/runs/run2/artifacts/checkpoints \
-        verifier/experiments/sft-direct-from-base-qwen3p5-2b-train5895/runs/run2/artifacts/checkpoints \
-        verifier/experiments/sft-direct-from-base-qwen3p5-2b-train5895/runs/run2/artifacts/checkpoints/checkpoints \
-        verifier/experiments/sft_qwen_3.5-2b_n6000/runs/run2/artifacts/checkpoints)"
-    else
-      arm=unseen
-      config=grpo-cot-from-sft4695-qwen3p5-2b-no-calibration-kl0-1200-samples
-      sft_run_name="${DISJOINT_SFT_RUN_NAME:-split1-seed0-unseen-sft}"
-      [[ "$sft_run_name" =~ ^[A-Za-z0-9][A-Za-z0-9_-]*$ ]] || {
-        echo "DISJOINT_SFT_RUN_NAME must use letters, digits, underscore or dash" >&2
-        exit 2
-      }
-      checkpoint="$(resolve_adapter \
-        "verifier/experiments/sft-direct-from-base-qwen3p5-2b-disjoint-4695-samples/runs/${sft_run_name}/artifacts/checkpoints" \
-        "verifier/experiments/sft-direct-from-base-qwen3p5-2b-disjoint4695/runs/${sft_run_name}/artifacts/checkpoints" \
-        "verifier/experiments/sft_qwen_3.5-2b_disjoint_n4695/runs/${sft_run_name}/artifacts/checkpoints")"
-    fi
-    data=verifier/data/train/sft/fever-oracle-matched-grpo-1200
-    test -f "$data/labeled_prompts.jsonl" || {
-      echo "Missing fixed GRPO training data: $data/labeled_prompts.jsonl" >&2
+    script="verifier/experiments/$config/train.py"
+    data="verifier/data/train/sft/fever-oracle-direct-5500/labeled_prompts.jsonl"
+    test -f "$data" || {
+      echo "Missing Direct 5500 data: $data" >&2
       exit 2
     }
-    seed="${SEED:-0}"
-    [[ "$seed" =~ ^[0-9]+$ ]] || { echo "SEED must be a nonnegative integer" >&2; exit 2; }
-    run_name="${run_tag}-${arm}-cot-grpo"
-    args=(--run-name "$run_name" --seed "$seed" --sft "$checkpoint" --data "$data")
+    args=(--run-name "$run_name" --seed "$seed")
     if [[ -n "${OUTPUT_ROOT:-}" ]]; then
       args+=(--output-root "$OUTPUT_ROOT")
     fi
-    echo "Train native-thinking GRPO: config=$config run=$run_name init=$checkpoint data=$data"
-    srun python "verifier/experiments/$config/train.py" "${args[@]}"
+    echo "Task 0: Train Direct SFT (5,500 claims): config=$config run=$run_name seed=$seed"
+    srun python "$script" "${args[@]}"
     ;;
-  *) echo "Unexpected array task: $SLURM_ARRAY_TASK_ID" >&2; exit 2 ;;
+  1)
+    config="sft-cot-from-base-qwen3p5-2b-5500-samples"
+    run_name="${COT_RUN_NAME:-${run_tag}}"
+    [[ "$run_name" =~ ^[A-Za-z0-9][A-Za-z0-9_-]*$ ]] || {
+      echo "COT_RUN_NAME must use letters, digits, underscore or dash" >&2
+      exit 2
+    }
+    script="verifier/experiments/$config/train.py"
+    data="${COT_DATA:-verifier/data/train/sft/fever-oracle-cot-soclaas/cot_sft_labeled_prompts.jsonl}"
+    test -f "$data" || {
+      echo "Missing CoT 5500 data: $data" >&2
+      exit 2
+    }
+    args=(--run-name "$run_name" --seed "$seed" --data "$data")
+    if [[ -n "${OUTPUT_ROOT:-}" ]]; then
+      args+=(--output-root "$OUTPUT_ROOT")
+    fi
+    echo "Task 1: Train CoT SFT (5,500 claims): config=$config run=$run_name data=$data seed=$seed"
+    srun python "$script" "${args[@]}"
+    ;;
+  *)
+    echo "Unexpected array task: $SLURM_ARRAY_TASK_ID (expected 0 or 1)" >&2
+    exit 2
+    ;;
 esac
