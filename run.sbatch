@@ -29,7 +29,7 @@ run_tag="${RUN_TAG:-cot-grpo1}"
 }
 
 resolve_adapter() {
-  local checkpoint
+  local canonical="$1" checkpoint weight_name source
   for checkpoint in "$@"; do
     if [[ -f "$checkpoint/adapter_config.json" &&
           ( -s "$checkpoint/adapter_model.safetensors" || -s "$checkpoint/adapter_model.bin" ) ]]; then
@@ -37,6 +37,25 @@ resolve_adapter() {
       return 0
     fi
   done
+  # Git moves tracked adapter_config.json, while ignored weights can remain
+  # under the former SoC directory. Link the weight into the current layout.
+  if [[ -f "$canonical/adapter_config.json" ]]; then
+    for checkpoint in "$@"; do
+      for weight_name in adapter_model.safetensors adapter_model.bin; do
+        if [[ -s "$checkpoint/$weight_name" ]]; then
+          source="$(cd "$checkpoint" && pwd -P)/$weight_name"
+          if [[ ! -e "$canonical/$weight_name" && ! -L "$canonical/$weight_name" ]]; then
+            ln -s "$source" "$canonical/$weight_name"
+          fi
+          if [[ -s "$canonical/$weight_name" ]]; then
+            printf 'Linked existing adapter weight: %s -> %s\n' "$canonical/$weight_name" "$source" >&2
+            printf '%s\n' "$canonical"
+            return 0
+          fi
+        fi
+      done
+    done
+  fi
   printf 'Missing completed adapter; checked:\n' >&2
   printf '  %s\n' "$@" >&2
   return 2
