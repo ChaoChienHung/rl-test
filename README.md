@@ -166,10 +166,10 @@ squeue -j "$job_id"
 ```
 
 #### B. Submit one-command Slurm array follow-up (`run.sbatch`)
-Executes Task 0 (1,200 continued SFT eval) and Tasks 1 & 2 (seen/unseen dual-arm CoT GRPO training):
+Executes Task 0 (5,500 direct SFT baseline) and Task 1 (5,500 CoT SFT training):
 ```bash
 job=$(sbatch --parsable run.sbatch)
-echo "Follow-up Array Job: $job"
+echo "5,500 SFT Comparison Array Job: $job"
 squeue -j "$job"
 ```
 
