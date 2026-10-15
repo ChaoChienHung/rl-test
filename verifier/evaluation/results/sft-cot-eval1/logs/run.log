@@ -1,0 +1,77 @@
+job=947258 run=sft-eval1 commit=d3d677bde751babfb7d33598af908e4f03e37a18 n=900 thinking=on retrieval=titles model=Qwen/Qwen3.5-2B checkpoints=verifier/experiments/sft_qwen_3.5-2b_n6000/runs/run2/artifacts/checkpoints result_dir=verifier/evaluation/results/checkpoint-cot/sft-eval1
+started_at=2026-10-14T20:15:16Z
+0 done, 900 to go -> verifier/evaluation/results/checkpoint-cot/sft-eval1/predictions.jsonl
+Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]Loading weights:   1%|          | 3/320 [00:00<00:11, 28.67it/s]Loading weights:  21%|██        | 66/320 [00:00<00:00, 362.61it/s]Loading weights:  36%|███▌      | 114/320 [00:00<00:00, 405.37it/s]Loading weights:  48%|████▊     | 155/320 [00:00<00:00, 398.54it/s]Loading weights:  62%|██████▎   | 200/320 [00:00<00:00, 414.21it/s]Loading weights:  78%|███████▊  | 249/320 [00:00<00:00, 435.65it/s]Loading weights:  92%|█████████▏| 293/320 [00:00<00:00, 423.93it/s]Loading weights: 100%|██████████| 320/320 [00:00<00:00, 403.53it/s]
+[transformers] `causal_conv1d_fn` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+[transformers] `chunk_gated_delta_rule` is falling back to its reference PyTorch implementation because `flash-linear-attention` is not installed. This is correct but much slower; install `flash-linear-attention` for the optimized kernel.
+[transformers] `causal_conv1d_update` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+[transformers] `fused_recurrent_gated_delta_rule` is falling back to its reference PyTorch implementation because `flash-linear-attention` is not installed. This is correct but much slower; install `flash-linear-attention` for the optimized kernel.
+  20/900  71s
+  40/900  115s
+  60/900  156s
+  80/900  227s
+  100/900  270s
+  120/900  292s
+  140/900  348s
+  160/900  395s
+  180/900  454s
+  200/900  511s
+  220/900  547s
+  240/900  589s
+  260/900  621s
+  280/900  644s
+  300/900  716s
+  320/900  742s
+  340/900  770s
+  360/900  799s
+  380/900  840s
+  400/900  904s
+  420/900  946s
+  440/900  976s
+  460/900  1017s
+  480/900  1039s
+  500/900  1080s
+  520/900  1108s
+  540/900  1160s
+  560/900  1187s
+  580/900  1213s
+  600/900  1258s
+  620/900  1331s
+  640/900  1373s
+  660/900  1422s
+  680/900  1452s
+  700/900  1493s
+  720/900  1522s
+  740/900  1565s
+  760/900  1609s
+  780/900  1664s
+  800/900  1710s
+  820/900  1765s
+  840/900  1790s
+  860/900  1834s
+  880/900  1876s
+  900/900  1936s
+
+== Qwen/Qwen3.5-2B+sft_qwen_3.5-2b_n6000_run2  (900 claims, predictions.jsonl) ==
+  format adherence      0.947   json=0.95  verdict=0.95  evidence=0.95  confidence=0.95
+  label accuracy        0.714
+  FEVER score           0.624
+  evidence F1 (non-NEI) 0.644
+  recall SUPPORTED        0.833  (n=300)
+  recall REFUTED          0.747  (n=300)
+  recall NOT_ENOUGH_INFO  0.563  (n=300)
+  ECE stated_conf       0.245   (available 0.95)
+      [0.9,1.0)  n=852  conf=1.00  acc=0.75
+  ECE token_conf        0.169   (available 0.95)
+      [0.4,0.5)  n=5    conf=0.50  acc=0.80
+      [0.5,0.6)  n=30   conf=0.56  acc=0.50
+      [0.6,0.7)  n=24   conf=0.65  acc=0.62
+      [0.7,0.8)  n=68   conf=0.76  acc=0.53
+      [0.8,0.9)  n=84   conf=0.86  acc=0.61
+      [0.9,1.0)  n=641  conf=0.98  acc=0.81
+  non-NEI, gold in  context: n=517  acc=0.836  FEVER=0.760
+  non-NEI, gold NOT in context: n=83   acc=0.506  FEVER=0.000
+  tokens in/out         1432 / 105 per claim
+  providers             {'local': 900}
+finished_at=2026-10-14T20:48:10Z
+predictions=verifier/evaluation/results/checkpoint-cot/sft-eval1/predictions.jsonl metrics=verifier/evaluation/results/checkpoint-cot/sft-eval1/metrics.json
