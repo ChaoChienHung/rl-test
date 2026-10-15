@@ -158,19 +158,23 @@ The committed `pilot1` data has 227 accepted examples. The separate `full1` teac
 
 The fixed 1,200 claims in `verifier/data/train/sft/fever-oracle-matched-grpo-1200/` are excluded from the new 4,695-claim SFT set. The two sets have no claim-ID overlap and together contain all 5,895 prepared oracle prompts. Verify the committed split with `python -m utils.build_disjoint_sft_grpo_split --check`; its hashes and label counts are in `verifier/data/train/sft/fever-oracle-disjoint-4695/split_manifest.json`.
 
-The two SFT arms have already been submitted on SoC. After pulling this branch, submit **only the two GRPO jobs** from a SoC login node. Find the running 4,695-row SFT job ID with `squeue -u "$USER"`; substitute that numeric ID below:
+The two SFT arms have completed on SoC. The root `run.sbatch` now submits two independent tasks: evaluate the 1,200-row SFT continuation, and train GRPO from the disjoint 4,695-row SFT checkpoint. After pulling this branch, confirm both adapter directories contain `adapter_config.json` and `adapter_model.safetensors`, then submit from a SoC login node:
 
 ```bash
 cd "$HOME/rl-test"
-squeue -u "$USER"
-unseen_sft_job=123456  # replace with the running 4,695-row SFT job ID
-grpo_job=$(sbatch --parsable --dependency="afterok:$unseen_sft_job" \
-  --export=ALL,RUN_TAG=split1-seed0 run.sbatch)
-echo "GRPO array: $grpo_job"
-squeue -j "$grpo_job"
+continued=verifier/experiments/sft-direct-from-sft-qwen3p5-2b-train1200/runs/split1-seed0-seen-sft/artifacts/checkpoints
+disjoint=verifier/experiments/sft-direct-from-base-qwen3p5-2b-disjoint4695/runs/split1-seed0-unseen-sft/artifacts/checkpoints
+if [[ -f "$continued/adapter_config.json" && -s "$continued/adapter_model.safetensors" && \
+      -f "$disjoint/adapter_config.json" && -s "$disjoint/adapter_model.safetensors" ]]; then
+  job=$(sbatch --parsable --export=ALL,RUN_TAG=split1-seed0 run.sbatch)
+  echo "Follow-up array: $job"
+  squeue -j "$job"
+else
+  echo "One or both renamed SFT checkpoint directories are incomplete"
+fi
 ```
 
-The two-task array waits for the 4,695-row SFT job to finish successfully. Task 0 starts from the already-trained 5,895-row SFT `run2`; task 1 starts from the 4,695-row SFT checkpoint under its **old configuration name** (`sft_qwen_3.5-2b_disjoint_n4695`), where the in-flight job writes it. Both use the **same fixed 1,200 rows**. `RUN_TAG` must match the tag used for the running SFT jobs (default `split1-seed0`); set `SFT_RUN_NAME` if the 4,695-row run has a different name. The renamed checkpoint path is a fallback if the old path is absent. Use `verifier/experiments/submit_split_comparison.sh` only for a fresh comparison when no SFT arm has been submitted.
+Task 0 evaluates the continued SFT adapter on the frozen 900 dev claims with title retrieval, a direct prompt and a 1024-token output cap. Results go to `verifier/evaluation/results/sft-continued1200-direct-cap1024/<RUN_TAG>/`. Task 1 starts GRPO from the disjoint 4,695-row SFT adapter on the same fixed 1,200 training rows, writing to `verifier/experiments/grpo-direct-from-sft-qwen3p5-2b-train1200-kl0/runs/<RUN_TAG>-unseen-grpo/`. Both tasks require the **new configuration paths** shown above. `RUN_TAG` defaults to `split1-seed0`; use `CONTINUED_SFT_RUN_NAME` or `DISJOINT_SFT_RUN_NAME` if either source run differs. Use a new `RUN_TAG` for a repeat so results are not overwritten. Use `verifier/experiments/submit_split_comparison.sh` only for a fresh four-job comparison.
 
 | Job | Starting checkpoint | Training rows | Output run |
 |---|---|---:|---|
@@ -179,7 +183,7 @@ The two-task array waits for the 4,695-row SFT job to finish successfully. Task 
 | Unseen → SFT | Qwen3.5-2B base | complementary 4,695 | `sft-direct-from-base-qwen3p5-2b-disjoint4695/runs/<tag>-unseen-sft/` |
 | Unseen → GRPO | adapter from the preceding job | fixed 1,200 | `grpo-direct-from-sft-qwen3p5-2b-train1200-kl0/runs/<tag>-unseen-grpo/` |
 
-Each run saves its LoRA adapter to `artifacts/checkpoints/`, `meta.json` and `logs/train_log.json`; this array writes `slurm-grpo-split-<job-id>_<task-id>.out` at the repo root. Check `squeue -j "$grpo_job"` and `sacct -j "$grpo_job" --format=JobID,State,ExitCode,Elapsed,MaxRSS`. If the 4,695-row SFT fails, neither GRPO task starts. The GRPO configurations here are **direct JSON** with a 96-token training completion cap, not CoT GRPO.
+The GRPO run saves its LoRA adapter to `artifacts/checkpoints/`, `meta.json` and `logs/train_log.json`; the SFT evaluation saves predictions, metrics, manifest and logs in its results folder. This array writes `slurm-split-followup-<job-id>_<task-id>.out` at the repo root. Check `squeue -j "$job"` and `sacct -j "$job" --format=JobID,State,ExitCode,Elapsed,MaxRSS`. The GRPO configuration here is **direct JSON** with a 96-token training completion cap, not CoT GRPO.
 
 The disjoint path has 5,895 unique claim exposures across its two stages. The seen path deliberately trains on 1,200 claims twice. Compare each child against its own starting checkpoint on the same dev IDs; compare the two seen-claim continuations to distinguish GRPO from additional SFT. The seen and unseen paths have different first-stage SFT data sizes, so their raw scores alone do not isolate the effect of overlap.
 
@@ -189,7 +193,7 @@ Evaluation jobs load dev claims, query the BM25 index and SQLite cache, generate
 
 ### Completed 1024-token evaluation sweep
 
-The six completed runs used the same frozen 900 dev claims, title retrieval, evaluator, and `MAX_NEW_TOKENS=1024`. Their results remain under `verifier/evaluation/results/`; the root `run.sbatch` now runs the current GRPO pair. For a new evaluation, use `verifier/evaluation/run.sbatch` below.
+The six completed runs used the same frozen 900 dev claims, title retrieval, evaluator, and `MAX_NEW_TOKENS=1024`. Their results remain under `verifier/evaluation/results/`; the root `run.sbatch` now runs the split follow-up evaluation and GRPO training. For a new standalone evaluation, use `verifier/evaluation/run.sbatch` below.
 
 | Task | Model | Prompt | Result condition |
 |---:|---|---|---|
