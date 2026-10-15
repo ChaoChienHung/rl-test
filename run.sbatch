@@ -39,12 +39,12 @@ export THINKING=off
 export RUN_NAME="${RUN_NAME:-run1}"
 
 case "${SLURM_ARRAY_TASK_ID:?}" in
-  0) variant=base; style=direct ;;
-  1) variant=base; style=cot_chain ;;
-  2) variant=base; style=cot_brief ;;
-  3) variant=sft; style=direct ;;
-  4) variant=sft; style=cot_chain ;;
-  5) variant=sft; style=cot_brief ;;
+  0) variant=base; style=direct; label=direct ;;
+  1) variant=base; style=cot_chain; label=cot-long ;;
+  2) variant=base; style=cot_brief; label=cot-brief ;;
+  3) variant=sft; style=direct; label=direct ;;
+  4) variant=sft; style=cot_chain; label=cot-long ;;
+  5) variant=sft; style=cot_brief; label=cot-brief ;;
   *)
     echo "Unexpected array task: $SLURM_ARRAY_TASK_ID" >&2
     exit 2
@@ -52,7 +52,7 @@ case "${SLURM_ARRAY_TASK_ID:?}" in
 esac
 
 export PROMPT_STYLE="$style"
-export EVAL_CONDITION="${variant}-${style}-cap1024"
+export EVAL_CONDITION="${variant}-${label}-cap1024"
 if [[ "$variant" == sft ]]; then
   export CHECKPOINTS="$sft_checkpoints"
 else

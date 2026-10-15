@@ -1,5 +1,5 @@
 {
-  "verifier/evaluation/results/sft-cot_brief-cap1024/run1/predictions.jsonl": {
+  "verifier/evaluation/results/sft-cot-brief-cap1024/run1/predictions.jsonl": {
     "model": "Qwen/Qwen3.5-2B+sft_qwen_3.5-2b_n6000_run2",
     "retrieval": "titles",
     "prompt_style": "cot_brief",

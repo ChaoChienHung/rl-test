@@ -29,7 +29,8 @@ Detailed document map: [data and downloads](verifier/docs/data.md), [system plan
 - **Retrieval**: Title retrieval reached 0.875 FEVER page recall@5.
 - **Base model (untrained Qwen3.5-2B)**: On the same 900 dev claims with title retrieval, direct prompting scored 45.9% accuracy / 33.8% FEVER; `cot_chain` scored 60.8% / 51.1%; `cot_brief` scored 61.8% / 48.6%. The direct run used a 160-token output cap, while CoT used 512; 46 direct outputs hit the cap and were invalid. Retest with matched caps before attributing the full gap to reasoning.
 - **SFT (2B LoRA, 5,895 claims)**: Direct prompting scored 74.1% accuracy / 65.9% FEVER; `cot_chain` scored 71.4% / 62.4%; `cot_brief` scored 74.6% / 63.9%. Brief reasoning largely removed truncation, but still reduced NEI recall and FEVER score relative to direct prompting.
-- **Next experiments**: Run the matched 1024-output-token sweep with [`run.sbatch`](run.sbatch) and the fixed SFT/GRPO split comparison with [`verifier/experiments/submit_split_comparison.sh`](verifier/experiments/submit_split_comparison.sh). Validate promising gains on an untouched holdout. See [`verifier/TODO.md`](verifier/TODO.md) for execution details.
+- **Matched 1024-token evaluation**: On 900 dev claims, Base `direct` / long CoT / brief CoT reached 47.6% / 62.8% / 61.8% accuracy. SFT `run2` reached 74.6% / 71.4% / 74.6%; its direct prompt had the highest FEVER score (66.3%). See the comparison below and the local, Git-ignored `verifier/INSIGHT.md`.
+- **Next experiments**: Run the fixed SFT/GRPO split comparison with [`verifier/experiments/submit_split_comparison.sh`](verifier/experiments/submit_split_comparison.sh). Validate promising gains on an untouched holdout. See [`verifier/TODO.md`](verifier/TODO.md) for execution details.
 
 Detailed metric comparisons, per-claim error cases, and calibration analyses are tracked in `verifier/INSIGHT.md`.
 
@@ -130,11 +131,18 @@ python -m utils.build_cot_sft_data prepare --provider soclaas --model qwen3.8:27
 python -m utils.build_cot_sft_data run --out verifier/data/train/sft/fever-oracle-cot-soclaas/pilot1
 python -m utils.build_cot_sft_data collect --out verifier/data/train/sft/fever-oracle-cot-soclaas/pilot1
 
-# Train CoT SFT pilot adapter on SoC
+# Train the 227 accepted CoT SFT pilot examples on a SoC login node.
+# This produces a CoT SFT adapter; it is not CoT GRPO.
+test -f verifier/data/train/sft/fever-oracle-cot-soclaas/pilot1/cot_sft_labeled_prompts.jsonl
+test -x .venv/bin/python
 export TRAIN_SCRIPT=verifier/experiments/cot_sft_qwen_3.5-2b_oracle_pilot300/train.py
-cot_sft_job=$(sbatch --parsable --partition=gpu --gpus=a100-40:1 --time=03:00:00 --export=ALL,RUN_NAME=pilot1,SEED=0 verifier/experiments/run_train.sbatch)
+cot_sft_job=$(sbatch --parsable --partition=gpu --gpus=a100-40:1 --exclude=xgpe2 --time=03:00:00 --export=ALL,RUN_NAME=pilot1,SEED=0 verifier/experiments/run_train.sbatch)
 unset TRAIN_SCRIPT
+echo "CoT SFT pilot job: $cot_sft_job"
+squeue -j "$cot_sft_job"
 ```
+
+The committed `pilot1` data has 227 accepted examples. The separate `full1` teacher batch has 5,895 requested rows but, in the current local snapshot, only 2,132 responses and no collected training file. No CoT SFT or CoT GRPO checkpoint is recorded in this repository yet. Existing `grpo_qwen_*` scripts train short direct JSON completions with a 96-token cap.
 
 ### 3. Fixed 4,695/1,200 split comparison
 
@@ -172,11 +180,18 @@ Launches six Slurm array tasks (at most two concurrent) on the same frozen 900 d
 | Task | Model | Prompt | Result condition |
 |---:|---|---|---|
 | 0 | Base | `direct` | `base-direct-cap1024` |
-| 1 | Base | `cot_chain` | `base-cot_chain-cap1024` |
-| 2 | Base | `cot_brief` | `base-cot_brief-cap1024` |
+| 1 | Base | `cot_chain` (long CoT) | `base-cot-long-cap1024` |
+| 2 | Base | `cot_brief` (brief CoT) | `base-cot-brief-cap1024` |
 | 3 | SFT `run2` | `direct` | `sft-direct-cap1024` |
-| 4 | SFT `run2` | `cot_chain` | `sft-cot_chain-cap1024` |
-| 5 | SFT `run2` | `cot_brief` | `sft-cot_brief-cap1024` |
+| 4 | SFT `run2` | `cot_chain` (long CoT) | `sft-cot-long-cap1024` |
+| 5 | SFT `run2` | `cot_brief` (brief CoT) | `sft-cot-brief-cap1024` |
+
+| Model | Direct Acc / FEVER | Long CoT Acc / FEVER | Brief CoT Acc / FEVER |
+|---|---:|---:|---:|
+| Base | 47.6% / 34.6% | **62.8% / 52.8%** | 61.8% / 48.6% |
+| SFT `run2` | **74.6% / 66.3%** | 71.4% / 62.4% | 74.6% / 63.9% |
+
+Result conditions use lowercase hyphens: `<model>-<prompt>-cap<output-tokens>`. `cot-long` is the result label for the existing `PROMPT_STYLE=cot_chain` implementation; `cot-brief` maps to `cot_brief`. Historical 160/512-token runs keep their original names and provenance.
 
 After pulling the updated branch on SoC, verify the SFT adapter exists and submit from the repo root:
 
@@ -188,7 +203,7 @@ echo "1024-token sweep: $job"
 squeue -j "$job"
 ```
 
-Each task writes to `verifier/evaluation/results/<result-condition>/run1/` with predictions, metrics, manifest and log. Slurm logs are `slurm-verifier-cap1024-<job-id>_<task-id>.out` in the repo root. Check completion with `sacct -j "$job" --format=JobID,JobName,State,ExitCode,Elapsed`. Use `sbatch --export=ALL,RUN_NAME=run2 run.sbatch` for a repeat, or `RESULTS_ROOT` to move the result tree. A larger output cap can expose repetitive generations and increase GPU time; inspect capped outputs and per-claim reasoning along with aggregate metrics. Comparing the six new runs holds the cap fixed. The older 160/512-token runs remain useful historical references, but their differences also include the cap change.
+Each task writes to `verifier/evaluation/results/<result-condition>/run1/` with predictions, metrics, manifest and log. Slurm logs are `slurm-verifier-cap1024-<job-id>_<task-id>.out` in the repo root. Check completion with `sacct -j "$job" --format=JobID,JobName,State,ExitCode,Elapsed`. Use `sbatch --export=ALL,RUN_NAME=run2 run.sbatch` for a repeat, or `RESULTS_ROOT` to move the result tree. At 1024 tokens, SFT long CoT still had 44 capped outputs and 48 format failures, while Base direct had 130 format failures with only 3 capped outputs. These are different failure modes. The runs hold the output cap fixed, but Base direct/long and brief CoT were generated from different code revisions; brief CoT was also developed after inspecting these dev claims. Treat this as a development-set comparison and validate on an untouched holdout.
 
 ### 2. Single evaluation run (`verifier/evaluation/run.sbatch`)
 

@@ -17,10 +17,10 @@ else
   esac
 fi
 case "$style" in
-  direct) condition=direct-baseline ;;
-  cot_chain) condition=cot-baseline ;;
-  cot_brief) condition=cot-brief ;;
-  cot_sft) condition=cot-sft ;;
+  direct) condition=base-direct ;;
+  cot_chain) condition=base-cot-long ;;
+  cot_brief) condition=base-cot-brief ;;
+  cot_sft) condition=base-cot-sft ;;
 esac
 
 cd "${SLURM_SUBMIT_DIR:?submit from the repo root}"
@@ -63,7 +63,7 @@ with open(sys.argv[1], encoding='utf-8') as f:
 PY
 )"
   adapter_args=(--adapter "$checkpoints")
-  condition="checkpoint-${condition%-baseline}"
+  condition="${condition/base-/checkpoint-}"
 fi
 
 if [[ -n "${EVAL_CONDITION:-}" ]]; then
