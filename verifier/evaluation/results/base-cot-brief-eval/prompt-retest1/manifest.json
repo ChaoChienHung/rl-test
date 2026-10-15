@@ -1,0 +1,16 @@
+{
+  "job_id": "948157",
+  "run_name": "prompt-retest1",
+  "commit": "3b2b8d85dbce2a40987f86abc8c9a0763f479ad6",
+  "model": "Qwen/Qwen3.5-2B",
+  "checkpoints": null,
+  "thinking": "off",
+  "prompt_style": "cot_brief",
+  "retrieval": "titles",
+  "condition": "base-cot-brief-eval",
+  "result_dir": "verifier/evaluation/results/base-cot-brief-eval/prompt-retest1",
+  "n_claims": 900,
+  "predictions": "verifier/evaluation/results/base-cot-brief-eval/prompt-retest1/predictions.jsonl",
+  "metrics": "verifier/evaluation/results/base-cot-brief-eval/prompt-retest1/metrics.json",
+  "log": "verifier/evaluation/results/base-cot-brief-eval/prompt-retest1/logs/run.log"
+}
