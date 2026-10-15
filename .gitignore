@@ -6,8 +6,6 @@ __pycache__/
 slurm-*.out
 verifier/data/baseline_runs/
 verifier/evaluation/results/manual/
-verifier/experiments/*/runs/*/artifacts/logs/*.log
-verifier/evaluation/results/*/*/logs/*.log
 verifier/data/**/*.log
 verifier/INSIGHT.md
 .env
