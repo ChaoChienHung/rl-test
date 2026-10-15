@@ -15,7 +15,7 @@ export TMPDIR="${TMPDIR:-$HOME/.pip-tmp}"
 mkdir -p "$TMPDIR"
 export TOKENIZERS_PARALLELISM=false
 
-train_script="${TRAIN_SCRIPT:-verifier/experiments/sft_qwen_3.5-2b_n6000/train.py}"
+train_script="${TRAIN_SCRIPT:-verifier/experiments/sft-direct-from-base-qwen3p5-2b-train5895/train.py}"
 case "$train_script" in
   verifier/experiments/*/train.py) ;;
   *) echo "TRAIN_SCRIPT must be a verifier/experiments/<config>/train.py path" >&2; exit 2 ;;
@@ -30,7 +30,7 @@ if [[ -n "${OUTPUT_ROOT:-}" ]]; then
 fi
 if [[ -n "${SFT_CHECKPOINTS:-}" ]]; then
   case "$train_script" in
-    verifier/experiments/grpo_*/train.py)
+    verifier/experiments/grpo-*/train.py)
       [[ -f "$SFT_CHECKPOINTS/adapter_config.json" ]] || {
         echo "Missing SFT adapter config: $SFT_CHECKPOINTS/adapter_config.json" >&2
         exit 2
@@ -46,7 +46,7 @@ if [[ -n "${SFT_CHECKPOINTS:-}" ]]; then
 fi
 if [[ -n "${INIT_CHECKPOINTS:-}" ]]; then
   case "$train_script" in
-    verifier/experiments/sft_*/train.py) ;;
+    verifier/experiments/sft-direct-*/train.py) ;;
     *) echo "INIT_CHECKPOINTS applies only to SFT training" >&2; exit 2 ;;
   esac
   [[ -f "$INIT_CHECKPOINTS/adapter_config.json" ]] || {
@@ -59,8 +59,8 @@ if [[ -n "${INIT_CHECKPOINTS:-}" ]]; then
 fi
 if [[ -n "${TRAIN_DATA:-}" ]]; then
   case "$train_script" in
-    verifier/experiments/cot_sft_*/train.py) args+=(--data "$TRAIN_DATA") ;;
-    verifier/experiments/grpo_qwen_*/train.py) args+=(--data "$TRAIN_DATA") ;;
+    verifier/experiments/sft-cot-*/train.py) args+=(--data "$TRAIN_DATA") ;;
+    verifier/experiments/grpo-direct-*/train.py) args+=(--data "$TRAIN_DATA") ;;
     *) echo "TRAIN_DATA applies only to CoT SFT or single-turn GRPO training" >&2; exit 2 ;;
   esac
 fi

@@ -7,7 +7,7 @@ retrieval shows it, in the same order and batches, so the loop must reproduce
 untrained baseline before anything smarter is built on it:
 
     python -m agent.agent_loop                                              # base 2B, untrained baseline: acc 0.459
-    python -m agent.agent_loop --adapter verifier/experiments/sft_qwen_3.5-2b_n6000/runs/run1/artifacts/checkpoints   # SFT: acc 0.759
+    python -m agent.agent_loop --adapter verifier/experiments/sft-direct-from-base-qwen3p5-2b-train5895/runs/run1/artifacts/checkpoints   # SFT: acc 0.759
     python -m agent.agent_loop --n 30 --tag smoke
 
 Writes verifier/data/traces/fever_dev_<run>.jsonl in docs/trace-format.md (schema 1),

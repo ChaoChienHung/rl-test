@@ -8,7 +8,7 @@ from pathlib import Path
 
 from utils.experiment_layout import ROOT
 
-train_path = ROOT / "verifier/experiments/cot_sft_qwen_3.5-2b_oracle_pilot300/train.py"
+train_path = ROOT / "verifier/experiments/sft-cot-from-base-qwen3p5-2b-pilot300/train.py"
 spec = importlib.util.spec_from_file_location("cot_sft_train", train_path)
 module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)

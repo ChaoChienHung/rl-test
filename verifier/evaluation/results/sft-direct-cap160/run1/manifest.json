@@ -3,7 +3,7 @@
   "run_name": "run1",
   "commit": "d3d677bde751babfb7d33598af908e4f03e37a18",
   "model": "Qwen/Qwen3.5-2B",
-  "checkpoints": "verifier/experiments/sft_qwen_3.5-2b_n6000/runs/run2/artifacts/checkpoints",
+  "checkpoints": "verifier/experiments/sft-direct-from-base-qwen3p5-2b-train5895/runs/run2/artifacts/checkpoints",
   "thinking": "off",
   "prompt_style": "direct",
   "retrieval": "titles",
@@ -17,5 +17,6 @@
   "original_result_dir": "verifier/evaluation/results/checkpoint-direct/sft-eval1",
   "original_run_name": "sft-eval1",
   "max_new_tokens": 160,
-  "max_new_tokens_source": "verifier/model.py default at run commit"
+  "max_new_tokens_source": "verifier/model.py default at run commit",
+  "original_checkpoints": "verifier/experiments/sft_qwen_3.5-2b_n6000/runs/run2/artifacts/checkpoints"
 }

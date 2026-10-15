@@ -21,6 +21,7 @@ def main():
                     "--n-train", "1200", "--rank", "16", "--lr", "0.0001",
                     "--data", DATA, "--init-adapter", args.init_adapter,
                     "--experiment-name", "Qwen_Qwen3.5-2B_continue_n1200",
+                    "--config-name", Path(__file__).parent.name,
                     "--run-name", args.run_name, "--seed", str(args.seed),
                     *(["--output-root", args.output_root] if args.output_root else [])],
                    cwd=ROOT, check=True)

@@ -3,7 +3,7 @@
   "run_name": "prompt-retest1",
   "commit": "3b2b8d85dbce2a40987f86abc8c9a0763f479ad6",
   "model": "Qwen/Qwen3.5-2B",
-  "checkpoints": "verifier/experiments/sft_qwen_3.5-2b_n6000/runs/run2/artifacts/checkpoints",
+  "checkpoints": "verifier/experiments/sft-direct-from-base-qwen3p5-2b-train5895/runs/run2/artifacts/checkpoints",
   "thinking": "off",
   "prompt_style": "cot_brief",
   "retrieval": "titles",
@@ -17,5 +17,6 @@
   "original_result_dir": "verifier/evaluation/results/sft-cot-brief-eval/prompt-retest1",
   "original_run_name": "prompt-retest1",
   "max_new_tokens": 512,
-  "max_new_tokens_source": "verifier/model.py default at run commit"
+  "max_new_tokens_source": "verifier/model.py default at run commit",
+  "original_checkpoints": "verifier/experiments/sft_qwen_3.5-2b_n6000/runs/run2/artifacts/checkpoints"
 }

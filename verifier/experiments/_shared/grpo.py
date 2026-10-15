@@ -102,11 +102,12 @@ if __name__ == "__main__":
     ap.add_argument("--tag", default="")
     ap.add_argument("--run-name", default=None, help="repeat label under verifier/experiments/<configuration>/runs/")
     ap.add_argument("--output-root", default=None, help="experiments directory for run artifacts (default: verifier/experiments)")
+    ap.add_argument("--config-name", default=None, help="directory name for this training configuration")
     a = ap.parse_args()
     a.data = a.data or DEFAULT_SFT_DATA
 
     name = f"{a.model.replace('/', '_')}_{'base_' if a.init == 'base' else ''}{a.reward}_n{a.n_train}" + (f"_{a.tag}" if a.tag else "")
-    artifacts = artifacts_dir("grpo", name, a.seed, a.run_name, a.output_root)
+    artifacts = artifacts_dir("grpo", name, a.seed, a.run_name, a.output_root, a.config_name)
     if artifacts.exists():
         raise SystemExit(f"run already exists: {artifacts}; use --run-name for a new run")
     out = artifacts / "checkpoints"

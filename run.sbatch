@@ -23,7 +23,7 @@ if [[ -n "${RESULT_DIR:-}" ]]; then
   exit 2
 fi
 
-sft_checkpoints="${SFT_CHECKPOINTS:-verifier/experiments/sft_qwen_3.5-2b_n6000/runs/run2/artifacts/checkpoints}"
+sft_checkpoints="${SFT_CHECKPOINTS:-verifier/experiments/sft-direct-from-base-qwen3p5-2b-train5895/runs/run2/artifacts/checkpoints}"
 [[ -f "$sft_checkpoints/adapter_config.json" ]] || {
   echo "Missing SFT adapter config: $sft_checkpoints/adapter_config.json" >&2
   exit 2

@@ -23,6 +23,7 @@ def main():
         else:
             if key == "subset_of": value = str(ROOT / value)
             cmd.extend([flag, str(value)])
+    cmd.extend(["--config-name", Path(__file__).parent.name])
     cmd.extend(["--run-name", args.run_name, "--seed", str(args.seed)])
     if args.output_root:
         cmd.extend(["--output-root", args.output_root])

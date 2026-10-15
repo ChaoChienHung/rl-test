@@ -19,6 +19,7 @@ def main():
     subprocess.run([sys.executable, str(SCRIPT), "--model", "Qwen/Qwen3.5-2B",
                     "--n-train", "4695", "--rank", "16", "--lr", "0.0001",
                     "--data", DATA, "--experiment-name", "Qwen_Qwen3.5-2B_disjoint_n4695",
+                    "--config-name", Path(__file__).parent.name,
                     "--run-name", args.run_name, "--seed", str(args.seed),
                     *(["--output-root", args.output_root] if args.output_root else [])],
                    cwd=ROOT, check=True)

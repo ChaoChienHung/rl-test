@@ -6,13 +6,15 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
-SCRIPT = ROOT / "verifier/experiments/_shared/sft.py"
-PARAMS = {'n_train': 60, 'rank': 16, 'lr': 0.0001, 'qlora': True, 'model': 'Qwen/Qwen3.5-4B', 'max_steps': 5}
+SCRIPT = ROOT / "verifier/experiments/_shared/grpo.py"
+PARAMS = {'prompts_per_step': 2, 'filter': True, 'beta': 0.04, 'model': 'Qwen/Qwen3.5-2B', 'max_steps': 200, 'n_train': 1200, 'tag': 'kl', 'num_generations': 8, 'lr': 2e-05, 'reward': 'full'}
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--run-name", required=True, help="new run label, e.g. run3")
     parser.add_argument("--output-root", help="experiments directory for run artifacts")
+    parser.add_argument("--sft", help="SFT adapter checkpoint directory used by GRPO")
+    parser.add_argument("--data", help="directory containing GRPO labeled_prompts.jsonl")
     parser.add_argument("--seed", type=int, default=0)
     args = parser.parse_args()
     cmd = [sys.executable, str(SCRIPT)]
@@ -23,9 +25,14 @@ def main():
         else:
             if key == "subset_of": value = str(ROOT / value)
             cmd.extend([flag, str(value)])
+    cmd.extend(["--config-name", Path(__file__).parent.name])
     cmd.extend(["--run-name", args.run_name, "--seed", str(args.seed)])
     if args.output_root:
         cmd.extend(["--output-root", args.output_root])
+    if args.sft:
+        cmd.extend(["--sft", args.sft])
+    if args.data:
+        cmd.extend(["--data", args.data])
     subprocess.run(cmd, cwd=ROOT, check=True)
 
 if __name__ == "__main__":

@@ -15,7 +15,7 @@ were recorded here.
 
 ## 1. Runs
 
-| Historical run (now under `verifier/experiments/grpo_.../runs/`) | Starts from | KL beta | Train claims | Steps | Train time | Peak GB |
+| Historical run (metadata retains its original name; directories use `grpo-...`) | Starts from | KL beta | Train claims | Steps | Train time | Peak GB |
 |---|---|---|---|---|---|---|
 | `Qwen_Qwen3.5-2B_full_n1200` | SFT adapter (trained in place) | 0 | all 1,200 | 600 | 3.0 h | 13.6 |
 | `Qwen_Qwen3.5-2B_base_full_n1200` | base model | 0.04 | all 1,200 | 600 | 3.6 h | 13.5 |
@@ -91,7 +91,7 @@ model, and both have room to teach abstention.
 `verifier/experiments/_shared/grpo_multiturn.py`, defaults: base Qwen3.5-2B, 16 FEVER train claims,
 3 steps, 8 samples per claim, at most 2 searches, KL 0.04. The model gets
 only the claim and calls `search` itself; tool output is masked from the
-loss. Run: `verifier/experiments/grpo_mt_qwen_3.5-2b_mt_base_full_n16/runs/run1/artifacts/` (`meta.json`,
+loss. Run: `verifier/experiments/grpo-multiturn-from-base-qwen3p5-2b-smoke16-kl004/runs/run1/artifacts/` (`meta.json`,
 `train_log.json`, `rollouts.jsonl`).
 
 | | Result |

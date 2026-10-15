@@ -9,7 +9,7 @@ eval_verifier asks for. Evaluate with eval_verifier.py --adapter on the same 900
 claims, so every number lands in the same table as the untrained model.
 
     python verifier/experiments/_shared/sft.py --model Qwen/Qwen3.5-2B --n-train 6000 --run-name run2
-    python -m verifier.evaluation.eval_verifier --model local --adapter verifier/experiments/sft_qwen_3.5-2b_n6000/runs/run2/artifacts/checkpoints --n 900 --retrieval titles
+    python -m verifier.evaluation.eval_verifier --model local --adapter verifier/experiments/sft-direct-from-base-qwen3p5-2b-train5895/runs/run2/artifacts/checkpoints --n 900 --retrieval titles
 
 The stated confidence is 1.0 in every target, so after SFT it carries no
 information by construction. Read accuracy, FEVER score, evidence F1 and
@@ -143,6 +143,7 @@ if __name__ == "__main__":
                     help="resume SFT from an existing LoRA adapter (continue training its weights)")
     ap.add_argument("--experiment-name", default=None,
                     help="preserve a historical experiment configuration name when data storage is renamed")
+    ap.add_argument("--config-name", default=None, help="directory name for this training configuration")
     a = ap.parse_args()
     if a.data and a.subset_of:
         ap.error("--data and --subset-of cannot be combined")
@@ -193,7 +194,7 @@ if __name__ == "__main__":
             for r in rows:
                 f.write(json.dumps(r, ensure_ascii=False) + "\n")
 
-    artifacts = artifacts_dir("sft", name, a.seed, a.run_name, a.output_root)
+    artifacts = artifacts_dir("sft", name, a.seed, a.run_name, a.output_root, a.config_name)
     if artifacts.exists():
         raise SystemExit(f"run already exists: {artifacts}; use --run-name for a new run")
     checkpoint_dir = artifacts / "checkpoints"

@@ -38,20 +38,20 @@ decide whether the 4B runs are needed at all.
 
 ```bash
 # From the repository root; use a fresh run name because historical run1 exists.
-python verifier/experiments/sft_qwen_3.5-2b_n60/train.py --run-name run2
-python -m verifier.evaluation.eval_verifier --model local --adapter verifier/experiments/sft_qwen_3.5-2b_n60/runs/run2/artifacts/checkpoints --n 30 --retrieval oracle
+python verifier/experiments/sft-direct-from-base-qwen3p5-2b-smoke60/train.py --run-name run2
+python -m verifier.evaluation.eval_verifier --model local --adapter verifier/experiments/sft-direct-from-base-qwen3p5-2b-smoke60/runs/run2/artifacts/checkpoints --n 30 --retrieval oracle
 
-python verifier/experiments/sft_qwen_3.5-2b_n6000/train.py --run-name run2
-python -m verifier.evaluation.eval_verifier --model local --adapter verifier/experiments/sft_qwen_3.5-2b_n6000/runs/run2/artifacts/checkpoints --n 900 --retrieval oracle
-python -m verifier.evaluation.eval_verifier --model local --adapter verifier/experiments/sft_qwen_3.5-2b_n6000/runs/run2/artifacts/checkpoints --n 900 --retrieval titles
+python verifier/experiments/sft-direct-from-base-qwen3p5-2b-train5895/train.py --run-name run2
+python -m verifier.evaluation.eval_verifier --model local --adapter verifier/experiments/sft-direct-from-base-qwen3p5-2b-train5895/runs/run2/artifacts/checkpoints --n 900 --retrieval oracle
+python -m verifier.evaluation.eval_verifier --model local --adapter verifier/experiments/sft-direct-from-base-qwen3p5-2b-train5895/runs/run2/artifacts/checkpoints --n 900 --retrieval titles
 
 python -m verifier.evaluation.eval_verifier --model local --n 900 --retrieval oracle
 python -m verifier.evaluation.eval_verifier --model local:Qwen/Qwen3.5-4B --n 900 --retrieval oracle
 python -m verifier.evaluation.eval_verifier --model local:Qwen/Qwen3.5-4B --n 900 --retrieval titles
 
-python verifier/experiments/sft_qwen_3.5-4b_n6000_qlora/train.py --run-name run2
-python -m verifier.evaluation.eval_verifier --model local --adapter verifier/experiments/sft_qwen_3.5-4b_n6000_qlora/runs/run2/artifacts/checkpoints --n 900 --retrieval oracle
-python -m verifier.evaluation.eval_verifier --model local --adapter verifier/experiments/sft_qwen_3.5-4b_n6000_qlora/runs/run2/artifacts/checkpoints --n 900 --retrieval titles
+python verifier/experiments/sft-direct-from-base-qwen3p5-4b-train5895-qlora/train.py --run-name run2
+python -m verifier.evaluation.eval_verifier --model local --adapter verifier/experiments/sft-direct-from-base-qwen3p5-4b-train5895-qlora/runs/run2/artifacts/checkpoints --n 900 --retrieval oracle
+python -m verifier.evaluation.eval_verifier --model local --adapter verifier/experiments/sft-direct-from-base-qwen3p5-4b-train5895-qlora/runs/run2/artifacts/checkpoints --n 900 --retrieval titles
 ```
 
 Standard error on 900-claim accuracy is about 1.6 points, so treat

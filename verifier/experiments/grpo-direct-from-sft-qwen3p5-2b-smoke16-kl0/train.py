@@ -7,7 +7,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[3]
 SCRIPT = ROOT / "verifier/experiments/_shared/grpo.py"
-PARAMS = {'init': 'base', 'prompts_per_step': 2, 'filter': False, 'beta': 0.04, 'model': 'Qwen/Qwen3.5-2B', 'max_steps': 0, 'n_train': 1200, 'tag': '', 'num_generations': 8, 'lr': 2e-05, 'reward': 'full'}
+PARAMS = {'prompts_per_step': 2, 'model': 'Qwen/Qwen3.5-2B', 'max_steps': 3, 'n_train': 16, 'tag': 'smoke', 'num_generations': 8, 'lr': 2e-05, 'reward': 'full'}
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -25,6 +25,7 @@ def main():
         else:
             if key == "subset_of": value = str(ROOT / value)
             cmd.extend([flag, str(value)])
+    cmd.extend(["--config-name", Path(__file__).parent.name])
     cmd.extend(["--run-name", args.run_name, "--seed", str(args.seed)])
     if args.output_root:
         cmd.extend(["--output-root", args.output_root])
