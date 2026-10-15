@@ -1,0 +1,3 @@
+job=952536 run=run1 commit=e63933f3b3b00ffd1142d95449d9cc05cedea71e n=900 thinking=off prompt_style=cot_native max_new_tokens=1024 retrieval=titles model=Qwen/Qwen3.5-2B checkpoints=verifier/experiments/grpo-cot-from-sft5895-qwen3p5-2b-no-calibration-kl0-1200-samples/runs/cot-grpo1-seen-cot-grpo/artifacts/checkpoints result_dir=verifier/evaluation/results/grpo-cot-from-sft5895-qwen3p5-2b-no-calibration-kl0-1200-samples/cot-native-cap1024/run1
+started_at=2026-10-15T16:39:19Z
+0 done, 900 to go -> verifier/evaluation/results/grpo-cot-from-sft5895-qwen3p5-2b-no-calibration-kl0-1200-samples/cot-native-cap1024/run1/predictions.jsonl

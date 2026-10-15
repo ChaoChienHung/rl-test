@@ -47,3 +47,32 @@ started_at=2026-10-15T16:14:46Z
   780/900  458s
   800/900  469s
   820/900  480s
+  840/900  491s
+  860/900  502s
+  880/900  513s
+  900/900  525s
+
+== Qwen/Qwen3.5-2B+sft-direct-from-base-qwen3p5-2b-5500-samples_run1  (900 claims, predictions.jsonl) ==
+  format adherence      1.000   json=1.00  verdict=1.00  evidence=1.00  confidence=1.00
+  label accuracy        0.761
+  FEVER score           0.664
+  evidence F1 (non-NEI) 0.649
+  recall SUPPORTED        0.820  (n=300)
+  recall REFUTED          0.783  (n=300)
+  recall NOT_ENOUGH_INFO  0.680  (n=300)
+  ECE stated_conf       0.239   (available 1.00)
+      [0.9,1.0)  n=900  conf=1.00  acc=0.76
+  ECE token_conf        0.046   (available 1.00)
+      [0.3,0.4)  n=5    conf=0.39  acc=0.00
+      [0.4,0.5)  n=47   conf=0.47  acc=0.47
+      [0.5,0.6)  n=88   conf=0.56  acc=0.56
+      [0.6,0.7)  n=99   conf=0.65  acc=0.58
+      [0.7,0.8)  n=128  conf=0.76  acc=0.70
+      [0.8,0.9)  n=170  conf=0.85  acc=0.80
+      [0.9,1.0)  n=363  conf=0.95  acc=0.91
+  non-NEI, gold in  context: n=517  acc=0.843  FEVER=0.762
+  non-NEI, gold NOT in context: n=83   acc=0.542  FEVER=0.000
+  tokens in/out         1365 / 24 per claim
+  providers             {'local': 900}
+finished_at=2026-10-15T16:24:15Z
+predictions=verifier/evaluation/results/sft-direct-from-base-qwen3p5-2b-5500-samples/direct-cap1024/run1/predictions.jsonl metrics=verifier/evaluation/results/sft-direct-from-base-qwen3p5-2b-5500-samples/direct-cap1024/run1/metrics.json
