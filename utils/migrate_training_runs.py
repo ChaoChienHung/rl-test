@@ -1,10 +1,11 @@
-"""Move local, Git-ignored checkpoint weights after training directories were renamed.
+"""Move local, Git-ignored training runs after experiment directories were renamed.
 
 Run only after any SoC jobs writing to the former paths have finished. The default
 mode lists planned moves; --apply moves files without overwriting existing targets.
 """
 
 import argparse
+import filecmp
 import shutil
 from pathlib import Path
 
@@ -30,25 +31,30 @@ RENAMED = {
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--apply", action="store_true", help="move checkpoint files; default is a dry run")
+    parser.add_argument("--apply", action="store_true", help="move run files; default is a dry run")
     args = parser.parse_args()
     count = 0
+    conflicts = 0
     for old, new in RENAMED.items():
         for run in (ROOT / old / "runs").glob("*"):
-            source = run / "artifacts" / "checkpoints"
-            if not source.is_dir():
+            if not run.is_dir():
                 continue
-            destination = ROOT / new / "runs" / run.name / "artifacts" / "checkpoints"
-            for item in source.iterdir():
-                target = destination / item.name
+            destination = ROOT / new / "runs" / run.name
+            for item in run.rglob("*"):
+                if not item.is_file():
+                    continue
+                target = destination / item.relative_to(run)
                 if target.exists():
+                    if not filecmp.cmp(item, target, shallow=False):
+                        print(f"CONFLICT {item} -> {target}; left in old location")
+                        conflicts += 1
                     continue
                 print(f"{'MOVE' if args.apply else 'WOULD MOVE'} {item} -> {target}")
                 if args.apply:
-                    destination.mkdir(parents=True, exist_ok=True)
+                    target.parent.mkdir(parents=True, exist_ok=True)
                     shutil.move(str(item), str(target))
                 count += 1
-    print(f"{count} checkpoint item(s) {'moved' if args.apply else 'to move'}")
+    print(f"{count} run file(s) {'moved' if args.apply else 'to move'}; {conflicts} conflict(s)")
 
 
 if __name__ == "__main__":

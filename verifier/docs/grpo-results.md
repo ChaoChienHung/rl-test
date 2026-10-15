@@ -15,14 +15,16 @@ were recorded here.
 
 ## 1. Runs
 
-| Historical run (metadata retains its original name; directories use `grpo-...`) | Starts from | KL beta | Train claims | Steps | Train time | Peak GB |
+| Current configuration / run | Starts from | KL beta | Train claims | Steps | Train time | Peak GB |
 |---|---|---|---|---|---|---|
-| `Qwen_Qwen3.5-2B_full_n1200` | SFT adapter (trained in place) | 0 | all 1,200 | 600 | 3.0 h | 13.6 |
-| `Qwen_Qwen3.5-2B_base_full_n1200` | base model | 0.04 | all 1,200 | 600 | 3.6 h | 13.5 |
-| `Qwen_Qwen3.5-2B_full_n1200_kl` | SFT merged, fresh LoRA | 0.04 | only those with reward spread | 200 | 1.0 h | 13.7 |
-| `Qwen_Qwen3.5-2B_full_n1200_kl` / `run2` | same, seed 1 | 0.04 | only those with reward spread | 200 | 0.7 h | 13.6 |
-| `Qwen_Qwen3.5-2B_full_n1200_kl05` | SFT merged, fresh LoRA | 0.5 | only those with reward spread | 200 | 0.8 h | 13.6 |
-| `Qwen_Qwen3.5-2B_full_n16_smoke` | SFT adapter | 0 | 16 | 3 | 72 s | 9.7 |
+| `grpo-direct-from-sft-qwen3p5-2b-train1200-kl0/run1` | SFT adapter (trained in place) | 0 | all 1,200 | 600 | 3.0 h | 13.6 |
+| `grpo-direct-from-base-qwen3p5-2b-train1200-kl004/run1` | base model | 0.04 | all 1,200 | 600 | 3.6 h | 13.5 |
+| `grpo-direct-from-sft-qwen3p5-2b-filtered1200-kl004/run1` | SFT merged, fresh LoRA | 0.04 | only those with reward spread | 200 | 1.0 h | 13.7 |
+| `grpo-direct-from-sft-qwen3p5-2b-filtered1200-kl004/run2` | same, seed 1 | 0.04 | only those with reward spread | 200 | 0.7 h | 13.6 |
+| `grpo-direct-from-sft-qwen3p5-2b-filtered1200-kl05/run1` | SFT merged, fresh LoRA | 0.5 | only those with reward spread | 200 | 0.8 h | 13.6 |
+| `grpo-direct-from-sft-qwen3p5-2b-smoke16-kl0/run1` | SFT adapter | 0 | 16 | 3 | 72 s | 9.7 |
+
+The saved `meta.json` files retain the original experiment IDs and training settings.
 
 "Reward spread" is the `--filter` flag. It keeps only the claims where
 `disagreement.py` found the 8 SFT samples scoring differently.

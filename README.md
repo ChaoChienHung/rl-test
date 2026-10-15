@@ -109,15 +109,15 @@ test -f verifier/data/fever/bm25_index/doc_ids.json && echo 'BM25: OK' || echo '
 
 Submit training jobs from the repository root using `verifier/experiments/run_train.sbatch`. Artifacts (`checkpoints/`, `meta.json`, `logs/train_log.json`) are written under `verifier/experiments/<config>/runs/<run-name>/artifacts/`. Configuration names follow `<method>-<output>-from-<start>-<model>-<data>[-<setting>]`; for example, `sft-direct-from-base-qwen3p5-2b-train5895`. `qwen3p5` means Qwen3.5; `train5895` counts actual training rows. `pilot300` means 300 teacher requests, of which 227 were accepted. `filtered1200` means reward-spread filtering of a 1,200-claim pool. `kl004` and `kl05` mean KL beta 0.04 and 0.5. Each `train.py` writes to its own configuration folder, and `RUN_NAME` chooses the repeat.
 
-If your SoC checkout predates the training-directory rename, wait for running training jobs to finish, pull this branch, then move any Git-ignored adapter weights into their new paths:
+If your SoC checkout predates the training-directory rename, wait for running training jobs to finish, pull this branch, then move any Git-ignored run files (including adapter weights and new job logs) into their new paths:
 
 ```bash
-python -m utils.migrate_training_checkpoints          # preview
-python -m utils.migrate_training_checkpoints --apply  # move without overwriting
+python -m utils.migrate_training_runs          # preview
+python -m utils.migrate_training_runs --apply  # move without overwriting
 test -s verifier/experiments/sft-direct-from-base-qwen3p5-2b-train5895/runs/run2/artifacts/checkpoints/adapter_model.safetensors
 ```
 
-The script leaves old metadata and logs intact if any remain on SoC. Saved evaluation manifests retain their original checkpoint path in `original_checkpoints` and use the current path in `checkpoints`.
+The script skips files already present at the destination, reports any different-content conflicts, and never overwrites them. Saved evaluation manifests retain their original checkpoint path in `original_checkpoints` and use the current path in `checkpoints`.
 
 ### 1. Standard no-CoT SFT (Qwen3.5-2B)
 
