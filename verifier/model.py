@@ -11,7 +11,7 @@ of the verdict (renormalised over the three labels).
     python -m verifier.evaluation.eval_verifier --model local --n 50
     python -m verifier.evaluation.eval_verifier --model qwen/qwen3.8-flash --n 50
     python -m verifier.evaluation.eval_verifier --model local --n 900 --retrieval titles
-    python -m verifier.evaluation.eval_verifier --model local --n 900 --retrieval titles --prompt-style cot_chain --output verifier/evaluation/results/baseline-cot-long-cap512/run1/predictions.jsonl
+    python -m verifier.evaluation.eval_verifier --model local --n 900 --retrieval titles --prompt-style cot_chain --output verifier/evaluation/results/base-qwen3p5-2b/cot-long-cap512/run1/predictions.jsonl
     python -m verifier.evaluation.eval_verifier --summarize verifier/evaluation/results/archive/local_n50.jsonl
 
 Without --output, results are appended per claim under verifier/evaluation/results/manual/.

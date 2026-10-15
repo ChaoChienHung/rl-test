@@ -63,7 +63,7 @@ verifier/experiments/<configuration>/runs/<run>/artifacts/
   meta.json, logs/train_log.json, checkpoints/adapter_config.json, optional rollouts.jsonl (in git)
   checkpoints/*.safetensors and checkpoint-*/                                             (not in git)
 verifier/evaluation/results/archive/        archived per-claim evaluation outputs                           (in git)
-verifier/evaluation/results/<condition>/<run>/  fresh predictions, metrics, manifest and logs                (not in git)
+verifier/evaluation/results/<eval_model>/<condition>/<run>/  fresh predictions, metrics, manifest and logs   (not in git)
 ```
 
 ## 4. What is left out of git, and how to get it back

@@ -17,11 +17,11 @@ else
   esac
 fi
 case "$style" in
-  direct) condition=baseline-direct; default_cap=160 ;;
-  cot_chain) condition=baseline-cot-long; default_cap=512 ;;
-  cot_brief) condition=baseline-cot-brief; default_cap=512 ;;
-  cot_sft) condition=baseline-cot-sft; default_cap=320 ;;
-  cot_native) condition=baseline-cot-native; default_cap=1024 ;;
+  direct) default_cap=160 ;;
+  cot_chain) default_cap=512 ;;
+  cot_brief) default_cap=512 ;;
+  cot_sft) default_cap=320 ;;
+  cot_native) default_cap=1024 ;;
 esac
 
 cd "${SLURM_SUBMIT_DIR:?submit from the repo root}"
@@ -64,7 +64,6 @@ with open(sys.argv[1], encoding='utf-8') as f:
 PY
 )"
   adapter_args=(--adapter "$checkpoints")
-  condition="${condition/baseline-/checkpoint-}"
 fi
 
 if [[ -n "${EVAL_MODEL:-}" ]]; then
@@ -90,8 +89,11 @@ else
   eval_model="base-qwen3p5-2b"
 fi
 
-style_hyphen="${style//_/-}"
-condition="${style_hyphen}-cap${MAX_NEW_TOKENS:-$default_cap}"
+case "$style" in
+  cot_chain) style_tag="cot-long" ;;
+  *) style_tag="${style//_/-}" ;;
+esac
+condition="${style_tag}-cap${MAX_NEW_TOKENS:-$default_cap}"
 
 if [[ -n "${EVAL_CONDITION:-}" ]]; then
   [[ "$EVAL_CONDITION" =~ ^[A-Za-z0-9][A-Za-z0-9_.-]*$ ]] || {

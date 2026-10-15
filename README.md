@@ -11,7 +11,7 @@ This repository studies evidence-grounded claim verification on FEVER. A verifie
 
 | Path | What it contains |
 |---|---|
-| [`run.sbatch`](run.sbatch) | Two-task Slurm array: trains 5,500 direct SFT baseline and 5,500 CoT SFT |
+| [`run.sbatch`](run.sbatch) | Two-task Slurm array: evaluates 5,500 direct SFT baseline and trains 5,500 native-thinking CoT SFT |
 | [`verifier/TODO.md`](verifier/TODO.md) | Current priorities and experiment checklist |
 | [`verifier/docs/`](verifier/docs/) | Data guide, experiment results, architecture and background |
 | [`verifier/data/train/`](verifier/data/train/) | Committed SFT and GRPO training examples |
@@ -71,6 +71,22 @@ Evaluates claim verification on frozen dev claim sets (default 900 claims with t
   - `direct`: Output concise JSON directly.
   - `cot_brief`: Output concise evidence reasoning (<=50 words) within the JSON object.
   - `cot_chain` (`cot_long`): Output full evidence reasoning chain within the JSON object.
+  - `cot_native`: Output native model thinking tokens (`<think>...</think>`), followed by JSON.
+- **Evaluation Results Directory Layout (`verifier/evaluation/results/`)**:
+  Evaluation results follow a hierarchical structure mirroring training configurations:
+  ```text
+  verifier/evaluation/results/
+  ├── <eval_model>/               # e.g., base-qwen3p5-2b or sft-direct-from-base-qwen3p5-2b-5500-samples
+  │   └── <condition>/            # <prompt_style>-cap<tokens>, e.g., direct-cap1024, cot-brief-cap1024
+  │       └── <run>/              # Run directory (e.g. run1, job-12345) containing:
+  │           ├── manifest.json   # Reproducibility metadata, command, commit, and file paths
+  │           ├── metrics.json    # Accuracy, FEVER score, format compliance, evidence F1, calibration ECE
+  │           ├── predictions.jsonl # Claim-by-claim predictions and citation outputs
+  │           └── logs/run.log    # Evaluation terminal log
+  └── archive/                    # Historical repository of raw per-claim .jsonl prediction files
+                                  # from early project baselines and probes (including local_n900_titles.jsonl,
+                                  # from which the frozen 900 dev set IDs were established).
+  ```
 - **Metrics Tracked**:
   - `accuracy`: Overall verdict classification accuracy.
   - `fever_score`: Strict FEVER metric (requires both correct verdict and full gold evidence citation).
@@ -183,9 +199,9 @@ job_id=$(sbatch --parsable --partition=gpu --gpus=a100-40:1 --time=03:00:00 \
 #### D. Submit single model evaluation job (`verifier/evaluation/run.sbatch`)
 ```bash
 # Example: evaluate SFT checkpoint under cot_brief prompt
-adapter=verifier/experiments/sft-direct-from-base-qwen3p5-2b-5895-samples/runs/run2/artifacts/checkpoints
+adapter=verifier/experiments/sft-direct-from-base-qwen3p5-2b-5500-samples/runs/run1/artifacts/checkpoints
 sbatch --partition=gpu --gpus=a100-40:1 --time=01:30:00 \
-  --export=ALL,N_CLAIMS=900,RUN_NAME=run1,PROMPT_STYLE=cot_brief,CHECKPOINTS="$adapter",EVAL_CONDITION=sft-cot-brief-eval \
+  --export=ALL,N_CLAIMS=900,RUN_NAME=run1,PROMPT_STYLE=cot_brief,CHECKPOINTS="$adapter" \
   verifier/evaluation/run.sbatch
 ```
 
