@@ -78,6 +78,14 @@ Reply with only one JSON object, nothing else:
 - evidence: ids of the sentences that justify the verdict, at most 5. Use [] for NOT_ENOUGH_INFO.
 - confidence: the probability that your verdict is correct."""
 
+COT_BRIEF_SYSTEM = """You are a fact-checker. Decide the claim using only the numbered Wikipedia evidence shown.
+In the reasoning field, write at most two short sentences (50 words total). Mention only the one or two most relevant E ids and explain the decisive support, contradiction, or missing fact. Do not list every sentence, repeat phrases, or continue deliberating. For NOT_ENOUGH_INFO, do not guess from outside knowledge.
+
+Reply immediately with exactly one complete JSON object and nothing else:
+{"reasoning": "brief evidence-based explanation", "verdict": "SUPPORTED" | "REFUTED" | "NOT_ENOUGH_INFO", "evidence": ["E3", ...], "confidence": <number 0 to 1>}
+
+Use [] for NOT_ENOUGH_INFO evidence. For other verdicts, cite at most 5 decisive E ids. Finish the JSON after the four fields."""
+
 OUT_DIR = os.path.join(DATA, "..", "..", "evaluation", "results", "manual")
 VERDICT_PREFIX = re.compile(r'"verdict"\s*:\s*"')
 
@@ -346,8 +354,9 @@ def run(model_name, n, retrieval="bm25", chunk=20, adapter=None, output=None,
     if not claims:
         return path
     system_prompt = {"direct": SYSTEM, "reasoning": REASONING_SYSTEM, "cot_sft": COT_SFT_SYSTEM,
-                     "cot_chain": COT_CHAIN_SYSTEM}[prompt_style]
-    max_new_tokens = {"direct": 160, "reasoning": 320, "cot_sft": 320, "cot_chain": 512}[prompt_style]
+                     "cot_chain": COT_CHAIN_SYSTEM, "cot_brief": COT_BRIEF_SYSTEM}[prompt_style]
+    max_new_tokens = {"direct": 160, "reasoning": 320, "cot_sft": 320,
+                      "cot_chain": 512, "cot_brief": 512}[prompt_style]
     if model_name.startswith("local"):
         base = model_name.split(":", 1)[1] if ":" in model_name else None
         if adapter and not base:

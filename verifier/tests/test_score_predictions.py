@@ -51,6 +51,14 @@ class SavedRunMetricsTest(unittest.TestCase):
         self.assertEqual(result["reasoning_valid_citations_rate"], 1.0)
         self.assertEqual(result["all"]["calibration"]["stated_conf"]["coverage"], 0.0)
 
+    def test_cot_brief_reports_reasoning_metrics(self):
+        item = row(1, True, 0.9)
+        item.update(prompt_style="cot_brief", reasoning_present=True,
+                    reasoning_citations_valid=True, format_ok=True)
+        result = summarize([item])
+        self.assertEqual(result["reasoning_present_rate"], 1.0)
+        self.assertEqual(result["reasoning_valid_citations_rate"], 1.0)
+
     def test_duplicate_ids_rejected(self):
         item = row(1, True, 0.9)
         with tempfile.TemporaryDirectory() as directory:

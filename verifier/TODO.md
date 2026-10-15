@@ -4,14 +4,15 @@ Current work is verifier evaluation on the `rl` branch. These tasks replace the 
 
 ## Next experiment sequence
 
-1. [ ] Once the no-CoT 2B SFT run completes, use **the same checkpoint** for direct (`THINKING=off`) and evidence-chain (`THINKING=on`) evaluation on the same 900 dev IDs, retrieval setup and evaluator. Compare both with the base-model runs, including accuracy, FEVER score, label recall, citation quality, confidence and token cost.
-2. [ ] Start a **new GRPO run from that SFT checkpoint**, retaining the checkpoint path and matched no-GRPO SFT results as the control. First inspect sampled rollouts and reward spread; for CoT GRPO, update the current 96-token completion cap, prompt format and reward checks before training, then compare on the same held-out evaluation.
+1. [x] Compare direct (`THINKING=off`) and evidence-chain (`THINKING=on`) prompts using the same no-CoT 2B SFT `run2` checkpoint, 900 dev IDs, title retrieval and evaluator. Direct: 667/900 accuracy, 593/900 FEVER; CoT: 643/900 accuracy, 562/900 FEVER. CoT has 48 format failures, 44 at its 512-token cap; see `INSIGHT.md` for label and confidence details.
+2. [ ] Submit root `run.sbatch` on SoC to retest **both the base 2B model and the no-CoT SFT `run2` checkpoint** on the same 900 IDs with `PROMPT_STYLE=cot_brief` and the same 512-token cap. Within each model, compare all-claim accuracy, FEVER, format, exactly-512 outputs, NEI recall and tokens against its existing direct and `cot_chain` runs. If failures remain, vary the token cap in a separate run. This prompt was tuned after inspecting the 900 dev results, so validate promising gains on an untouched holdout.
+3. [ ] Start a **new GRPO run from that SFT checkpoint**, retaining the checkpoint path and matched no-GRPO SFT results as the control. First inspect sampled rollouts and reward spread; for CoT GRPO, update the current 96-token completion cap, prompt format and reward checks before training, then compare on the same held-out evaluation.
 
 CoT SFT data preparation can proceed in parallel with step 1; it is a separate experiment and should not change the existing no-CoT checkpoint or its evaluation.
 
 ## P0 — comparable verifier evaluation (RL-1, AG-3)
 
-- [ ] Train the no-CoT Qwen3.5-2B SFT adapter from the committed 5,895 examples (seed 0); the historical LoRA weights are not committed. Record job ID, runtime, peak GPU memory, and checkpoint path.
+- [x] Train the no-CoT Qwen3.5-2B SFT adapter from the committed 5,895 examples (seed 0). The local run is `sft_qwen_3.5-2b_n6000/runs/run2` with checkpoint under `artifacts/checkpoints/`; the LoRA weights are not committed. The run metadata reports 6,720 seconds and 5.62 GB peak GPU memory.
 - [ ] Freeze disjoint train, prompt-development, calibration and holdout claim IDs, then publish the split manifest and leakage check. The committed 5,895-row SFT train set and matched 1,200-row subset have zero ID overlap with the archived 900 dev claims; the remaining splits are not frozen.
 - [ ] Run direct JSON (`THINKING=off`) and zero-shot evidence-chain (`THINKING=on`) evaluation on the same FEVER dev IDs and title retrieval: 30-claim smoke tests, then 900 claims. Submit `verifier/evaluation/run.sbatch`; each run stores predictions, metrics, manifest and logs under `verifier/evaluation/results/<condition>/<run>/`.
 - [ ] Record per claim: gold, verdict, evidence IDs, retrieval condition, reasoning if present, stated confidence, verdict-token probability, tokens and latency. Check evidence citations by hand; a valid E-ID alone does not prove support.

@@ -2,12 +2,12 @@
 set -euo pipefail
 
 # THINKING is the historical on/off switch. PROMPT_STYLE selects an exact style.
-# Model-internal thinking stays disabled in all three conditions.
+# Model-internal thinking stays disabled in every condition.
 thinking="${THINKING:-off}"
 if [[ -n "${PROMPT_STYLE:-}" ]]; then
   case "$PROMPT_STYLE" in
-    direct|cot_chain|cot_sft) style="$PROMPT_STYLE" ;;
-    *) echo "PROMPT_STYLE must be direct, cot_chain, or cot_sft" >&2; exit 2 ;;
+    direct|cot_chain|cot_brief|cot_sft) style="$PROMPT_STYLE" ;;
+    *) echo "PROMPT_STYLE must be direct, cot_chain, cot_brief, or cot_sft" >&2; exit 2 ;;
   esac
 else
   case "$thinking" in
@@ -19,6 +19,7 @@ fi
 case "$style" in
   direct) condition=direct-baseline ;;
   cot_chain) condition=cot-baseline ;;
+  cot_brief) condition=cot-brief ;;
   cot_sft) condition=cot-sft ;;
 esac
 

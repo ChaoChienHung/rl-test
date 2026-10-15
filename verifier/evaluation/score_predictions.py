@@ -103,11 +103,11 @@ def summarize(rows):
             "mean_tokens_in": mean([r["in_tokens"] for r in rows if r.get("in_tokens") is not None]),
             "mean_tokens_out": mean([r["out_tokens"] for r in rows if r.get("out_tokens") is not None]),
             "reasoning_present_rate": mean([int(bool(r.get("reasoning_present"))) for r in rows])
-            if rows[0].get("prompt_style") in ("reasoning", "cot_chain", "cot_sft") else None,
+            if rows[0].get("prompt_style") in ("reasoning", "cot_chain", "cot_brief", "cot_sft") else None,
             "reasoning_valid_citations_rate": mean([
                 int(r["reasoning_citations_valid"]) for r in rows
                 if r.get("reasoning_citations_valid") is not None])
-            if rows[0].get("prompt_style") in ("reasoning", "cot_chain", "cot_sft") else None}
+            if rows[0].get("prompt_style") in ("reasoning", "cot_chain", "cot_brief", "cot_sft") else None}
 
 
 if __name__ == "__main__":

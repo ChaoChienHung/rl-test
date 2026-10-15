@@ -1,17 +1,21 @@
 # Fact verifier experiments
 
-This repository studies evidence-grounded claim verification on FEVER. A verifier reads a claim and retrieved sentences, then returns a JSON verdict and cited sentence IDs; some configurations also return a stated confidence. The `rl` branch contains historical SFT and GRPO runs plus the next direct and evidence-chain baseline experiments. The raw FEVER corpus, retrieval index, and model weights are not committed.
+This repository studies evidence-grounded claim verification on FEVER. A verifier reads a claim and retrieved sentences, then returns a JSON verdict and cited sentence IDs; some configurations also return a stated confidence. The `rl` branch contains historical SFT and GRPO runs plus direct, CoT, and brief reasoning baselines.
+
+- **Current priorities & experiment checklist**: [`verifier/TODO.md`](verifier/TODO.md)
+- **Research journal, experimental insights & error analyses**: `verifier/INSIGHT.md` (local / Git-ignored) and [`verifier/docs/`](verifier/docs/)
 
 ## Where to look
 
 | Path | What it contains |
 |---|---|
+| [`run.sbatch`](run.sbatch) | One-command Slurm array for the base & SFT `cot_brief` retest |
 | [`verifier/TODO.md`](verifier/TODO.md) | Current priorities and experiment checklist |
 | [`verifier/docs/`](verifier/docs/) | Data guide, experiment results, architecture and background |
 | [`verifier/data/train/`](verifier/data/train/) | Committed SFT and GRPO training examples |
 | [`verifier/data/eval/`](verifier/data/eval/) | Frozen FEVER dev claim IDs |
-| [`verifier/experiments/`](verifier/experiments/) | Historical SFT and GRPO training configurations |
-| [`verifier/evaluation/`](verifier/evaluation/) | Shared evaluator, one Slurm launcher and `results/` |
+| [`verifier/experiments/`](verifier/experiments/) | SFT and GRPO training configurations |
+| [`verifier/evaluation/`](verifier/evaluation/) | Shared evaluator, Slurm launcher and `results/` |
 | [`retrieval/`](retrieval/) | FEVER index and search code |
 | [`core/`](core/) | Shared reward and interfaces |
 | [`agent/`](agent/) | Search/verify loop and controller scaffold |
@@ -20,78 +24,51 @@ This repository studies evidence-grounded claim verification on FEVER. A verifie
 
 Detailed document map: [data and downloads](verifier/docs/data.md), [system plan](verifier/docs/plan.md), [prompted baseline](verifier/docs/prompted-baseline-results.md), [SFT](verifier/docs/sft-probe.md), [GRPO](verifier/docs/grpo-results.md), [agent traces](verifier/docs/trace-format.md), [models](verifier/docs/models.md), and [related work](verifier/docs/related-work.md).
 
-## Current status (2026-10-14)
+## Current status
 
-- Title retrieval reached 0.875 FEVER page recall@5. The untrained Qwen3.5-2B verifier reached 0.459 accuracy / 0.340 FEVER score on 900 dev claims with title retrieval.
-- A 2B SFT LoRA trained on about 6,000 claims reached 0.759 accuracy / 0.667 FEVER score with title retrieval. Its training examples and saved predictions are committed; its LoRA weights are not.
-- Archived GRPO runs have not surpassed that SFT accuracy, and verdict-token calibration worsened. The next comparison is direct JSON versus zero-shot evidence-chain prompting on identical claims and retrieval. These new jobs have not yet been run.
+- **Retrieval**: Title retrieval reached 0.875 FEVER page recall@5.
+- **Base model (untrained Qwen3.5-2B)**: On 900 dev claims with title retrieval, direct prompting scored 45.9% accuracy / 33.8% FEVER score; zero-shot evidence-chain (`cot_chain`) scored 60.8% accuracy / 51.1% FEVER score.
+- **SFT (2B LoRA, 5,895 claims)**: Direct prompting scored 74.1% accuracy / 65.9% FEVER score. Zero-shot `cot_chain` scored 71.4% accuracy / 62.4% FEVER score, suffering from 512-token truncations and NEI recall drops.
+- **Next experiment**: Run [`run.sbatch`](run.sbatch) on SoC to test `cot_brief` (concise <=50 words evidence reasoning) on both base and SFT models. See [`verifier/TODO.md`](verifier/TODO.md) for execution details.
 
-A committed SFT `labeled_prompts.jsonl` row has a claim/evidence `prompt` and a gold-answer JSON `completion`. The completion is the training target; it does not teach search steps or give a calibrated confidence target. Historical `meta.json` paths preserve the original machine's layout, while current scripts use this repository's paths.
+Detailed metric comparisons, per-claim error cases, and calibration analyses are tracked in `verifier/INSIGHT.md`.
 
-## Set up on the SoC cluster
+## SoC cluster setup & resources
 
-Submit jobs from an SoC Slurm login node (`xlogin.comp.nus.edu.sg`), not `stu2`. Run commands from the repository root after pushing this branch and pulling it on SoC. Check the [SoC Slurm guide](https://dochub.comp.nus.edu.sg/cf/guides/compute-cluster/slurm) and [cluster information](https://dochub.comp.nus.edu.sg/cf/guides/compute-cluster/slurm-info) on the cluster for current partitions, GPU types and limits; resource lines in the supplied batch files may need adjustment.
-
-Run the shell commands below **after SSHing into SoC**, where `$HOME` refers to your cluster home (for this account, `/home/c/chaoch`). On the Mac, `$HOME` refers to the Mac home (for example, `/Users/ludwigchao`); its `.venv`, downloaded data and temporary directory are separate. The Slurm job must be able to see the cluster paths used for the repo, data and `TMPDIR`.
+Submit jobs from an SoC Slurm login node (`xlogin.comp.nus.edu.sg`), not `stu2`. Run commands from the repository root after syncing the branch:
 
 ```bash
 cd "$HOME/rl-test"
 git fetch origin
 git switch rl
 git pull --ff-only origin rl
-sinfo
-squeue -u "$USER"
 ```
 
-## SoC GPU and time limits
+### Partitions & GPU guidelines
 
-Check the live cluster configuration before submitting; the following is a snapshot from 2026-10-15, not a reservation or a promise of free GPUs:
-
-```bash
-sinfo -o "%P %l %a"                  # partition, maximum wall time, availability
-sinfo -N -p gpu,gpu-long -o "%N %P %t %G"  # node, partition, state, configured GPUs
-```
-
-| Partition | Maximum wall time on 2026-10-15 | Used here |
+| Partition | Max wall time | Usage |
 |---|---:|---|
-| `gpu` | 3 hours | Evaluation: 90 minutes requested |
-| `gpu-long` | 3 days | Training: 6 hours requested |
-| `normal` | 3 hours | CPU index build: 3 hours requested |
-| `long` | 3 days | Optional for CPU jobs requiring more than 3 hours |
+| `gpu` | 3 hours | Evaluation (~90 min requested) |
+| `gpu-long` | 3 days | Training (~3–6 hours requested) |
+| `normal` | 3 hours | CPU index build (~3 hours requested) |
 
-The wall-time limit belongs to the **partition**, not to a GPU model. A job's `--time` must fit the selected partition; requesting a shorter time does not imply it will actually run that long. `gpu-long` contains fewer eligible nodes than `gpu`, so a job may wait longer. The `test` partition also reported a 3-day limit but is not selected by these scripts.
-
-The cluster advertised these GPU resource types in `sinfo`; the number shown is the **configured cards per node**, not the number currently free or available to this account:
-
-| Slurm GPU type | Configured cards per node seen | For this repository |
-|---|---:|---|
-| `a100-40` | 1–2 | Default for evaluation and training; supports `bfloat16` |
-| `a100-80` | 1 | Alternative when a run needs more GPU memory |
-| `h100-47` | 4 | Compatible alternative |
-| `h100-96` | 2 | Compatible alternative |
-| `h200-141` | 4 | Compatible alternative; verify partition and access first |
-| `nv` | 1–2 | Unspecified model; includes the `xgpe2` Titan RTX, so avoid for the current `bfloat16` code |
-
-The current eval and train launchers each start **one Python process that uses one GPU**. Set the GPU count to `1`; requesting two cards will not make these scripts run twice as fast. Use a typed request such as `--gpus=a100-40:1` or `--gpus=h100-47:1` to avoid an incompatible node. A command-line `sbatch` option overrides its `#SBATCH` default; for example, `sbatch --partition=gpu --gpus=h100-47:1 --time=01:30:00 --export=ALL,N_CLAIMS=30,RUN_NAME=h100-smoke verifier/evaluation/run.sbatch`. `--mem=24G` in the eval script is **CPU memory**, separate from the GPU's 40/47/80 GB VRAM. Check pending jobs with `squeue -u "$USER"`; inspect the job's log and `sacct` after it finishes. [Slurm `sbatch` options](https://slurm.schedmd.com/sbatch.html) and [NVIDIA `bfloat16` support](https://docs.nvidia.com/cuda/archive/13.1.0/cuda-programming-guide/05-appendices/mathematical-functions.html) explain the resource syntax and hardware requirement.
+- **Single GPU**: Evaluation and training scripts each run **one Python process on one GPU**. Requesting multiple GPUs does not speed up execution.
+- **GPU types**: Use `a100-40:1` (default), `a100-80:1`, `h100-47:1`, or `h100-96:1` which support `bfloat16`. Avoid `nv` (which may allocate older cards like Titan RTX on `xgpe2`).
+- **Disk quota**: `/tmp` on SoC login nodes has a strict write quota. Always export `TMPDIR="$HOME/.pip-tmp"` before installing packages or submitting jobs.
 
 ## Data preparation
 
-The repository commits prepared SFT/GRPO examples and archived predictions, but not raw FEVER, its retrieval index, model weights or the Python environment. Prepare these once on a filesystem visible to both the login and compute nodes. The raw FEVER files plus index need roughly 21 GB; model downloads and Python packages need additional space. Check your quota before starting. Creating `.venv` inside a Slurm job at the same repo path does not avoid a home-directory quota; a node-local temporary environment would disappear after the job.
-
-From the repository root, create the environment and install dependencies. The batch files activate this existing `.venv` but do not create it. On SoC `xlogin1`, a direct write test found that `/tmp` hit a write quota after about 10 MiB even though `df -h /tmp` showed free filesystem space. Set `TMPDIR` to a writable directory in the cluster home before installing; keep it exported when submitting Slurm jobs. If that directory also reports `Disk quota exceeded`, check its quota instead of deleting data based on `df` alone.
+The raw FEVER corpus and indexes require roughly 21 GB and are not committed to Git.
 
 ```bash
+# 1. Prepare Python environment
 mkdir -p "$HOME/.pip-tmp"
 export TMPDIR="$HOME/.pip-tmp"
 python3 -m venv .venv
 source .venv/bin/activate
-# Install a CUDA-compatible PyTorch build for the cluster GPU, then:
 python -m pip install --no-cache-dir -r requirements.txt
-```
 
-Download only FEVER for the baseline; [the data guide](verifier/docs/data.md) has SciFact and AVeriTeC instructions for later experiments. The zip and extracted Wikipedia pages coexist until the successful `unzip` finishes, then the command removes the zip to recover space.
-
-```bash
+# 2. Download FEVER raw data
 mkdir -p verifier/data/fever
 cd verifier/data/fever
 curl -fLO https://fever.ai/download/fever/train.jsonl
@@ -101,260 +78,152 @@ unzip -q wiki-pages.zip && rm wiki-pages.zip
 cd ../../..
 ```
 
-If `wiki-pages/` was already extracted by an earlier attempt but the 1.6 GB zip is still present, confirm the expected 109 `wiki-*.jsonl` files, then remove the redundant archive from the repository root:
-
-```bash
-find verifier/data/fever/wiki-pages -maxdepth 1 -name 'wiki-*.jsonl' -type f | wc -l
-rm verifier/data/fever/wiki-pages.zip
-```
-
 ## Index preparation
 
-Evaluation and SFT data preparation require two local retrieval files that Git does not contain: `pages.sqlite` (Wikipedia sentences) and `bm25_index/` (the BM25 search index). Build them once from FEVER's `wiki-pages/` on SoC. Before submitting, check the raw inputs and Python environment from the cluster repo root:
+Evaluation and SFT data preparation require `pages.sqlite` (Wikipedia sentences) and `bm25_index/` (BM25 search index).
 
+1. Verify raw data:
 ```bash
-cd "$HOME/rl-test"
 for file in verifier/data/fever/train.jsonl verifier/data/fever/shared_task_dev.jsonl .venv/bin/python; do
-  if test -f "$file"; then echo "OK $file"; else echo "MISSING $file"; fi
+  test -f "$file" && echo "OK $file" || echo "MISSING $file"
 done
 test -d verifier/data/fever/wiki-pages && echo 'OK wiki-pages' || echo 'MISSING wiki-pages'
 ```
 
-When all four checks say `OK`, submit the CPU indexing job. It requests the `normal` partition, eight CPUs, 32 GB RAM and up to three hours. The job writes `verifier/data/fever/pages.sqlite` and `verifier/data/fever/bm25_index/` and refuses to overwrite either existing output.
-
+2. Submit CPU indexing job (takes ~13 minutes on SoC `normal` partition):
 ```bash
-mkdir -p "$HOME/.pip-tmp"
 export TMPDIR="$HOME/.pip-tmp"
 job_id=$(sbatch --parsable --export=ALL retrieval/build_fever_index.sbatch)
 echo "Index job: $job_id"
 squeue -j "$job_id"
 ```
 
-After it leaves the queue, check `sacct -j "$job_id" --format=JobID,State,ExitCode,Elapsed,MaxRSS` for `COMPLETED` and exit code `0:0`, then check both outputs. If you opened a new shell and no longer have `job_id`, use `sacct -u "$USER" --starttime today --format=JobID,JobName,State,ExitCode,Elapsed` to find the `fever-index` job. Run these commands from the repo root:
-
+3. Confirm outputs after completion:
 ```bash
 test -s verifier/data/fever/pages.sqlite && echo 'SQLite: OK' || echo 'SQLite: MISSING'
 test -f verifier/data/fever/bm25_index/doc_ids.json && echo 'BM25: OK' || echo 'BM25: MISSING'
 ```
 
-The job log is `slurm-fever-index-<job-id>.out` in the repo root. The angle-bracket text is a placeholder, not something to type literally in a shell. To read the most recent index log without knowing its job ID:
+## Training on SoC
 
-```bash
-ls -t slurm-fever-index-*.out | head -n 1 | xargs tail -n 5
-```
+Submit training jobs from the repository root using `verifier/experiments/run_train.sbatch`. Artifacts (`checkpoints/`, `meta.json`, `logs/train_log.json`) are written under `verifier/experiments/<config>/runs/<run-name>/artifacts/`.
 
-The successful SoC run on 2026-10-15 processed 5,396,106 pages and 3,114,367 terms in 13 minutes 3 seconds (job 946444, `COMPLETED`, exit code `0:0`). This is an observed runtime, not a guarantee for another node or queue; the `done:` line in the log confirms the indexer reached its end. A failed build can leave partial files, so inspect those and the log before retrying. Once both outputs exist and the job completed successfully, proceed to training or evaluation.
+### 1. Standard no-CoT SFT (Qwen3.5-2B)
 
-## Train the verifier on SoC
-
-The first reproducible training run is **no-CoT SFT** for Qwen3.5-2B. Its committed FEVER examples contain a prompt and a target JSON with `verdict`, `evidence`, and `confidence`, but no `reasoning`; 5,895 usable rows were saved for the 6,000-claim configuration. It trains a LoRA adapter and does not run evaluation. The historical seed-0 run took 2,190 seconds (about 37 minutes) for training and reported 5.18 GB peak GPU memory; setup, queueing, and hardware can change the total time. A separate **CoT SFT pilot** below uses teacher explanations from SoCLaaS or Gemini and trains another adapter after its data is collected. Running `THINKING=on` with the no-CoT SFT adapter tests a *prompt change on the same checkpoint*, not CoT SFT. GRPO configurations need an existing SFT adapter, including base-start GRPO (which reads the SFT LoRA shape). See the [experiment catalogue](#experiment-catalogue) below for the configuration names.
-
-### Prepare CoT SFT data with SoCLaaS
-
-`utils/build_cot_sft_data.py` uses the committed **FEVER train only** oracle prompts. It sends the shown E-numbered evidence and fixed gold answer to the teacher, asks only for a short explanation, then checks the returned relation and citations. The accepted completion contains `reasoning`, the original gold `verdict`, and the original gold `evidence`; it omits the old uncalibrated `confidence: 1.0`. The generated file is named `cot_sft_labeled_prompts.jsonl` under a `fever-oracle-cot-<provider>/<run>/` directory so it cannot be mistaken for the no-CoT `labeled_prompts.jsonl`. This is a separate dataset with its own CoT SFT trainer and matching evaluation prompt below.
-
-For example, an accepted row about Sa Talaiassa uses evidence `E8`. Its no-CoT target was `{"verdict":"SUPPORTED","evidence":["E8"],"confidence":1.0}`. The CoT SFT target adds an explanation and leaves out the unsupported confidence label:
-
-```json
-{"reasoning":"E8 explicitly states that Sa Talaiassa is also known as Sa Talaia or Sa Talaia de Sant Josep, which directly confirms the claim that it is known by another name.","verdict":"SUPPORTED","evidence":["E8"]}
-```
-
-SoCLaaS is SoC's free, OpenAI-compatible gateway. Its [access guide](https://dochub.comp.nus.edu.sg/cf/guides/soclaas/access) and [quickstart](https://dochub.comp.nus.edu.sg/cf/guides/soclaas/quickstart) specify `https://soclaas-api.comp.nus.edu.sg/v1` and `GET /models`; the model list is specific to your key. Use a local computer connected to the NUS network if it can reach the gateway. The source prompts are already in Git, so no SoC GPU or server copy is needed for teacher generation. `models` and `run` privately prompt for the key in an interactive terminal; the script never puts it in command arguments, environment variables, the repo or logs. It only sends the key to the verified SoCLaaS host. Keep it private and rotate it through the SoCLaaS portal if exposed. The default pilot selects 100 claims per class, seed 0.
-
-```bash
-python -m utils.build_cot_sft_data models
-python -m utils.build_cot_sft_data prepare --provider soclaas --model qwen3.8:27b
-python -m utils.build_cot_sft_data run --out verifier/data/train/sft/fever-oracle-cot-soclaas/pilot1 --max-requests 10
-python -m utils.build_cot_sft_data run --out verifier/data/train/sft/fever-oracle-cot-soclaas/pilot1
-python -m utils.build_cot_sft_data collect --out verifier/data/train/sft/fever-oracle-cot-soclaas/pilot1
-```
-
-`qwen3.8:27b` is the current recommended reasoning teacher in the SoCLaaS [model catalogue](https://dochub.comp.nus.edu.sg/cf/guides/soclaas/models); use it only if `models` lists it for your key. `prepare` and `collect` work offline. `run` resumes from saved successful responses and stops on HTTP 429 or another API error. The default delay is one second between SoCLaaS requests (10 seconds for Gemini), and `--delay` overrides it. The published [default limits](https://dochub.comp.nus.edu.sg/cf/guides/soclaas/usage-limits) are 90 requests/minute and virtual US$80/day or US$800/month; these are accounting limits, **not real charges**, and your key can have different limits. A 10-request run gives actual token usage and latency before expanding. After all 300 pilot responses arrive, inspect `summary.json` and validate the explanations before preparing all 5,895 rows with `prepare --provider soclaas --model YOUR_MODEL_ID --per-class 0 --out verifier/data/train/sft/fever-oracle-cot-soclaas/full1`, then `run` and `collect` with that directory. Replace `YOUR_MODEL_ID` with an actual allowed ID. `requests.jsonl`, API responses and rejected rows are locally ignored; `manifest.json`, `summary.json` and accepted `cot_sft_labeled_prompts.jsonl` can be reviewed for inclusion in Git. The validator catches wrong E IDs and label relations, but cannot prove every explanation is semantically faithful. Only sync an accepted dataset to SoC for training.
-
-The earlier Gemini route remains available with `prepare --provider gemini --model gemini-3.8-flash --out verifier/data/train/sft/fever-oracle-cot-gemini/pilot2`, but SoCLaaS is the preferred teacher for this SoC experiment. Run either provider on an interactive machine that can reach its endpoint; do not put an API key into an `sbatch --export` argument.
-
-### Train the CoT SFT pilot
-
-After `collect` completes, review the accepted `verifier/data/train/sft/fever-oracle-cot-soclaas/pilot1/cot_sft_labeled_prompts.jsonl`, `summary.json`, and `manifest.json`. Sync those files and the training code to the SoC repo. The CoT pilot has its own configuration, `verifier/experiments/cot_sft_qwen_3.5-2b_oracle_pilot300/train.py`. It requires a complete teacher run and refuses missing or inconsistent data. Set `TRAIN_DATA` to another accepted `cot_sft_labeled_prompts.jsonl` before submission if needed. Its LoRA weights and training log go under `verifier/experiments/cot_sft_qwen_3.5-2b_oracle_pilot300/runs/<run>/artifacts/`; the trained output has `reasoning`, `verdict`, and `evidence`, without a fabricated confidence label.
-
-The first SoCLaaS pilot received all 300 teacher responses and accepted **227** examples: 90 SUPPORTED, 86 REFUTED, 51 NOT_ENOUGH_INFO. The 73 exclusions are 46 citation mismatches, 18 cases where the teacher judged the gold label unsupported by the shown context, 8 relation disagreements, and 1 duplicate/too-many citation. These checks filter obvious problems but do not certify semantic fidelity; a small spot check found plausible explanations in all 12 inspected accepted examples. This is a pilot with a NEI shortfall. A comparison to the 5,895-row no-CoT SFT does not isolate the effect of CoT training; use the same 227 claim IDs for a matched no-CoT control before making that claim.
-
-```bash
-cd "$HOME/rl-test"
-test -f verifier/data/train/sft/fever-oracle-cot-soclaas/pilot1/cot_sft_labeled_prompts.jsonl
-export TRAIN_SCRIPT=verifier/experiments/cot_sft_qwen_3.5-2b_oracle_pilot300/train.py
-cot_sft_job=$(sbatch --parsable --partition=gpu --gpus=a100-40:1 --time=03:00:00 --export=ALL,RUN_NAME=pilot1,SEED=0 verifier/experiments/run_train.sbatch)
-echo "CoT SFT job: $cot_sft_job"
-squeue -j "$cot_sft_job"
-unset TRAIN_SCRIPT
-```
-
-After `sacct -j "$cot_sft_job" --format=JobID,State,ExitCode,Elapsed,MaxRSS` reports `COMPLETED` and `0:0`, evaluate the resulting adapter with its matching `cot_sft` prompt. The same evaluation pipeline still scores verdict and FEVER evidence; `stated_conf` is unavailable by design, while verdict-token confidence remains available when the model exposes logits. In the `cot_sft` condition, format adherence does not require a `confidence` field. A 30-claim run checks the pipeline; use the same frozen 900 dev IDs as other runs for comparison.
-
-```bash
-adapter=verifier/experiments/cot_sft_qwen_3.5-2b_oracle_pilot300/runs/pilot1/artifacts/checkpoints
-sbatch --export=ALL,N_CLAIMS=30,RUN_NAME=pilot1,PROMPT_STYLE=cot_sft,CHECKPOINTS="$adapter" verifier/evaluation/run.sbatch
-# Results: verifier/evaluation/results/checkpoint-cot-sft/pilot1/
-```
-
-Submit from the SoC repo root with `sbatch`, not by running `train.py` on the login node. `run_train.sbatch` uses `gpu-long`, one A100 40 GB GPU, four CPUs, 32 GB CPU RAM and a six-hour limit by default. If a training run fits within three hours, you can select `--partition=gpu --time=03:00:00` at submission; if it needs more GPU memory, select a different supported GPU type. See [SoC GPU and time limits](#soc-gpu-and-time-limits). Set `TRAIN_SCRIPT` to a configuration's `train.py`; the default is `sft_qwen_3.5-2b_n6000`. `RUN_NAME` identifies a fresh attempt and `SEED` defaults to 0.
+Trains on the committed 5,895 FEVER examples (seed 0, ~37 minutes on A100):
 
 ```bash
 cd "$HOME/rl-test"
 job_id=$(sbatch --parsable --partition=gpu --gpus=a100-40:1 --time=03:00:00 --export=ALL,RUN_NAME=run2,SEED=0 verifier/experiments/run_train.sbatch)
 echo "no-CoT SFT job: $job_id"
 squeue -j "$job_id"
-# Adapter after successful completion:
-# verifier/experiments/sft_qwen_3.5-2b_n6000/runs/run2/artifacts/checkpoints/
+# Checkpoint: verifier/experiments/sft_qwen_3.5-2b_n6000/runs/run2/artifacts/checkpoints/
+```
 
-# For a specific GRPO configuration after an SFT adapter exists:
+### 2. CoT SFT Pilot (with SoCLaaS)
+
+`utils/build_cot_sft_data.py` queries SoCLaaS (`qwen3.8:27b`) or Gemini on FEVER **train-only** oracle prompts to generate short verified reasoning chains:
+
+```bash
+# Generate teacher data (interactive API key entry, no GPU needed)
+python -m utils.build_cot_sft_data prepare --provider soclaas --model qwen3.8:27b
+python -m utils.build_cot_sft_data run --out verifier/data/train/sft/fever-oracle-cot-soclaas/pilot1
+python -m utils.build_cot_sft_data collect --out verifier/data/train/sft/fever-oracle-cot-soclaas/pilot1
+
+# Train CoT SFT pilot adapter on SoC
+export TRAIN_SCRIPT=verifier/experiments/cot_sft_qwen_3.5-2b_oracle_pilot300/train.py
+cot_sft_job=$(sbatch --parsable --partition=gpu --gpus=a100-40:1 --time=03:00:00 --export=ALL,RUN_NAME=pilot1,SEED=0 verifier/experiments/run_train.sbatch)
+unset TRAIN_SCRIPT
+```
+
+### 3. GRPO training
+
+Requires an existing SFT adapter checkpoint:
+
+```bash
 export TRAIN_SCRIPT=verifier/experiments/grpo_qwen_3.5-2b_full_n1200/train.py
 export SFT_CHECKPOINTS=verifier/experiments/sft_qwen_3.5-2b_n6000/runs/run2/artifacts/checkpoints
 sbatch --export=ALL,RUN_NAME=run2,SEED=1 verifier/experiments/run_train.sbatch
 unset TRAIN_SCRIPT SFT_CHECKPOINTS
 ```
 
-By default, a run writes `meta.json`, `logs/train_log.json`, and `checkpoints/` under `verifier/experiments/<configuration>/runs/<run-name>/artifacts/`. `checkpoints/` contains the LoRA adapter for later evaluation; the Slurm terminal log is `slurm-train-verifier-<job-id>.out` in the submission directory. The script refuses to reuse an existing artifacts directory. To put all training runs on a different shared filesystem, set `OUTPUT_ROOT` to the **experiments root** before submission; the configuration and run subdirectories are still added automatically. For example:
+## Evaluation on SoC
 
-```bash
-export OUTPUT_ROOT="$HOME/rl-training"
-sbatch --export=ALL,RUN_NAME=run2,SEED=1 verifier/experiments/run_train.sbatch
-# Then inspect: $HOME/rl-training/sft_qwen_3.5-2b_n6000/runs/run2/artifacts/
-unset OUTPUT_ROOT
-```
+Evaluation jobs load dev claims, query the BM25 index and SQLite cache, generate predictions, and score accuracy and FEVER metrics.
 
-For GRPO using an SFT adapter outside the repo, set `SFT_CHECKPOINTS` to its checkpoint directory; single-turn GRPO can also set `TRAIN_DATA` to a directory containing `labeled_prompts.jsonl`. `OUTPUT_ROOT` changes run artifacts, not the FEVER source data. The no-CoT SFT example uses seed 0 to match the committed 5,895-row dataset and the historical configuration. Inspect a completed training run with `sacct -j "$job_id" --format=JobID,State,ExitCode,Elapsed,MaxRSS` and `cat verifier/experiments/sft_qwen_3.5-2b_n6000/runs/run2/artifacts/meta.json`. Its learning log is under the same artifacts directory at `logs/train_log.json`; if it fails before those files appear, read `slurm-train-verifier-<job-id>.out` with the actual job ID substituted.
+### 1. One-command array retest (`run.sbatch`)
 
-## Evaluate the verifier on SoC
-
-Submit `verifier/evaluation/run.sbatch` with `sbatch` from the SoC repo root. It requests the `gpu` partition, one A100 40 GB GPU, four CPUs, 24 GB CPU RAM and 90 minutes, then invokes `run_eval.sh` inside the job. The model loader uses `bfloat16`; see [SoC GPU and time limits](#soc-gpu-and-time-limits) for compatible types and overrides. On 2026-10-15, a GPU check on `xgpe2` returned `nvidia-smi: No devices found` despite Slurm allocating a GPU, so avoid that node until SoC repairs it. Evaluation needs `shared_task_dev.jsonl`, `pages.sqlite`, a completed `bm25_index/` and `.venv`. Run these checks first; plain `test -f` is silent even on success:
+Launches a two-task Slurm array to evaluate both the base model (task 0) and the SFT `run2` adapter (task 1) using the concise `cot_brief` prompt on the frozen 900 dev claims:
 
 ```bash
 cd "$HOME/rl-test"
-for file in verifier/data/fever/shared_task_dev.jsonl verifier/data/fever/pages.sqlite .venv/bin/python; do
-  if test -f "$file"; then echo "OK $file"; else echo "MISSING $file"; fi
-done
-test -f verifier/data/fever/bm25_index/doc_ids.json && echo 'OK BM25 index' || echo 'MISSING BM25 index'
+job=$(sbatch --parsable run.sbatch)
+echo "Array job: $job (task 0: base, task 1: SFT)"
+squeue -j "$job"
 ```
+Results write to `verifier/evaluation/results/base-cot-brief-eval/prompt-retest1/` and `sft-cot-brief-eval/prompt-retest1/`.
 
-The job calls the shared evaluator, scores predictions and records the run. Both prompt settings use the same FEVER dev IDs and title retrieval; neither trains a model. The job sets `TMPDIR` to a directory in cluster home if none is exported, avoiding the observed `/tmp` write quota.
+### 2. Single evaluation run (`verifier/evaluation/run.sbatch`)
 
-`CHECKPOINTS` is optional: without it the evaluator loads the untrained `Qwen/Qwen3.5-2B`; with it, the evaluator loads the LoRA adapter and its base model from `adapter_config.json`. Adapter weights must be present on the cluster, since Git does not contain them. `THINKING=off` (default) requests `verdict`, `evidence`, and `confidence` in JSON. `THINKING=on` requests the same fields plus an evidence-based `reasoning` string in that **same JSON object**. This switch changes the prompt; Qwen's internal `enable_thinking` remains disabled in both modes. There is no constrained JSON decoding, so format compliance is measured rather than guaranteed. The current `format_rate` checks that JSON parses and that verdict, evidence, and confidence are valid; it does not require `reasoning` or prove that the output contains nothing outside the JSON. For the evidence-chain run, also inspect `reasoning_present_rate` and `reasoning_valid_citations_rate` in `metrics.json`.
-
-Submission template (`[...]` marks optional text and `|` separates alternatives; these symbols and uppercase path names are **notation, not literal shell arguments**):
+Submit single evaluation conditions via `verifier/evaluation/run.sbatch`:
 
 ```text
-[RESULTS_ROOT=ROOT_PATH | RESULT_DIR=RUN_PATH] sbatch [--partition=PARTITION] [--gpus=GPU_TYPE:1] [--time=HH:MM:SS] --export=ALL[,N_CLAIMS=COUNT][,RUN_NAME=NAME][,THINKING=on|off][,CHECKPOINTS=ADAPTER_PATH][,EVAL_CONDITION=NAME] verifier/evaluation/run.sbatch
+[RESULTS_ROOT=ROOT_PATH | RESULT_DIR=RUN_PATH] sbatch [--partition=PARTITION] [--gpus=GPU_TYPE:1] [--time=HH:MM:SS] \
+  --export=ALL[,N_CLAIMS=COUNT][,RUN_NAME=NAME][,THINKING=on|off | ,PROMPT_STYLE=STYLE][,CHECKPOINTS=ADAPTER_PATH][,EVAL_CONDITION=NAME] \
+  verifier/evaluation/run.sbatch
 ```
 
-`N_CLAIMS` defaults to 900, `RUN_NAME` to `job-<Slurm ID>`, and `THINKING` to `off`. `EVAL_CONDITION` optionally names the condition folder and records the same name in `manifest.json`; without it, the condition is inferred from `THINKING` and `CHECKPOINTS`. `RESULTS_ROOT` moves the parent results directory but retains `<condition>/<run-name>/`; `RESULT_DIR` specifies the **exact new directory for one run** and does not add those subdirectories. `RESULTS_ROOT` and `RESULT_DIR` cannot be set together. Relative paths are resolved from the repo root; absolute paths must be writable and visible on the compute node. The job refuses to overwrite an existing result directory.
+**Key options:**
+- `N_CLAIMS`: Number of dev claims (default: 900; smoke test: 30).
+- `PROMPT_STYLE`: `direct` (short JSON), `cot_chain` (explicit chain), `cot_brief` (<=50 words reasoning), or `cot_sft` (confidence-free CoT adapter).
+- `CHECKPOINTS`: Path to adapter checkpoint directory (e.g. `verifier/experiments/sft_qwen_3.5-2b_n6000/runs/run2/artifacts/checkpoints`). Omit to evaluate the untrained base model.
+- `RUN_NAME`: Unique run identifier (e.g. `run1`, `run2`).
+- `EVAL_CONDITION`: Result subdirectory name under `verifier/evaluation/results/`.
 
-Results inside the Git checkout can be committed selectively. The default result directory keeps `predictions.jsonl`, `metrics.json`, and `manifest.json` available to Git while ignoring `logs/*.log`; check file sizes before committing a large run or a custom `RESULT_DIR`.
-
-Run a small smoke test before a full comparison when changing the model or GPU setup. Use a new run name if its result directory already exists. The direct and evidence-chain jobs have separate condition directories, so both can use `RUN_NAME=run1` and be submitted together. Slurm will queue either job until its requested GPU is available.
-
-The direct 30-claim smoke run on a working GPU allocation completed its claim loop in 51 seconds on 2026-10-15; this excludes queueing and model load time. It reached 0.400 label accuracy and 0.233 FEVER score. These 30-claim metrics are a pipeline check, not the full baseline result. The optional `causal_conv1d` and `flash-linear-attention` kernels were absent, so Transformers used its slower reference implementations. A linear extrapolation gives roughly 25 minutes for 900 direct claims of similar length, but actual runtime will vary. Evidence-chain output may take longer, so the example grants it the `gpu` partition's full three-hour limit.
+**Examples:**
 
 ```bash
+# 30-claim smoke test
 sbatch --export=ALL,N_CLAIMS=30,RUN_NAME=smoke1,THINKING=off verifier/evaluation/run.sbatch
 
-# Submit both 900-claim conditions; each requests one A100 40 GB GPU.
-direct_job=$(sbatch --parsable --partition=gpu --gpus=a100-40:1 --time=01:30:00 --export=ALL,N_CLAIMS=900,RUN_NAME=run1,THINKING=off verifier/evaluation/run.sbatch)
-cot_job=$(sbatch --parsable --partition=gpu --gpus=a100-40:1 --time=03:00:00 --export=ALL,N_CLAIMS=900,RUN_NAME=run1,THINKING=on verifier/evaluation/run.sbatch)
-echo "direct job: $direct_job; evidence-chain job: $cot_job"
-squeue -j "$direct_job,$cot_job"
+# Base model: direct vs cot_chain (900 claims)
+sbatch --partition=gpu --gpus=a100-40:1 --time=01:30:00 --export=ALL,N_CLAIMS=900,RUN_NAME=run1,THINKING=off verifier/evaluation/run.sbatch
+sbatch --partition=gpu --gpus=a100-40:1 --time=03:00:00 --export=ALL,N_CLAIMS=900,RUN_NAME=run1,THINKING=on verifier/evaluation/run.sbatch
 
-# After the no-CoT SFT job is COMPLETED with exit code 0:0, test both prompts
-# against the same LoRA adapter. Use new run names if these paths already exist.
+# SFT checkpoint: direct vs cot_chain (900 claims)
 adapter=verifier/experiments/sft_qwen_3.5-2b_n6000/runs/run2/artifacts/checkpoints
-sft_direct_job=$(sbatch --parsable --partition=gpu --gpus=a100-40:1 --time=01:30:00 --export=ALL,N_CLAIMS=900,RUN_NAME=run2,THINKING=off,CHECKPOINTS="$adapter",EVAL_CONDITION=sft-direct-eval verifier/evaluation/run.sbatch)
-sft_cot_job=$(sbatch --parsable --partition=gpu --gpus=a100-40:1 --time=03:00:00 --export=ALL,N_CLAIMS=900,RUN_NAME=run2,THINKING=on,CHECKPOINTS="$adapter",EVAL_CONDITION=sft-cot-eval verifier/evaluation/run.sbatch)
-echo "SFT direct job: $sft_direct_job; SFT evidence-chain job: $sft_cot_job"
-# Results: verifier/evaluation/results/sft-direct-eval/run2/
-#          verifier/evaluation/results/sft-cot-eval/run2/
+sbatch --partition=gpu --gpus=a100-40:1 --time=01:30:00 --export=ALL,N_CLAIMS=900,RUN_NAME=run2,THINKING=off,CHECKPOINTS="$adapter",EVAL_CONDITION=sft-direct-eval verifier/evaluation/run.sbatch
+sbatch --partition=gpu --gpus=a100-40:1 --time=03:00:00 --export=ALL,N_CLAIMS=900,RUN_NAME=run2,THINKING=on,CHECKPOINTS="$adapter",EVAL_CONDITION=sft-cot-eval verifier/evaluation/run.sbatch
 ```
 
-Each job writes `predictions.jsonl` (one claim per line), `metrics.json` (aggregate scores), `manifest.json` (settings and paths), and `logs/run.log` under `verifier/evaluation/results/<condition>/<run>/`. Default conditions are `direct-baseline`, `cot-baseline`, `checkpoint-direct`, `checkpoint-cot`, and `checkpoint-cot-sft`; `EVAL_CONDITION` gives a run an explicit name such as `sft-direct-eval` or `sft-cot-eval`. For example, read a completed direct run with:
+### 3. Inspecting results & offline scoring
+
+Each run directory contains `predictions.jsonl`, `metrics.json`, and `manifest.json`:
 
 ```bash
 cat verifier/evaluation/results/direct-baseline/run1/metrics.json
 head -n 1 verifier/evaluation/results/direct-baseline/run1/predictions.jsonl
-cat verifier/evaluation/results/direct-baseline/run1/manifest.json
 ```
 
-To save evaluation runs elsewhere, choose one of these copyable examples. `RESULTS_ROOT` relocates all condition/run directories; `RESULT_DIR` targets a single directory, including a custom experiment name:
-
-```bash
-RESULTS_ROOT="$HOME/rl-evaluation" sbatch --export=ALL,N_CLAIMS=900,RUN_NAME=run2,THINKING=off verifier/evaluation/run.sbatch
-# Writes $HOME/rl-evaluation/direct-baseline/run2/metrics.json
-
-RESULT_DIR="$HOME/rl-evaluation/my-prompt-study/run2" sbatch --export=ALL,N_CLAIMS=900,RUN_NAME=run2,THINKING=on verifier/evaluation/run.sbatch
-# Writes $HOME/rl-evaluation/my-prompt-study/run2/metrics.json
-```
-
-The script refuses to overwrite an existing run. Use `squeue -j <job-id>`, then `sacct -j <job-id> --format=JobID,State,ExitCode,Elapsed,MaxRSS` and the run log to inspect status. Slurm also writes `slurm-eval-verifier-<job-id>.out` in the submission directory; read it first if a job fails before creating its result directory. No cluster jobs have been submitted from this workspace.
-
-Archived predictions can be evaluated without a GPU or raw FEVER:
-
+Re-score archived predictions offline without GPU:
 ```bash
 python -m verifier.evaluation.score_predictions verifier/evaluation/results/archive/local_n900_titles.jsonl
 python -m unittest verifier.tests.test_score_predictions verifier.tests.test_eval_verifier_reasoning
 ```
 
-### Worked example: evaluate one SFT checkpoint two ways
-
-Assume the completed 5,895-row no-CoT SFT adapter is in `runs/run2`. On SoC, confirm its two adapter files exist; substitute your actual run name if different. Then submit direct and evidence-chain prompts against **that same adapter** and the same 900 dev claims:
-
-```bash
-cd "$HOME/rl-test"
-adapter=verifier/experiments/sft_qwen_3.5-2b_n6000/runs/run2/artifacts/checkpoints
-test -f "$adapter/adapter_config.json" && test -f "$adapter/adapter_model.safetensors" && echo 'adapter: OK'
-direct_job=$(sbatch --parsable --partition=gpu --gpus=a100-40:1 --exclude=xgpe2 --time=01:30:00 --export=ALL,N_CLAIMS=900,RUN_NAME=sft-compare1,THINKING=off,CHECKPOINTS="$adapter",EVAL_CONDITION=sft-direct-eval verifier/evaluation/run.sbatch)
-cot_job=$(sbatch --parsable --partition=gpu --gpus=a100-40:1 --exclude=xgpe2 --time=03:00:00 --export=ALL,N_CLAIMS=900,RUN_NAME=sft-compare1,THINKING=on,CHECKPOINTS="$adapter",EVAL_CONDITION=sft-cot-eval verifier/evaluation/run.sbatch)
-echo "direct=$direct_job evidence-chain=$cot_job"
-squeue -j "$direct_job,$cot_job"
-```
-
-After both jobs finish with `COMPLETED` and exit code `0:0`, read `sft-direct-eval/sft-compare1/metrics.json` and `sft-cot-eval/sft-compare1/metrics.json`. This short script prints the comparable headline numbers:
-
-```bash
-python - <<'PY'
-import json
-from pathlib import Path
-root = Path('verifier/evaluation/results')
-for condition in ('sft-direct-eval', 'sft-cot-eval'):
-    file = root / condition / 'sft-compare1' / 'metrics.json'
-    run = next(iter(json.loads(file.read_text()).values()))
-    all_claims = run['all']
-    print(condition, 'n=', all_claims['n'],
-          'accuracy=', round(all_claims['accuracy'], 3),
-          'FEVER=', round(all_claims['fever_score'], 3),
-          'format=', round(all_claims['format_rate'], 3),
-          'tokens_out=', round(run['mean_tokens_out'], 1))
-PY
-```
-
-For a concrete **observed** prediction, the untrained direct baseline's claim `19983` had gold `REFUTED`, predicted `SUPPORTED`, `format_ok=true`, and stated confidence `1.0`. It was valid JSON but factually wrong (`correct=false`, `fever_score=false`). Find that row in `verifier/evaluation/results/direct-baseline/run1/predictions.jsonl`; the example illustrates why format adherence and verdict accuracy are reported separately. The `sft-compare1` numbers above are still to be measured.
-
 ## Experiment catalogue
 
-The training configuration names are historical. `n16`, `n60` and `n1200` are requested training claim counts; `n6000` produced 5,895 usable rows. `full` means the complete reward formula, not a full dataset. `base` means GRPO starts from the base model; otherwise it starts from an SFT model or adapter. `kl` uses KL beta 0.04, while `kl05` uses 0.5. `qlora` means 4-bit QLoRA, `mt` means multi-turn search/verification, and `smoke` marks a small trial.
-
-| Configuration in `verifier/experiments/` | What it ran |
+| Configuration in `verifier/experiments/` | Description |
 |---|---|
 | `sft_qwen_3.5-2b_n60` | 2B no-CoT SFT, 60-claim smoke run |
-| `sft_qwen_3.5-2b_n6000` | 2B no-CoT SFT, 5,895 usable FEVER claims |
-| `cot_sft_qwen_3.5-2b_oracle_pilot300` | 2B CoT SFT on 227 accepted SoCLaaS explanations from 300 candidate FEVER claims |
+| `sft_qwen_3.5-2b_n6000` | 2B no-CoT SFT, 5,895 usable FEVER claims (main SFT baseline) |
+| `cot_sft_qwen_3.5-2b_oracle_pilot300` | 2B CoT SFT on 227 accepted SoCLaaS explanations |
 | `sft_qwen_3.5-2b_n1200_from_qwen_3.5-2b_n6000` | 2B SFT on the 1,200-claim subset matched to GRPO |
 | `sft_qwen_3.5-4b_n60_qlora` | 4B QLoRA SFT, 60-claim smoke run |
 | `sft_qwen_3.5-4b_n6000_qlora` | 4B QLoRA SFT, same 5,895 examples as 2B |
 | `grpo_qwen_3.5-2b_full_n16_smoke` | 2B single-turn GRPO, 16-claim smoke run |
-| `grpo_qwen_3.5-2b_full_n1200` | 2B single-turn GRPO from SFT, full reward, 1,200 claims, no KL penalty |
+| `grpo_qwen_3.5-2b_full_n1200` | 2B single-turn GRPO from SFT, full reward, 1,200 claims, no KL |
 | `grpo_qwen_3.5-2b_base_full_n1200` | 2B single-turn GRPO from base, full reward, 1,200 claims, KL beta 0.04 |
-| `grpo_qwen_3.5-2b_full_n1200_kl` | 2B GRPO from SFT, 1,200-claim pool with reward-spread filtering, KL beta 0.04; `run2` is seed 1 |
+| `grpo_qwen_3.5-2b_full_n1200_kl` | 2B GRPO from SFT, 1,200-claim pool with reward-spread filtering, KL beta 0.04 |
 | `grpo_qwen_3.5-2b_full_n1200_kl05` | Same filtered setup with KL beta 0.5 |
 | `grpo_mt_qwen_3.5-2b_mt_base_full_n16` | Multi-turn GRPO from base with search/verify actions, 16-claim trial |
-
-Each SFT or GRPO configuration has a `train.py` launcher reconstructed from its saved `runs/run1/artifacts/meta.json`. Its checkpoint weights are ignored by Git. SFT needs raw FEVER and the index; GRPO additionally needs the SFT adapter weights restored or retrained. See [Train the verifier on SoC](#train-the-verifier-on-soc) for commands and output locations.
-
-The historical JSONL predictions are in `verifier/evaluation/results/archive/`; new results belong in a named evaluation run. Preserve seeds, input IDs, retrieval condition and resource use when comparing runs.
