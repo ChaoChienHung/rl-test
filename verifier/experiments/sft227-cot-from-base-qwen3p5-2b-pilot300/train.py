@@ -64,7 +64,7 @@ def main():
     seconds, peak_gb = train(MODEL, rows, str(checkpoint_dir), False, args.max_steps,
                              1e-4, 16, args.seed, system_prompt=COT_SFT_SYSTEM)
     meta = {
-        "experiment": "sft-cot-from-base-qwen3p5-2b-pilot300",
+        "experiment": "sft227-cot-from-base-qwen3p5-2b-pilot300",
         "model": MODEL, "teacher_provider": source_manifest["provider"],
         "teacher_model": source_manifest["model"], "teacher_summary": source_summary,
         "data_file": str(Path(args.data).resolve()), "data_sha256": data_hash,

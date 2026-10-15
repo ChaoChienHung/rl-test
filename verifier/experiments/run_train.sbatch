@@ -15,7 +15,7 @@ export TMPDIR="${TMPDIR:-$HOME/.pip-tmp}"
 mkdir -p "$TMPDIR"
 export TOKENIZERS_PARALLELISM=false
 
-train_script="${TRAIN_SCRIPT:-verifier/experiments/sft-direct-from-base-qwen3p5-2b-train5895/train.py}"
+train_script="${TRAIN_SCRIPT:-verifier/experiments/sft5895-direct-from-base-qwen3p5-2b/train.py}"
 case "$train_script" in
   verifier/experiments/*/train.py) ;;
   *) echo "TRAIN_SCRIPT must be a verifier/experiments/<config>/train.py path" >&2; exit 2 ;;

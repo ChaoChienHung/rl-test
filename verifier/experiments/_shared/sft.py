@@ -9,7 +9,7 @@ eval_verifier asks for. Evaluate with eval_verifier.py --adapter on the same 900
 claims, so every number lands in the same table as the untrained model.
 
     python verifier/experiments/_shared/sft.py --model Qwen/Qwen3.5-2B --n-train 6000 --run-name run2
-    python -m verifier.evaluation.eval_verifier --model local --adapter verifier/experiments/sft-direct-from-base-qwen3p5-2b-train5895/runs/run2/artifacts/checkpoints --n 900 --retrieval titles
+    python -m verifier.evaluation.eval_verifier --model local --adapter verifier/experiments/sft5895-direct-from-base-qwen3p5-2b/runs/run2/artifacts/checkpoints --n 900 --retrieval titles
 
 The stated confidence is 1.0 in every target, so after SFT it carries no
 information by construction. Read accuracy, FEVER score, evidence F1 and

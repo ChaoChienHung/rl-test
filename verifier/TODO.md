@@ -15,7 +15,7 @@ CoT SFT data preparation can proceed in parallel with step 1; it is a separate e
 
 ## P0 — comparable verifier evaluation (RL-1, AG-3)
 
-- [x] Train the no-CoT Qwen3.5-2B SFT adapter from the committed 5,895 examples (seed 0). The local run is `sft-direct-from-base-qwen3p5-2b-train5895/runs/run2` with checkpoint under `artifacts/checkpoints/`; the LoRA weights are not committed. The run metadata reports 6,720 seconds and 5.62 GB peak GPU memory.
+- [x] Train the no-CoT Qwen3.5-2B SFT adapter from the committed 5,895 examples (seed 0). The local run is `sft5895-direct-from-base-qwen3p5-2b/runs/run2` with checkpoint under `artifacts/checkpoints/`; the LoRA weights are not committed. The run metadata reports 6,720 seconds and 5.62 GB peak GPU memory.
 - [ ] Freeze disjoint train, prompt-development, calibration and holdout claim IDs, then publish the split manifest and leakage check. The committed 5,895-row SFT train set and matched 1,200-row subset have zero ID overlap with the archived 900 dev claims; the remaining splits are not frozen.
 - [ ] Run direct JSON (`THINKING=off`) and zero-shot evidence-chain (`THINKING=on`) evaluation on the same FEVER dev IDs and title retrieval: 30-claim smoke tests, then 900 claims. Submit `verifier/evaluation/run.sbatch`; each run stores predictions, metrics, manifest and logs under `verifier/evaluation/results/<condition>/<run>/`.
 - [ ] Record per claim: gold, verdict, evidence IDs, retrieval condition, reasoning if present, stated confidence, verdict-token probability, tokens and latency. Check evidence citations by hand; a valid E-ID alone does not prove support.

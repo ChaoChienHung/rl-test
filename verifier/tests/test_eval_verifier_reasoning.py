@@ -7,8 +7,8 @@ from verifier.model import COT_SFT_SYSTEM, REASONING_SYSTEM, adapter_label, scor
 
 class ReasoningScoreTest(unittest.TestCase):
     def test_experiment_adapter_label_keeps_run_identity(self):
-        path = "../experiments/sft-direct-from-base-qwen3p5-2b-train5895/runs/run2/artifacts/checkpoints"
-        self.assertEqual(adapter_label(path), "sft-direct-from-base-qwen3p5-2b-train5895_run2")
+        path = "../experiments/sft5895-direct-from-base-qwen3p5-2b/runs/run2/artifacts/checkpoints"
+        self.assertEqual(adapter_label(path), "sft5895-direct-from-base-qwen3p5-2b_run2")
         self.assertEqual(adapter_label("verifier/data/train/sft/fever-oracle-full"),
                          "fever-oracle-full")
 
