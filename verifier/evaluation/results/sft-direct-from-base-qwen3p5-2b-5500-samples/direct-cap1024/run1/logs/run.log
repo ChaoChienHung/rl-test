@@ -1,0 +1,49 @@
+job=952485 run=run1 commit=bba19337516390246865c923e21b3ed0f026d270 n=900 thinking=off prompt_style=direct max_new_tokens=1024 retrieval=titles model=Qwen/Qwen3.5-2B checkpoints=verifier/experiments/sft-direct-from-base-qwen3p5-2b-5500-samples/runs/run1/artifacts/checkpoints result_dir=verifier/evaluation/results/sft-direct-from-base-qwen3p5-2b-5500-samples/direct-cap1024/run1
+started_at=2026-10-15T16:14:46Z
+0 done, 900 to go -> verifier/evaluation/results/sft-direct-from-base-qwen3p5-2b-5500-samples/direct-cap1024/run1/predictions.jsonl
+Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]Loading weights:   0%|          | 1/320 [00:00<00:51,  6.16it/s]Loading weights:  13%|█▎        | 41/320 [00:00<00:01, 183.12it/s]Loading weights:  24%|██▍       | 76/320 [00:00<00:00, 248.03it/s]Loading weights:  32%|███▎      | 104/320 [00:00<00:00, 239.67it/s]Loading weights:  44%|████▍     | 142/320 [00:00<00:00, 279.16it/s]Loading weights:  54%|█████▍    | 173/320 [00:00<00:00, 282.07it/s]Loading weights:  64%|██████▍   | 205/320 [00:00<00:00, 279.10it/s]Loading weights:  75%|███████▍  | 239/320 [00:00<00:00, 286.17it/s]Loading weights:  85%|████████▌ | 272/320 [00:01<00:00, 296.01it/s]Loading weights:  94%|█████████▍| 302/320 [00:01<00:00, 285.46it/s]Loading weights: 100%|██████████| 320/320 [00:01<00:00, 259.79it/s]
+[transformers] `causal_conv1d_fn` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+[transformers] `chunk_gated_delta_rule` is falling back to its reference PyTorch implementation because `flash-linear-attention` is not installed. This is correct but much slower; install `flash-linear-attention` for the optimized kernel.
+[transformers] `causal_conv1d_update` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+[transformers] `fused_recurrent_gated_delta_rule` is falling back to its reference PyTorch implementation because `flash-linear-attention` is not installed. This is correct but much slower; install `flash-linear-attention` for the optimized kernel.
+  20/900  21s
+  40/900  33s
+  60/900  44s
+  80/900  56s
+  100/900  67s
+  120/900  78s
+  140/900  89s
+  160/900  101s
+  180/900  112s
+  200/900  124s
+  220/900  136s
+  240/900  147s
+  260/900  158s
+  280/900  169s
+  300/900  181s
+  320/900  193s
+  340/900  206s
+  360/900  217s
+  380/900  229s
+  400/900  240s
+  420/900  252s
+  440/900  263s
+  460/900  275s
+  480/900  287s
+  500/900  298s
+  520/900  310s
+  540/900  321s
+  560/900  332s
+  580/900  344s
+  600/900  355s
+  620/900  366s
+  640/900  378s
+  660/900  391s
+  680/900  402s
+  700/900  413s
+  720/900  425s
+  740/900  436s
+  760/900  448s
+  780/900  458s
+  800/900  469s
+  820/900  480s
