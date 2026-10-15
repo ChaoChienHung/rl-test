@@ -81,9 +81,9 @@ and a 1024-token generation cap for both the untrained 2B base model and its
 
 | Model | Prompt | Accuracy | FEVER | Format | NEI recall | Mean output tokens | At cap |
 |---|---|---:|---:|---:|---:|---:|---:|
-| Base | [direct](../evaluation/results/base-direct-cap1024/run1/metrics.json) | 47.6% | 34.6% | 85.6% | 14.0% | 61.3 | 3 |
-| Base | [long CoT](../evaluation/results/base-cot-long-cap1024/run1/metrics.json) | **62.8%** | **52.8%** | 94.2% | 43.7% | 217.3 | 7 |
-| Base | [brief CoT](../evaluation/results/base-cot-brief-cap1024/run1/metrics.json) | 61.8% | 48.6% | 99.8% | 28.0% | 93.7 | 1 |
+| Base | [direct](../evaluation/results/baseline-direct-cap1024/run1/metrics.json) | 47.6% | 34.6% | 85.6% | 14.0% | 61.3 | 3 |
+| Base | [long CoT](../evaluation/results/baseline-cot-long-cap1024/run1/metrics.json) | **62.8%** | **52.8%** | 94.2% | 43.7% | 217.3 | 7 |
+| Base | [brief CoT](../evaluation/results/baseline-cot-brief-cap1024/run1/metrics.json) | 61.8% | 48.6% | 99.8% | 28.0% | 93.7 | 1 |
 | SFT `run2` | [direct](../evaluation/results/sft-direct-cap1024/run1/metrics.json) | **74.6%** | **66.3%** | 100.0% | 71.3% | 24.2 | 0 |
 | SFT `run2` | [long CoT](../evaluation/results/sft-cot-long-cap1024/run1/metrics.json) | 71.4% | 62.4% | 94.7% | 56.3% | 129.6 | 44 |
 | SFT `run2` | [brief CoT](../evaluation/results/sft-cot-brief-cap1024/run1/metrics.json) | 74.6% | 63.9% | 99.0% | 57.0% | 66.5 | 9 |

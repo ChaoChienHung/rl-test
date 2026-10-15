@@ -179,9 +179,9 @@ Launches six Slurm array tasks (at most two concurrent) on the same frozen 900 d
 
 | Task | Model | Prompt | Result condition |
 |---:|---|---|---|
-| 0 | Base | `direct` | `base-direct-cap1024` |
-| 1 | Base | `cot_chain` (long CoT) | `base-cot-long-cap1024` |
-| 2 | Base | `cot_brief` (brief CoT) | `base-cot-brief-cap1024` |
+| 0 | Base | `direct` | `baseline-direct-cap1024` |
+| 1 | Base | `cot_chain` (long CoT) | `baseline-cot-long-cap1024` |
+| 2 | Base | `cot_brief` (brief CoT) | `baseline-cot-brief-cap1024` |
 | 3 | SFT `run2` | `direct` | `sft-direct-cap1024` |
 | 4 | SFT `run2` | `cot_chain` (long CoT) | `sft-cot-long-cap1024` |
 | 5 | SFT `run2` | `cot_brief` (brief CoT) | `sft-cot-brief-cap1024` |
@@ -191,7 +191,7 @@ Launches six Slurm array tasks (at most two concurrent) on the same frozen 900 d
 | Base | 47.6% / 34.6% | **62.8% / 52.8%** | 61.8% / 48.6% |
 | SFT `run2` | **74.6% / 66.3%** | 71.4% / 62.4% | 74.6% / 63.9% |
 
-Result conditions use lowercase hyphens: `<model>-<prompt>-cap<output-tokens>`. `cot-long` is the result label for the existing `PROMPT_STYLE=cot_chain` implementation; `cot-brief` maps to `cot_brief`. Historical 160/512-token runs keep their original names and provenance.
+Result conditions use lowercase hyphens: `<model>-<prompt>-cap<output-tokens>`. The untrained model uses `baseline`; `cot-long` is the result label for `PROMPT_STYLE=cot_chain`, and `cot-brief` maps to `cot_brief`. Historical results also use `cap160` or `cap512`: `baseline-direct-cap160`, `baseline-cot-long-cap512`, `baseline-cot-brief-cap512`, `sft-direct-cap160`, `sft-cot-long-cap512`, and `sft-cot-brief-cap512`. Their manifests retain original condition/run names and original run paths; prediction rows and logs are unchanged.
 
 After pulling the updated branch on SoC, verify the SFT adapter exists and submit from the repo root:
 
@@ -235,8 +235,8 @@ sbatch --partition=gpu --gpus=a100-40:1 --time=03:00:00 --export=ALL,N_CLAIMS=90
 
 # SFT checkpoint: direct vs cot_chain (900 claims)
 adapter=verifier/experiments/sft_qwen_3.5-2b_n6000/runs/run2/artifacts/checkpoints
-sbatch --partition=gpu --gpus=a100-40:1 --time=01:30:00 --export=ALL,N_CLAIMS=900,RUN_NAME=run2,THINKING=off,CHECKPOINTS="$adapter",EVAL_CONDITION=sft-direct-eval verifier/evaluation/run.sbatch
-sbatch --partition=gpu --gpus=a100-40:1 --time=03:00:00 --export=ALL,N_CLAIMS=900,RUN_NAME=run2,THINKING=on,CHECKPOINTS="$adapter",EVAL_CONDITION=sft-cot-eval verifier/evaluation/run.sbatch
+sbatch --partition=gpu --gpus=a100-40:1 --time=01:30:00 --export=ALL,N_CLAIMS=900,RUN_NAME=run2,THINKING=off,CHECKPOINTS="$adapter",EVAL_CONDITION=sft-direct-cap160 verifier/evaluation/run.sbatch
+sbatch --partition=gpu --gpus=a100-40:1 --time=03:00:00 --export=ALL,N_CLAIMS=900,RUN_NAME=run2,THINKING=on,CHECKPOINTS="$adapter",EVAL_CONDITION=sft-cot-long-cap512 verifier/evaluation/run.sbatch
 
 ```
 
@@ -245,8 +245,8 @@ sbatch --partition=gpu --gpus=a100-40:1 --time=03:00:00 --export=ALL,N_CLAIMS=90
 Each run directory contains `predictions.jsonl`, `metrics.json`, and `manifest.json`:
 
 ```bash
-cat verifier/evaluation/results/direct-baseline/run1/metrics.json
-head -n 1 verifier/evaluation/results/direct-baseline/run1/predictions.jsonl
+cat verifier/evaluation/results/baseline-direct-cap160/run1/metrics.json
+head -n 1 verifier/evaluation/results/baseline-direct-cap160/run1/predictions.jsonl
 ```
 
 Re-score archived predictions offline without GPU:
