@@ -22,9 +22,9 @@ test -f "$existing_sft/adapter_config.json" && test -s "$existing_sft/adapter_mo
 }
 for output in \
   "verifier/experiments/sft-direct-from-sft-qwen3p5-2b-train1200/runs/${run_tag}-seen-sft/artifacts" \
-  "verifier/experiments/grpo-direct-from-sft-qwen3p5-2b-train1200-kl0/runs/${run_tag}-seen-grpo/artifacts" \
+  "verifier/experiments/grpo-cot-from-sft-qwen3p5-2b-train1200-full-kl0/runs/${run_tag}-seen-cot-grpo/artifacts" \
   "verifier/experiments/sft-direct-from-base-qwen3p5-2b-disjoint4695/runs/${run_tag}-unseen-sft/artifacts" \
-  "verifier/experiments/grpo-direct-from-sft-qwen3p5-2b-train1200-kl0/runs/${run_tag}-unseen-grpo/artifacts"; do
+  "verifier/experiments/grpo-cot-from-sft-qwen3p5-2b-train1200-full-kl0/runs/${run_tag}-unseen-cot-grpo/artifacts"; do
   test ! -e "$output" || { echo "Run already exists: $output" >&2; exit 2; }
 done
 
@@ -33,16 +33,16 @@ seen_sft_job=$(sbatch --parsable --partition=gpu --gpus=a100-40:1 \
   --export=ALL,TRAIN_SCRIPT=verifier/experiments/sft-direct-from-sft-qwen3p5-2b-train1200/train.py,RUN_NAME="${run_tag}-seen-sft",SEED=0,INIT_CHECKPOINTS="$existing_sft",SFT_CHECKPOINTS=,TRAIN_DATA= \
   verifier/experiments/run_train.sbatch)
 seen_grpo_job=$(sbatch --parsable --partition=gpu-long --gpus=a100-40:1 \
-  --exclude=xgpe2 --time=06:00:00 \
-  --export=ALL,TRAIN_SCRIPT=verifier/experiments/grpo-direct-from-sft-qwen3p5-2b-train1200-kl0/train.py,RUN_NAME="${run_tag}-seen-grpo",SEED=0,SFT_CHECKPOINTS="$existing_sft",TRAIN_DATA="$grpo_data",INIT_CHECKPOINTS= \
+  --exclude=xgpe2 --time=1-00:00:00 \
+  --export=ALL,TRAIN_SCRIPT=verifier/experiments/grpo-cot-from-sft-qwen3p5-2b-train1200-full-kl0/train.py,RUN_NAME="${run_tag}-seen-cot-grpo",SEED=0,SFT_CHECKPOINTS="$existing_sft",TRAIN_DATA="$grpo_data",INIT_CHECKPOINTS= \
   verifier/experiments/run_train.sbatch)
 unseen_sft_job=$(sbatch --parsable --partition=gpu --gpus=a100-40:1 \
   --exclude=xgpe2 --time=03:00:00 \
   --export=ALL,TRAIN_SCRIPT=verifier/experiments/sft-direct-from-base-qwen3p5-2b-disjoint4695/train.py,RUN_NAME="${run_tag}-unseen-sft",SEED=0,INIT_CHECKPOINTS=,SFT_CHECKPOINTS=,TRAIN_DATA= \
   verifier/experiments/run_train.sbatch)
 unseen_grpo_job=$(sbatch --parsable --partition=gpu-long --gpus=a100-40:1 \
-  --exclude=xgpe2 --time=06:00:00 --dependency="afterok:$unseen_sft_job" \
-  --export=ALL,TRAIN_SCRIPT=verifier/experiments/grpo-direct-from-sft-qwen3p5-2b-train1200-kl0/train.py,RUN_NAME="${run_tag}-unseen-grpo",SEED=0,SFT_CHECKPOINTS="$new_sft",TRAIN_DATA="$grpo_data",INIT_CHECKPOINTS= \
+  --exclude=xgpe2 --time=1-00:00:00 --dependency="afterok:$unseen_sft_job" \
+  --export=ALL,TRAIN_SCRIPT=verifier/experiments/grpo-cot-from-sft-qwen3p5-2b-train1200-full-kl0/train.py,RUN_NAME="${run_tag}-unseen-cot-grpo",SEED=0,SFT_CHECKPOINTS="$new_sft",TRAIN_DATA="$grpo_data",INIT_CHECKPOINTS= \
   verifier/experiments/run_train.sbatch)
 
 printf 'Seen 1,200 -> continued SFT: %s\n' "$seen_sft_job"

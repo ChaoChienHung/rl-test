@@ -69,6 +69,14 @@ Reply with only one JSON object, nothing else:
 
 - evidence: ids of the sentences that justify the verdict, at most 5. Use [] for NOT_ENOUGH_INFO."""
 
+NATIVE_THINKING_SYSTEM = """You are a fact-checker. You get a claim and numbered evidence sentences from Wikipedia.
+Think through the claim using only the evidence shown. Identify decisive E ids and any missing or contradictory facts. Do not use outside knowledge.
+
+After thinking, finish with only one JSON object:
+{"verdict": "SUPPORTED" | "REFUTED" | "NOT_ENOUGH_INFO", "evidence": ["E3", ...]}
+
+Use at most 5 evidence ids. Use [] for NOT_ENOUGH_INFO. Do not include confidence."""
+
 COT_CHAIN_SYSTEM = """You are a fact-checker. You get a claim and numbered evidence sentences from Wikipedia.
 Reason step by step using only the evidence shown. In the reasoning field: (1) identify the checkable parts of the claim, (2) match each relevant part to E ids and quote or paraphrase what those sentences say, (3) resolve contradictions or missing support, and (4) explain why the final verdict follows. Keep the chain concise. Do not invent evidence or use outside knowledge.
 
@@ -169,6 +177,8 @@ def render(claim, shown):
 
 def parse(text):
     """Return (parsed dict or None, per-field validity)."""
+    # Native Qwen thinking may itself mention JSON; score only the final answer.
+    text = text.rsplit("</think>", 1)[-1]
     m = re.search(r"\{.*\}", text, re.S)
     obj = None
     if m:
@@ -218,7 +228,7 @@ def label_probs(tokens):
 
 class LocalModel:
     def __init__(self, name=LOCAL_MODEL, batch_size=4, adapter=None,
-                 system_prompt=SYSTEM, max_new_tokens=160):
+                 system_prompt=SYSTEM, max_new_tokens=160, enable_thinking=False):
         import torch
         from transformers import AutoModelForCausalLM, AutoTokenizer
         self.torch = torch
@@ -234,6 +244,7 @@ class LocalModel:
         self.batch_size = batch_size
         self.system_prompt = system_prompt
         self.max_new_tokens = max_new_tokens
+        self.enable_thinking = enable_thinking
         self.name = name if not adapter else f"{name}+{adapter_label(adapter)}"
 
     def run(self, prompts):
@@ -245,7 +256,8 @@ class LocalModel:
     def _batch(self, prompts):
         texts = [self.tok.apply_chat_template(
             [{"role": "system", "content": self.system_prompt}, {"role": "user", "content": p}],
-            tokenize=False, add_generation_prompt=True, enable_thinking=False) for p in prompts]
+            tokenize=False, add_generation_prompt=True,
+            enable_thinking=self.enable_thinking) for p in prompts]
         inp = self.tok(texts, return_tensors="pt", padding=True).to("cuda")
         self.torch.manual_seed(SEED)
         gen = self.model.generate(**inp, max_new_tokens=self.max_new_tokens, do_sample=False,
@@ -262,7 +274,7 @@ class LocalModel:
                 top = lp.topk(20)
                 alts = [(self.tok.decode([j]), v) for j, v in zip(top.indices.tolist(), top.values.tolist())]
                 tokens.append((self.tok.decode([tid]), alts))
-            res.append({"text": self.tok.decode(ids, skip_special_tokens=True),
+            res.append({"text": self.tok.decode(ids, skip_special_tokens=not self.enable_thinking),
                         "tokens": tokens, "provider": "local",
                         "in_tokens": int(inp["attention_mask"][b].sum()), "out_tokens": len(tokens)})
         return res
@@ -303,6 +315,9 @@ class OpenRouterModel:
 def score(claim, ctx, gen, require_confidence=True):
     obj, ok = parse(gen["text"])
     reasoning = obj.get("reasoning") if isinstance(obj.get("reasoning"), str) else None
+    if "</think>" in gen["text"]:
+        native_reasoning = gen["text"].split("</think>", 1)[0].replace("<think>", "").strip()
+        reasoning = native_reasoning or reasoning
     reasoning_ids = re.findall(r"\bE\d+\b", reasoning or "")
     gold = FEVER_LABEL[claim["label"]]
     pred = obj.get("verdict") if ok["verdict"] else None
@@ -354,10 +369,12 @@ def run(model_name, n, retrieval="bm25", chunk=20, adapter=None, output=None,
     if not claims:
         return path
     system_prompt = {"direct": SYSTEM, "reasoning": REASONING_SYSTEM, "cot_sft": COT_SFT_SYSTEM,
-                     "cot_chain": COT_CHAIN_SYSTEM, "cot_brief": COT_BRIEF_SYSTEM}[prompt_style]
+                     "cot_chain": COT_CHAIN_SYSTEM, "cot_brief": COT_BRIEF_SYSTEM,
+                     "cot_native": NATIVE_THINKING_SYSTEM}[prompt_style]
     if max_new_tokens is None:
         max_new_tokens = {"direct": 160, "reasoning": 320, "cot_sft": 320,
-                          "cot_chain": 512, "cot_brief": 512}[prompt_style]
+                          "cot_chain": 512, "cot_brief": 512,
+                          "cot_native": 1024}[prompt_style]
     if max_new_tokens <= 0:
         raise ValueError("max_new_tokens must be positive")
     if model_name.startswith("local"):
@@ -366,8 +383,11 @@ def run(model_name, n, retrieval="bm25", chunk=20, adapter=None, output=None,
             with open(os.path.join(adapter.split(",")[0], "adapter_config.json"), encoding="utf-8") as f:
                 base = json.load(f)["base_model_name_or_path"]
         model = LocalModel(base or LOCAL_MODEL, adapter=adapter,
-                           system_prompt=system_prompt, max_new_tokens=max_new_tokens)
+                           system_prompt=system_prompt, max_new_tokens=max_new_tokens,
+                           enable_thinking=prompt_style == "cot_native")
     else:
+        if prompt_style == "cot_native":
+            raise ValueError("cot_native currently requires a local Qwen model")
         model = OpenRouterModel(model_name, system_prompt=system_prompt,
                                 max_new_tokens=max_new_tokens)
     retriever = FeverRetriever()
@@ -380,7 +400,7 @@ def run(model_name, n, retrieval="bm25", chunk=20, adapter=None, output=None,
             for c, x, g in zip(batch, ctxs, gens):
                 f.write(json.dumps({"model": model.name, "retrieval": retrieval,
                                     "prompt_style": prompt_style,
-                                    **score(c, x, g, require_confidence=prompt_style != "cot_sft")},
+                                    **score(c, x, g, require_confidence=prompt_style not in ("cot_sft", "cot_native"))},
                                    ensure_ascii=False) + "\n")
         print(f"  {i + len(batch)}/{len(claims)}  {time.time() - t0:.0f}s", flush=True)
     return path

@@ -2,12 +2,12 @@
 set -euo pipefail
 
 # THINKING is the historical on/off switch. PROMPT_STYLE selects an exact style.
-# Model-internal thinking stays disabled in every condition.
+# Only PROMPT_STYLE=cot_native enables model-internal thinking.
 thinking="${THINKING:-off}"
 if [[ -n "${PROMPT_STYLE:-}" ]]; then
   case "$PROMPT_STYLE" in
-    direct|cot_chain|cot_brief|cot_sft) style="$PROMPT_STYLE" ;;
-    *) echo "PROMPT_STYLE must be direct, cot_chain, cot_brief, or cot_sft" >&2; exit 2 ;;
+    direct|cot_chain|cot_brief|cot_sft|cot_native) style="$PROMPT_STYLE" ;;
+    *) echo "PROMPT_STYLE must be direct, cot_chain, cot_brief, cot_sft, or cot_native" >&2; exit 2 ;;
   esac
 else
   case "$thinking" in
@@ -21,6 +21,7 @@ case "$style" in
   cot_chain) condition=baseline-cot-long; default_cap=512 ;;
   cot_brief) condition=baseline-cot-brief; default_cap=512 ;;
   cot_sft) condition=baseline-cot-sft; default_cap=320 ;;
+  cot_native) condition=baseline-cot-native; default_cap=1024 ;;
 esac
 
 cd "${SLURM_SUBMIT_DIR:?submit from the repo root}"
@@ -129,6 +130,7 @@ record = {
     'thinking': thinking, 'prompt_style': style, 'retrieval': 'titles',
     'max_new_tokens': int(max_new_tokens) if max_new_tokens else {
         'direct': 160, 'cot_chain': 512, 'cot_brief': 512, 'cot_sft': 320,
+        'cot_native': 1024,
     }[style],
     'condition': condition, 'result_dir': result_dir,
     'n_claims': int(n), 'predictions': predictions, 'metrics': metrics,
