@@ -1,0 +1,23 @@
+{
+  "experiment": "grpo-cot-from-sft4500tagged-qwen3p5-2b-no-calibration-kl0-1000-samples",
+  "model": "Qwen/Qwen3.5-2B",
+  "sft": "verifier/experiments/sft-direct-from-base-qwen3p5-2b-tagged-4500-samples/runs/run1-tag-sft/artifacts/checkpoints",
+  "data": "verifier/data/train/sft/fever-oracle-tagged-grpo-1000",
+  "n_train": 1000,
+  "seed": 0,
+  "reward": "verdict_harm_plus_evidence_no_calibration",
+  "thinking_mode": true,
+  "diagnostics": [
+    "correctness",
+    "evidence",
+    "final_present",
+    "thinking_present"
+  ],
+  "num_generations": 8,
+  "max_completion_length": 1024,
+  "beta": 0.0,
+  "max_steps": 0,
+  "steps": 500,
+  "train_seconds": 24828,
+  "peak_gpu_gb": 22.52
+}
