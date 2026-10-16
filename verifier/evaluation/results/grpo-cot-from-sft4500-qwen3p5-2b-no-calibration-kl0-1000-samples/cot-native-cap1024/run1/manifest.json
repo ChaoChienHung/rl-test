@@ -1,0 +1,19 @@
+{
+  "job_id": "960129",
+  "run_name": "run1",
+  "commit": "54994d1ed9a28269894290c779096eb7e406431e",
+  "model": "Qwen/Qwen3.5-2B",
+  "eval_model": "grpo-cot-from-sft4500-qwen3p5-2b-no-calibration-kl0-1000-samples",
+  "checkpoints": "verifier/experiments/grpo-cot-from-sft4500-qwen3p5-2b-no-calibration-kl0-1000-samples/runs/run1-json-grpo/artifacts/checkpoints",
+  "thinking": "on",
+  "native_thinking": true,
+  "prompt_style": "cot_native",
+  "retrieval": "titles",
+  "max_new_tokens": 1024,
+  "condition": "cot-native-cap1024",
+  "result_dir": "verifier/evaluation/results/grpo-cot-from-sft4500-qwen3p5-2b-no-calibration-kl0-1000-samples/cot-native-cap1024/run1",
+  "n_claims": 900,
+  "predictions": "verifier/evaluation/results/grpo-cot-from-sft4500-qwen3p5-2b-no-calibration-kl0-1000-samples/cot-native-cap1024/run1/predictions.jsonl",
+  "metrics": "verifier/evaluation/results/grpo-cot-from-sft4500-qwen3p5-2b-no-calibration-kl0-1000-samples/cot-native-cap1024/run1/metrics.json",
+  "log": "verifier/evaluation/results/grpo-cot-from-sft4500-qwen3p5-2b-no-calibration-kl0-1000-samples/cot-native-cap1024/run1/logs/run.log"
+}

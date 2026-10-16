@@ -1,0 +1,74 @@
+job=960129 run=run1 commit=54994d1ed9a28269894290c779096eb7e406431e n=900 thinking=off prompt_style=cot_native max_new_tokens=1024 retrieval=titles model=Qwen/Qwen3.5-2B checkpoints=verifier/experiments/grpo-cot-from-sft4500-qwen3p5-2b-no-calibration-kl0-1000-samples/runs/run1-json-grpo/artifacts/checkpoints result_dir=verifier/evaluation/results/grpo-cot-from-sft4500-qwen3p5-2b-no-calibration-kl0-1000-samples/cot-native-cap1024/run1
+started_at=2026-10-16T15:07:50Z
+0 done, 900 to go -> verifier/evaluation/results/grpo-cot-from-sft4500-qwen3p5-2b-no-calibration-kl0-1000-samples/cot-native-cap1024/run1/predictions.jsonl
+Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]Loading weights:   0%|          | 1/320 [00:00<00:32,  9.94it/s]Loading weights:  15%|█▌        | 49/320 [00:00<00:00, 285.63it/s]Loading weights:  31%|███       | 98/320 [00:00<00:00, 370.51it/s]Loading weights:  46%|████▌     | 146/320 [00:00<00:00, 410.25it/s]Loading weights:  58%|█████▊    | 187/320 [00:00<00:00, 405.52it/s]Loading weights:  73%|███████▎  | 234/320 [00:00<00:00, 426.81it/s]Loading weights:  87%|████████▋ | 278/320 [00:00<00:00, 422.91it/s]Loading weights: 100%|██████████| 320/320 [00:00<00:00, 392.89it/s]
+[transformers] `causal_conv1d_fn` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+[transformers] `chunk_gated_delta_rule` is falling back to its reference PyTorch implementation because `flash-linear-attention` is not installed. This is correct but much slower; install `flash-linear-attention` for the optimized kernel.
+[transformers] `causal_conv1d_update` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+[transformers] `fused_recurrent_gated_delta_rule` is falling back to its reference PyTorch implementation because `flash-linear-attention` is not installed. This is correct but much slower; install `flash-linear-attention` for the optimized kernel.
+  20/900  80s
+  40/900  141s
+  60/900  197s
+  80/900  278s
+  100/900  331s
+  120/900  388s
+  140/900  451s
+  160/900  518s
+  180/900  583s
+  200/900  643s
+  220/900  697s
+  240/900  750s
+  260/900  828s
+  280/900  890s
+  300/900  953s
+  320/900  1005s
+  340/900  1053s
+  360/900  1109s
+  380/900  1166s
+  400/900  1222s
+  420/900  1286s
+  440/900  1339s
+  460/900  1396s
+  480/900  1444s
+  500/900  1490s
+  520/900  1552s
+  540/900  1607s
+  560/900  1663s
+  580/900  1718s
+  600/900  1775s
+  620/900  1833s
+  640/900  1893s
+  660/900  1948s
+  680/900  2004s
+  700/900  2052s
+  720/900  2123s
+  740/900  2185s
+  760/900  2254s
+  780/900  2309s
+  800/900  2378s
+  820/900  2441s
+  840/900  2499s
+  860/900  2560s
+  880/900  2615s
+  900/900  2684s
+
+== Qwen/Qwen3.5-2B+grpo-cot-from-sft4500-qwen3p5-2b-no-calibration-kl0-1000-samples_run1-json-grpo  (900 claims, predictions.jsonl) ==
+  format adherence      1.000   json=1.00  format=1.00  verdict=1.00  evidence=1.00  confidence=0.00
+  label accuracy        0.747
+  FEVER score           0.673
+  evidence F1 (non-NEI) 0.747
+  recall SUPPORTED        0.820  (n=300)
+  recall REFUTED          0.743  (n=300)
+  recall NOT_ENOUGH_INFO  0.677  (n=300)
+  ECE stated_conf       None   (available 0.00)
+  ECE token_conf        0.247   (available 1.00)
+      [0.5,0.6)  n=4    conf=0.55  acc=0.50
+      [0.7,0.8)  n=4    conf=0.74  acc=0.00
+      [0.8,0.9)  n=5    conf=0.87  acc=0.20
+      [0.9,1.0)  n=887  conf=1.00  acc=0.75
+  non-NEI, gold in  context: n=517  acc=0.843  FEVER=0.779
+  non-NEI, gold NOT in context: n=83   acc=0.398  FEVER=0.000
+  tokens in/out         1334 / 191 per claim
+  providers             {'local': 900}
+finished_at=2026-10-16T15:53:13Z
+predictions=verifier/evaluation/results/grpo-cot-from-sft4500-qwen3p5-2b-no-calibration-kl0-1000-samples/cot-native-cap1024/run1/predictions.jsonl metrics=verifier/evaluation/results/grpo-cot-from-sft4500-qwen3p5-2b-no-calibration-kl0-1000-samples/cot-native-cap1024/run1/metrics.json
