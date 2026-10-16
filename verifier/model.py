@@ -94,6 +94,43 @@ Reply immediately with exactly one complete JSON object and nothing else:
 
 Use [] for NOT_ENOUGH_INFO evidence. For other verdicts, cite at most 5 decisive E ids. Finish the JSON after the four fields."""
 
+TAG_DIRECT_SYSTEM = """You are a fact-checker. You get a claim and numbered evidence sentences from Wikipedia.
+Decide whether the evidence SUPPORTS the claim, REFUTES it, or gives NOT_ENOUGH_INFO to decide. Use only the evidence given.
+
+Reply with only XML tags in this exact order:
+<evidence>E3, ...</evidence>
+<verdict>SUPPORTED | REFUTED | NOT_ENOUGH_INFO</verdict>
+
+- evidence: ids of the sentences that justify the verdict, at most 5. Use empty <evidence></evidence> for NOT_ENOUGH_INFO.
+- verdict: SUPPORTED, REFUTED, or NOT_ENOUGH_INFO."""
+
+TAG_COT_BRIEF_SYSTEM = """You are a fact-checker. Decide the claim using only the numbered Wikipedia evidence shown.
+In 1-2 short sentences, explain which shown sentences support or refute the claim, or why they are insufficient. Mention prompt-local E ids.
+
+Finish with the tags in this exact order:
+<evidence>E3, ...</evidence>
+<verdict>SUPPORTED | REFUTED | NOT_ENOUGH_INFO</verdict>
+
+Use empty <evidence></evidence> for NOT_ENOUGH_INFO."""
+
+TAG_COT_CHAIN_SYSTEM = """You are a fact-checker. You get a claim and numbered evidence sentences from Wikipedia.
+Reason step by step using only the evidence shown: (1) identify checkable parts, (2) match relevant parts to E ids, (3) resolve contradictions or missing support, and (4) conclude.
+
+Finish with the tags in this exact order:
+<evidence>E3, ...</evidence>
+<verdict>SUPPORTED | REFUTED | NOT_ENOUGH_INFO</verdict>
+
+Use empty <evidence></evidence> for NOT_ENOUGH_INFO."""
+
+TAG_NATIVE_THINKING_SYSTEM = """You are a fact-checker. You get a claim and numbered evidence sentences from Wikipedia.
+Think through the claim using only the evidence shown. Identify decisive E ids and any missing or contradictory facts. Do not use outside knowledge.
+
+After thinking, finish with only the tags:
+<evidence>E3, ...</evidence>
+<verdict>SUPPORTED | REFUTED | NOT_ENOUGH_INFO</verdict>
+
+Use at most 5 evidence ids. Use empty <evidence></evidence> for NOT_ENOUGH_INFO."""
+
 OUT_DIR = os.path.join(DATA, "..", "..", "evaluation", "results", "manual")
 VERDICT_PREFIX = re.compile(r'(?:"verdict"\s*:\s*"|<verdict>\s*)')
 
@@ -401,11 +438,15 @@ def run(model_name, n, retrieval="bm25", chunk=20, adapter=None, output=None,
         return path
     system_prompt = {"direct": SYSTEM, "reasoning": REASONING_SYSTEM, "cot_sft": COT_SFT_SYSTEM,
                      "cot_chain": COT_CHAIN_SYSTEM, "cot_brief": COT_BRIEF_SYSTEM,
-                     "cot_native": NATIVE_THINKING_SYSTEM}[prompt_style]
+                     "cot_native": NATIVE_THINKING_SYSTEM,
+                     "direct_tag": TAG_DIRECT_SYSTEM, "cot_brief_tag": TAG_COT_BRIEF_SYSTEM,
+                     "cot_chain_tag": TAG_COT_CHAIN_SYSTEM, "cot_native_tag": TAG_NATIVE_THINKING_SYSTEM}[prompt_style]
     if max_new_tokens is None:
         max_new_tokens = {"direct": 160, "reasoning": 320, "cot_sft": 320,
                           "cot_chain": 512, "cot_brief": 512,
-                          "cot_native": 1024}[prompt_style]
+                          "cot_native": 1024,
+                          "direct_tag": 160, "cot_brief_tag": 512,
+                          "cot_chain_tag": 512, "cot_native_tag": 1024}[prompt_style]
     if max_new_tokens <= 0:
         raise ValueError("max_new_tokens must be positive")
     if model_name.startswith("local"):
@@ -415,10 +456,10 @@ def run(model_name, n, retrieval="bm25", chunk=20, adapter=None, output=None,
                 base = json.load(f)["base_model_name_or_path"]
         model = LocalModel(base or LOCAL_MODEL, adapter=adapter,
                            system_prompt=system_prompt, max_new_tokens=max_new_tokens,
-                           enable_thinking=prompt_style == "cot_native")
+                           enable_thinking=prompt_style in ("cot_native", "cot_native_tag"))
     else:
-        if prompt_style == "cot_native":
-            raise ValueError("cot_native currently requires a local Qwen model")
+        if prompt_style in ("cot_native", "cot_native_tag"):
+            raise ValueError(f"{prompt_style} currently requires a local Qwen model")
         model = OpenRouterModel(model_name, system_prompt=system_prompt,
                                 max_new_tokens=max_new_tokens)
     retriever = FeverRetriever()
@@ -431,7 +472,7 @@ def run(model_name, n, retrieval="bm25", chunk=20, adapter=None, output=None,
             for c, x, g in zip(batch, ctxs, gens):
                 f.write(json.dumps({"model": model.name, "retrieval": retrieval,
                                     "prompt_style": prompt_style,
-                                    **score(c, x, g, require_confidence=prompt_style not in ("cot_sft", "cot_native"))},
+                                    **score(c, x, g, require_confidence=prompt_style not in ("cot_sft", "cot_native", "direct_tag", "cot_brief_tag", "cot_chain_tag", "cot_native_tag"))},
                                    ensure_ascii=False) + "\n")
         print(f"  {i + len(batch)}/{len(claims)}  {time.time() - t0:.0f}s", flush=True)
     return path

@@ -6,8 +6,8 @@ set -euo pipefail
 thinking="${THINKING:-off}"
 if [[ -n "${PROMPT_STYLE:-}" ]]; then
   case "$PROMPT_STYLE" in
-    direct|cot_chain|cot_brief|cot_sft|cot_native) style="$PROMPT_STYLE" ;;
-    *) echo "PROMPT_STYLE must be direct, cot_chain, cot_brief, cot_sft, or cot_native" >&2; exit 2 ;;
+    direct|cot_chain|cot_brief|cot_sft|cot_native|direct_tag|cot_chain_tag|cot_brief_tag|cot_native_tag) style="$PROMPT_STYLE" ;;
+    *) echo "PROMPT_STYLE must be direct, cot_chain, cot_brief, cot_sft, cot_native, direct_tag, cot_chain_tag, cot_brief_tag, or cot_native_tag" >&2; exit 2 ;;
   esac
 else
   case "$thinking" in
@@ -17,11 +17,11 @@ else
   esac
 fi
 case "$style" in
-  direct) default_cap=160 ;;
-  cot_chain) default_cap=512 ;;
-  cot_brief) default_cap=512 ;;
+  direct|direct_tag) default_cap=160 ;;
+  cot_chain|cot_chain_tag) default_cap=512 ;;
+  cot_brief|cot_brief_tag) default_cap=512 ;;
   cot_sft) default_cap=320 ;;
-  cot_native) default_cap=1024 ;;
+  cot_native|cot_native_tag) default_cap=1024 ;;
 esac
 
 cd "${SLURM_SUBMIT_DIR:?submit from the repo root}"
@@ -91,6 +91,7 @@ fi
 
 case "$style" in
   cot_chain) style_tag="cot-long" ;;
+  cot_chain_tag) style_tag="cot-long-tag" ;;
   *) style_tag="${style//_/-}" ;;
 esac
 condition="${style_tag}-cap${MAX_NEW_TOKENS:-$default_cap}"

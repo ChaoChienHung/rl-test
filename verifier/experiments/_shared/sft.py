@@ -30,8 +30,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
 from retrieval.build_bm25_index import DATA
 from utils.experiment_layout import artifacts_dir
-from verifier.model import (FEVER_LABEL, LOCAL_MODEL, SEED, SYSTEM, build_context, gold_sets,
-                    render, sample_claims)
+from verifier.model import (FEVER_LABEL, LOCAL_MODEL, SEED, SYSTEM, TAG_DIRECT_SYSTEM,
+                            build_context, gold_sets, render, sample_claims)
 
 OUT_DIR = os.path.join(DATA, "..", "train", "sft")
 NEI = "NOT_ENOUGH_INFO"
@@ -144,6 +144,8 @@ if __name__ == "__main__":
     ap.add_argument("--experiment-name", default=None,
                     help="preserve a historical experiment configuration name when data storage is renamed")
     ap.add_argument("--config-name", default=None, help="directory name for this training configuration")
+    ap.add_argument("--prompt-format", choices=["json", "tag"], default="json",
+                    help="system prompt format: 'json' (default) or 'tag' (TAG_DIRECT_SYSTEM)")
     a = ap.parse_args()
     if a.data and a.subset_of:
         ap.error("--data and --subset-of cannot be combined")
@@ -199,11 +201,12 @@ if __name__ == "__main__":
         raise SystemExit(f"run already exists: {artifacts}; use --run-name for a new run")
     checkpoint_dir = artifacts / "checkpoints"
     checkpoint_dir.mkdir(parents=True)
+    sys_prompt = TAG_DIRECT_SYSTEM if a.prompt_format == "tag" else SYSTEM
     secs, peak_gb = train(a.model, rows, str(checkpoint_dir), a.qlora, a.max_steps, a.lr, a.rank,
-                          a.seed, init_adapter=a.init_adapter)
+                          a.seed, system_prompt=sys_prompt, init_adapter=a.init_adapter)
     meta = {"model": a.model, "n_train": len(rows), "qlora": a.qlora, "max_steps": a.max_steps,
             "lr": a.lr, "rank": a.rank, "seed": a.seed, "subset_of": a.subset_of, "train_seconds": round(secs),
-            "data": a.data, "init_adapter": a.init_adapter, "peak_gpu_gb": round(peak_gb, 2)}
+            "data": a.data, "prompt_format": a.prompt_format, "init_adapter": a.init_adapter, "peak_gpu_gb": round(peak_gb, 2)}
     with open(artifacts / "meta.json", "w", encoding="utf-8") as f:
         json.dump(meta, f, indent=1)
     print(json.dumps(meta, indent=1))

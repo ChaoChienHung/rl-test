@@ -72,15 +72,22 @@ def load_train_rows(data_dir, n_train):
     rows = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
     ids = [str(row["id"]) for row in rows]
     dev_ids = set(map(str, json.loads((ROOT / "verifier/data/eval/fever-dev-900-ids.json").read_text())["ids"]))
-    if len(rows) != 1200 or len(set(ids)) != 1200 or set(ids) & dev_ids:
-        raise ValueError("expected the fixed 1,200 unique train claims with no frozen dev overlap")
+    if len(rows) not in (1000, 1200) or len(set(ids)) != len(rows) or set(ids) & dev_ids:
+        raise ValueError(f"expected 1,000 or 1,200 unique train claims with no frozen dev overlap, got {len(rows)}")
     if n_train < 1 or n_train > len(rows) or any(row["gold"] not in LABELS for row in rows):
         raise ValueError("invalid n_train or gold label")
     random.Random(SEED).shuffle(rows)
-    return [{"prompt": [{"role": "system", "content": NATIVE_THINKING_SYSTEM},
-                        {"role": "user", "content": row["prompt"]}],
-             "gold": row["gold"],
-             "gold_ids": json.loads(row["completion"])["evidence"]} for row in rows[:n_train]]
+    out = []
+    for row in rows[:n_train]:
+        obj, _ = parse(row["completion"])
+        gold_ids = obj.get("evidence", []) if isinstance(obj, dict) else []
+        out.append({
+            "prompt": [{"role": "system", "content": NATIVE_THINKING_SYSTEM},
+                       {"role": "user", "content": row["prompt"]}],
+            "gold": row["gold"],
+            "gold_ids": gold_ids,
+        })
+    return out
 
 
 def main(config_name, n_train, default_steps):
