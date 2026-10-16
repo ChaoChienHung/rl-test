@@ -1,0 +1,19 @@
+{
+  "job_id": "959810",
+  "run_name": "run1",
+  "commit": "e7935f4fb42c9b5e86b26391dbc86af322f078e5",
+  "model": "Qwen/Qwen3.5-2B",
+  "eval_model": "sft-direct-from-base-qwen3p5-2b-tagged-4500-samples",
+  "checkpoints": "verifier/experiments/sft-direct-from-base-qwen3p5-2b-tagged-4500-samples/runs/run1-tag-sft/artifacts/checkpoints",
+  "thinking": "off",
+  "native_thinking": false,
+  "prompt_style": "direct_tag",
+  "retrieval": "titles",
+  "max_new_tokens": 1024,
+  "condition": "direct-tag-cap1024",
+  "result_dir": "verifier/evaluation/results/sft-direct-from-base-qwen3p5-2b-tagged-4500-samples/direct-tag-cap1024/run1",
+  "n_claims": 900,
+  "predictions": "verifier/evaluation/results/sft-direct-from-base-qwen3p5-2b-tagged-4500-samples/direct-tag-cap1024/run1/predictions.jsonl",
+  "metrics": "verifier/evaluation/results/sft-direct-from-base-qwen3p5-2b-tagged-4500-samples/direct-tag-cap1024/run1/metrics.json",
+  "log": "verifier/evaluation/results/sft-direct-from-base-qwen3p5-2b-tagged-4500-samples/direct-tag-cap1024/run1/logs/run.log"
+}

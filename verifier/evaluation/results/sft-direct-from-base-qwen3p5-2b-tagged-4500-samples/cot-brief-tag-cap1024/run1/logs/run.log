@@ -1,0 +1,71 @@
+job=959829 run=run1 commit=e7935f4fb42c9b5e86b26391dbc86af322f078e5 n=900 thinking=off prompt_style=cot_brief_tag max_new_tokens=1024 retrieval=titles model=Qwen/Qwen3.5-2B checkpoints=verifier/experiments/sft-direct-from-base-qwen3p5-2b-tagged-4500-samples/runs/run1-tag-sft/artifacts/checkpoints result_dir=verifier/evaluation/results/sft-direct-from-base-qwen3p5-2b-tagged-4500-samples/cot-brief-tag-cap1024/run1
+started_at=2026-10-16T13:52:30Z
+0 done, 900 to go -> verifier/evaluation/results/sft-direct-from-base-qwen3p5-2b-tagged-4500-samples/cot-brief-tag-cap1024/run1/predictions.jsonl
+Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]Loading weights:   1%|          | 3/320 [00:00<00:10, 29.66it/s]Loading weights:  15%|█▍        | 47/320 [00:00<00:01, 261.52it/s]Loading weights:  28%|██▊       | 89/320 [00:00<00:00, 324.28it/s]Loading weights:  38%|███▊      | 122/320 [00:00<00:00, 324.04it/s]Loading weights:  48%|████▊     | 155/320 [00:00<00:00, 323.03it/s]Loading weights:  61%|██████    | 195/320 [00:00<00:00, 344.76it/s]Loading weights:  72%|███████▏  | 230/320 [00:00<00:00, 331.47it/s]Loading weights:  83%|████████▎ | 265/320 [00:00<00:00, 334.25it/s]Loading weights:  95%|█████████▌| 305/320 [00:00<00:00, 347.81it/s]Loading weights: 100%|██████████| 320/320 [00:00<00:00, 321.86it/s]
+[transformers] `causal_conv1d_fn` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+[transformers] `chunk_gated_delta_rule` is falling back to its reference PyTorch implementation because `flash-linear-attention` is not installed. This is correct but much slower; install `flash-linear-attention` for the optimized kernel.
+[transformers] `causal_conv1d_update` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+[transformers] `fused_recurrent_gated_delta_rule` is falling back to its reference PyTorch implementation because `flash-linear-attention` is not installed. This is correct but much slower; install `flash-linear-attention` for the optimized kernel.
+  20/900  20s
+  40/900  30s
+  60/900  40s
+  80/900  51s
+  100/900  61s
+  120/900  72s
+  140/900  82s
+  160/900  93s
+  180/900  103s
+  200/900  114s
+  220/900  125s
+  240/900  135s
+  260/900  146s
+  280/900  156s
+  300/900  168s
+  320/900  179s
+  340/900  191s
+  360/900  201s
+  380/900  212s
+  400/900  223s
+  420/900  234s
+  440/900  244s
+  460/900  255s
+  480/900  266s
+  500/900  276s
+  520/900  287s
+  540/900  298s
+  560/900  308s
+  580/900  319s
+  600/900  329s
+  620/900  340s
+  640/900  351s
+  660/900  363s
+  680/900  374s
+  700/900  384s
+  720/900  395s
+  740/900  406s
+  760/900  417s
+  780/900  427s
+  800/900  437s
+  820/900  447s
+  840/900  458s
+  860/900  468s
+  880/900  478s
+  900/900  489s
+
+== Qwen/Qwen3.5-2B+sft-direct-from-base-qwen3p5-2b-tagged-4500-samples_run1-tag-sft  (900 claims, predictions.jsonl) ==
+  format adherence      1.000   json=1.00  format=1.00  verdict=1.00  evidence=1.00  confidence=0.00
+  label accuracy        0.742
+  FEVER score           0.676
+  evidence F1 (non-NEI) 0.606
+  recall SUPPORTED        0.780  (n=300)
+  recall REFUTED          0.667  (n=300)
+  recall NOT_ENOUGH_INFO  0.780  (n=300)
+  ECE stated_conf       None   (available 0.00)
+  ECE token_conf        0.258   (available 1.00)
+      [0.9,1.0)  n=900  conf=1.00  acc=0.74
+  non-NEI, gold in  context: n=517  acc=0.785  FEVER=0.723
+  non-NEI, gold NOT in context: n=83   acc=0.337  FEVER=0.000
+  tokens in/out         1331 / 20 per claim
+  providers             {'local': 900}
+finished_at=2026-10-16T14:01:13Z
+predictions=verifier/evaluation/results/sft-direct-from-base-qwen3p5-2b-tagged-4500-samples/cot-brief-tag-cap1024/run1/predictions.jsonl metrics=verifier/evaluation/results/sft-direct-from-base-qwen3p5-2b-tagged-4500-samples/cot-brief-tag-cap1024/run1/metrics.json

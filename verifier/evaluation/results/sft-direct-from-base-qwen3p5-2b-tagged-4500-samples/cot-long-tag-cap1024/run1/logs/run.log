@@ -1,0 +1,71 @@
+job=959733 run=run1 commit=e7935f4fb42c9b5e86b26391dbc86af322f078e5 n=900 thinking=off prompt_style=cot_chain_tag max_new_tokens=1024 retrieval=titles model=Qwen/Qwen3.5-2B checkpoints=verifier/experiments/sft-direct-from-base-qwen3p5-2b-tagged-4500-samples/runs/run1-tag-sft/artifacts/checkpoints result_dir=verifier/evaluation/results/sft-direct-from-base-qwen3p5-2b-tagged-4500-samples/cot-long-tag-cap1024/run1
+started_at=2026-10-16T13:56:32Z
+0 done, 900 to go -> verifier/evaluation/results/sft-direct-from-base-qwen3p5-2b-tagged-4500-samples/cot-long-tag-cap1024/run1/predictions.jsonl
+Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]Loading weights:   2%|▎         | 8/320 [00:00<00:04, 77.01it/s]Loading weights:  17%|█▋        | 53/320 [00:00<00:00, 290.14it/s]Loading weights:  31%|███       | 98/320 [00:00<00:00, 358.27it/s]Loading weights:  45%|████▌     | 145/320 [00:00<00:00, 397.77it/s]Loading weights:  58%|█████▊    | 187/320 [00:00<00:00, 400.67it/s]Loading weights:  73%|███████▎  | 233/320 [00:00<00:00, 419.38it/s]Loading weights:  87%|████████▋ | 278/320 [00:00<00:00, 423.04it/s]Loading weights: 100%|██████████| 320/320 [00:00<00:00, 391.88it/s]
+[transformers] `causal_conv1d_fn` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+[transformers] `chunk_gated_delta_rule` is falling back to its reference PyTorch implementation because `flash-linear-attention` is not installed. This is correct but much slower; install `flash-linear-attention` for the optimized kernel.
+[transformers] `causal_conv1d_update` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+[transformers] `fused_recurrent_gated_delta_rule` is falling back to its reference PyTorch implementation because `flash-linear-attention` is not installed. This is correct but much slower; install `flash-linear-attention` for the optimized kernel.
+  20/900  27s
+  40/900  36s
+  60/900  45s
+  80/900  54s
+  100/900  63s
+  120/900  72s
+  140/900  81s
+  160/900  91s
+  180/900  100s
+  200/900  109s
+  220/900  119s
+  240/900  127s
+  260/900  136s
+  280/900  144s
+  300/900  154s
+  320/900  170s
+  340/900  180s
+  360/900  190s
+  380/900  199s
+  400/900  209s
+  420/900  218s
+  440/900  227s
+  460/900  236s
+  480/900  246s
+  500/900  255s
+  520/900  264s
+  540/900  274s
+  560/900  283s
+  580/900  292s
+  600/900  301s
+  620/900  310s
+  640/900  319s
+  660/900  329s
+  680/900  339s
+  700/900  347s
+  720/900  357s
+  740/900  368s
+  760/900  377s
+  780/900  386s
+  800/900  396s
+  820/900  405s
+  840/900  414s
+  860/900  423s
+  880/900  432s
+  900/900  441s
+
+== Qwen/Qwen3.5-2B+sft-direct-from-base-qwen3p5-2b-tagged-4500-samples_run1-tag-sft  (900 claims, predictions.jsonl) ==
+  format adherence      1.000   json=1.00  format=1.00  verdict=1.00  evidence=1.00  confidence=0.00
+  label accuracy        0.739
+  FEVER score           0.670
+  evidence F1 (non-NEI) 0.604
+  recall SUPPORTED        0.783  (n=300)
+  recall REFUTED          0.667  (n=300)
+  recall NOT_ENOUGH_INFO  0.767  (n=300)
+  ECE stated_conf       None   (available 0.00)
+  ECE token_conf        0.26   (available 1.00)
+      [0.9,1.0)  n=900  conf=1.00  acc=0.74
+  non-NEI, gold in  context: n=517  acc=0.789  FEVER=0.721
+  non-NEI, gold NOT in context: n=83   acc=0.325  FEVER=0.000
+  tokens in/out         1344 / 21 per claim
+  providers             {'local': 900}
+finished_at=2026-10-16T14:04:32Z
+predictions=verifier/evaluation/results/sft-direct-from-base-qwen3p5-2b-tagged-4500-samples/cot-long-tag-cap1024/run1/predictions.jsonl metrics=verifier/evaluation/results/sft-direct-from-base-qwen3p5-2b-tagged-4500-samples/cot-long-tag-cap1024/run1/metrics.json

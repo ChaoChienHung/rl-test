@@ -1,0 +1,77 @@
+job=959806 run=run1 commit=e7935f4fb42c9b5e86b26391dbc86af322f078e5 n=900 thinking=off prompt_style=cot_brief max_new_tokens=1024 retrieval=titles model=Qwen/Qwen3.5-2B checkpoints=verifier/experiments/sft-direct-from-base-qwen3p5-2b-disjoint-4500-samples/runs/run1-json-sft/artifacts/checkpoints result_dir=verifier/evaluation/results/sft-direct-from-base-qwen3p5-2b-disjoint-4500-samples/cot-brief-cap1024/run1
+started_at=2026-10-16T13:40:27Z
+0 done, 900 to go -> verifier/evaluation/results/sft-direct-from-base-qwen3p5-2b-disjoint-4500-samples/cot-brief-cap1024/run1/predictions.jsonl
+Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]Loading weights:   0%|          | 1/320 [00:02<11:08,  2.10s/it]Loading weights:   3%|▎         | 11/320 [00:02<00:47,  6.45it/s]Loading weights:   7%|▋         | 22/320 [00:02<00:20, 14.45it/s]Loading weights:   9%|▉         | 28/320 [00:02<00:16, 17.36it/s]Loading weights:  12%|█▏        | 39/320 [00:02<00:10, 28.04it/s]Loading weights:  14%|█▍        | 46/320 [00:03<00:10, 25.20it/s]Loading weights:  19%|█▉        | 61/320 [00:03<00:06, 40.19it/s]Loading weights:  22%|██▏       | 69/320 [00:03<00:06, 39.74it/s]Loading weights:  24%|██▍       | 78/320 [00:03<00:05, 44.01it/s]Loading weights:  27%|██▋       | 85/320 [00:03<00:05, 46.85it/s]Loading weights:  29%|██▉       | 92/320 [00:03<00:04, 51.05it/s]Loading weights:  31%|███       | 99/320 [00:04<00:05, 39.43it/s]Loading weights:  33%|███▎      | 105/320 [00:04<00:05, 41.78it/s]Loading weights:  37%|███▋      | 117/320 [00:04<00:03, 56.52it/s]Loading weights:  39%|███▉      | 124/320 [00:04<00:03, 51.57it/s]Loading weights:  41%|████▏     | 132/320 [00:04<00:03, 52.06it/s]Loading weights:  43%|████▎     | 138/320 [00:04<00:03, 51.84it/s]Loading weights:  46%|████▌     | 146/320 [00:04<00:03, 53.32it/s]Loading weights:  48%|████▊     | 152/320 [00:05<00:04, 39.22it/s]Loading weights:  52%|█████▏    | 165/320 [00:05<00:02, 51.91it/s]Loading weights:  53%|█████▎    | 171/320 [00:05<00:02, 51.13it/s]Loading weights:  57%|█████▋    | 181/320 [00:05<00:02, 55.49it/s]Loading weights:  58%|█████▊    | 187/320 [00:05<00:02, 49.49it/s]Loading weights:  62%|██████▏   | 199/320 [00:05<00:02, 58.06it/s]Loading weights:  64%|██████▍   | 206/320 [00:06<00:02, 43.39it/s]Loading weights:  69%|██████▉   | 220/320 [00:06<00:01, 58.40it/s]Loading weights:  71%|███████   | 227/320 [00:06<00:01, 49.64it/s]Loading weights:  74%|███████▍  | 236/320 [00:06<00:01, 56.24it/s]Loading weights:  76%|███████▌  | 243/320 [00:06<00:01, 51.39it/s]Loading weights:  79%|███████▉  | 252/320 [00:06<00:01, 54.53it/s]Loading weights:  81%|████████  | 258/320 [00:07<00:01, 42.91it/s]Loading weights:  83%|████████▎ | 265/320 [00:07<00:01, 46.50it/s]Loading weights:  86%|████████▋ | 276/320 [00:07<00:00, 59.15it/s]Loading weights:  88%|████████▊ | 283/320 [00:07<00:00, 53.02it/s]Loading weights:  91%|█████████ | 291/320 [00:07<00:00, 52.74it/s]Loading weights:  93%|█████████▎| 297/320 [00:07<00:00, 52.58it/s]Loading weights:  95%|█████████▌| 304/320 [00:07<00:00, 55.85it/s]Loading weights:  97%|█████████▋| 310/320 [00:08<00:00, 41.99it/s]Loading weights:  98%|█████████▊| 315/320 [00:08<00:00, 41.96it/s]Loading weights: 100%|██████████| 320/320 [00:08<00:00, 38.41it/s]
+[transformers] `causal_conv1d_fn` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+[transformers] `chunk_gated_delta_rule` is falling back to its reference PyTorch implementation because `flash-linear-attention` is not installed. This is correct but much slower; install `flash-linear-attention` for the optimized kernel.
+[transformers] `causal_conv1d_update` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+[transformers] `fused_recurrent_gated_delta_rule` is falling back to its reference PyTorch implementation because `flash-linear-attention` is not installed. This is correct but much slower; install `flash-linear-attention` for the optimized kernel.
+  20/900  33s
+  40/900  52s
+  60/900  70s
+  80/900  90s
+  100/900  107s
+  120/900  126s
+  140/900  145s
+  160/900  166s
+  180/900  188s
+  200/900  206s
+  220/900  227s
+  240/900  244s
+  260/900  261s
+  280/900  279s
+  300/900  298s
+  320/900  317s
+  340/900  336s
+  360/900  355s
+  380/900  373s
+  400/900  393s
+  420/900  414s
+  440/900  432s
+  460/900  453s
+  480/900  470s
+  500/900  488s
+  520/900  507s
+  540/900  561s
+  560/900  578s
+  580/900  598s
+  600/900  617s
+  620/900  638s
+  640/900  659s
+  660/900  679s
+  680/900  696s
+  700/900  714s
+  720/900  734s
+  740/900  754s
+  760/900  774s
+  780/900  794s
+  800/900  813s
+  820/900  831s
+  840/900  849s
+  860/900  868s
+  880/900  886s
+  900/900  907s
+
+== Qwen/Qwen3.5-2B+sft-direct-from-base-qwen3p5-2b-disjoint-4500-samples_run1-json-sft  (900 claims, predictions.jsonl) ==
+  format adherence      0.999   json=1.00  format=1.00  verdict=1.00  evidence=1.00  confidence=1.00
+  label accuracy        0.739
+  FEVER score           0.643
+  evidence F1 (non-NEI) 0.657
+  recall SUPPORTED        0.820  (n=300)
+  recall REFUTED          0.800  (n=300)
+  recall NOT_ENOUGH_INFO  0.597  (n=300)
+  ECE stated_conf       0.26   (available 1.00)
+      [0.9,1.0)  n=899  conf=1.00  acc=0.74
+  ECE token_conf        0.2   (available 1.00)
+      [0.4,0.5)  n=3    conf=0.50  acc=0.00
+      [0.5,0.6)  n=25   conf=0.56  acc=0.56
+      [0.6,0.7)  n=33   conf=0.65  acc=0.55
+      [0.7,0.8)  n=50   conf=0.75  acc=0.52
+      [0.8,0.9)  n=51   conf=0.86  acc=0.53
+      [0.9,1.0)  n=737  conf=0.99  acc=0.79
+  non-NEI, gold in  context: n=517  acc=0.857  FEVER=0.774
+  non-NEI, gold NOT in context: n=83   acc=0.518  FEVER=0.000
+  tokens in/out         1408 / 58 per claim
+  providers             {'local': 900}
+finished_at=2026-10-16T13:56:32Z
+predictions=verifier/evaluation/results/sft-direct-from-base-qwen3p5-2b-disjoint-4500-samples/cot-brief-cap1024/run1/predictions.jsonl metrics=verifier/evaluation/results/sft-direct-from-base-qwen3p5-2b-disjoint-4500-samples/cot-brief-cap1024/run1/metrics.json

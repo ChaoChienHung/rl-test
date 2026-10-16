@@ -1,0 +1,78 @@
+job=959762 run=run1 commit=e7935f4fb42c9b5e86b26391dbc86af322f078e5 n=900 thinking=off prompt_style=direct max_new_tokens=1024 retrieval=titles model=Qwen/Qwen3.5-2B checkpoints=verifier/experiments/sft-direct-from-base-qwen3p5-2b-disjoint-4500-samples/runs/run1-json-sft/artifacts/checkpoints result_dir=verifier/evaluation/results/sft-direct-from-base-qwen3p5-2b-disjoint-4500-samples/direct-cap1024/run1
+started_at=2026-10-16T13:33:26Z
+0 done, 900 to go -> verifier/evaluation/results/sft-direct-from-base-qwen3p5-2b-disjoint-4500-samples/direct-cap1024/run1/predictions.jsonl
+Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]Loading weights:   0%|          | 1/320 [00:02<14:17,  2.69s/it]Loading weights:   3%|▎         | 11/320 [00:02<00:57,  5.37it/s]Loading weights:   5%|▌         | 17/320 [00:02<00:35,  8.47it/s]Loading weights:   8%|▊         | 24/320 [00:03<00:21, 13.51it/s]Loading weights:   9%|▉         | 30/320 [00:03<00:17, 16.94it/s]Loading weights:  11%|█▏        | 36/320 [00:03<00:13, 21.00it/s]Loading weights:  13%|█▎        | 41/320 [00:03<00:12, 22.81it/s]Loading weights:  14%|█▍        | 45/320 [00:03<00:12, 22.92it/s]Loading weights:  15%|█▌        | 49/320 [00:03<00:12, 22.47it/s]Loading weights:  17%|█▋        | 54/320 [00:04<00:09, 26.93it/s]Loading weights:  18%|█▊        | 59/320 [00:04<00:08, 29.87it/s]Loading weights:  20%|██        | 65/320 [00:04<00:09, 27.18it/s]Loading weights:  24%|██▍       | 76/320 [00:04<00:05, 42.01it/s]Loading weights:  26%|██▌       | 82/320 [00:04<00:06, 36.54it/s]Loading weights:  29%|██▉       | 92/320 [00:04<00:04, 47.78it/s]Loading weights:  31%|███       | 98/320 [00:05<00:06, 35.09it/s]Loading weights:  32%|███▏      | 103/320 [00:05<00:06, 31.14it/s]Loading weights:  35%|███▍      | 111/320 [00:05<00:05, 35.45it/s]Loading weights:  37%|███▋      | 118/320 [00:05<00:05, 38.29it/s]Loading weights:  38%|███▊      | 123/320 [00:05<00:05, 34.09it/s]Loading weights:  40%|███▉      | 127/320 [00:06<00:05, 33.10it/s]Loading weights:  41%|████▏     | 132/320 [00:06<00:06, 30.16it/s]Loading weights:  44%|████▍     | 142/320 [00:06<00:04, 37.40it/s]Loading weights:  46%|████▌     | 147/320 [00:06<00:04, 36.69it/s]Loading weights:  47%|████▋     | 151/320 [00:06<00:04, 35.62it/s]Loading weights:  48%|████▊     | 155/320 [00:06<00:04, 34.25it/s]Loading weights:  52%|█████▏    | 166/320 [00:07<00:03, 44.33it/s]Loading weights:  53%|█████▎    | 171/320 [00:07<00:03, 45.02it/s]Loading weights:  55%|█████▌    | 176/320 [00:07<00:03, 39.11it/s]Loading weights:  57%|█████▋    | 182/320 [00:07<00:03, 41.98it/s]Loading weights:  58%|█████▊    | 187/320 [00:07<00:04, 30.72it/s]Loading weights:  61%|██████    | 195/320 [00:07<00:03, 38.29it/s]Loading weights:  62%|██████▎   | 200/320 [00:08<00:03, 33.22it/s]Loading weights:  64%|██████▍   | 204/320 [00:08<00:03, 29.79it/s]Loading weights:  65%|██████▌   | 208/320 [00:08<00:03, 28.27it/s]Loading weights:  68%|██████▊   | 218/320 [00:08<00:02, 35.83it/s]Loading weights:  70%|██████▉   | 223/320 [00:08<00:03, 30.16it/s]Loading weights:  74%|███████▍  | 236/320 [00:08<00:01, 46.32it/s]Loading weights:  76%|███████▌  | 242/320 [00:09<00:01, 42.37it/s]Loading weights:  78%|███████▊  | 248/320 [00:09<00:01, 43.26it/s]Loading weights:  79%|███████▉  | 253/320 [00:09<00:01, 38.66it/s]Loading weights:  81%|████████  | 258/320 [00:09<00:02, 30.48it/s]Loading weights:  82%|████████▏ | 262/320 [00:09<00:01, 32.08it/s]Loading weights:  84%|████████▍ | 268/320 [00:09<00:01, 37.58it/s]Loading weights:  85%|████████▌ | 273/320 [00:10<00:01, 36.37it/s]Loading weights:  87%|████████▋ | 278/320 [00:10<00:01, 33.33it/s]Loading weights:  89%|████████▉ | 284/320 [00:10<00:00, 38.83it/s]Loading weights:  90%|█████████ | 289/320 [00:10<00:00, 40.03it/s]Loading weights:  92%|█████████▏| 294/320 [00:10<00:00, 35.21it/s]Loading weights:  95%|█████████▌| 304/320 [00:10<00:00, 48.98it/s]Loading weights:  97%|█████████▋| 310/320 [00:10<00:00, 38.29it/s]Loading weights:  98%|█████████▊| 315/320 [00:11<00:00, 38.42it/s]Loading weights: 100%|██████████| 320/320 [00:11<00:00, 28.63it/s]
+[transformers] `causal_conv1d_fn` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+[transformers] `chunk_gated_delta_rule` is falling back to its reference PyTorch implementation because `flash-linear-attention` is not installed. This is correct but much slower; install `flash-linear-attention` for the optimized kernel.
+[transformers] `causal_conv1d_update` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+[transformers] `fused_recurrent_gated_delta_rule` is falling back to its reference PyTorch implementation because `flash-linear-attention` is not installed. This is correct but much slower; install `flash-linear-attention` for the optimized kernel.
+  20/900  23s
+  40/900  34s
+  60/900  46s
+  80/900  57s
+  100/900  69s
+  120/900  80s
+  140/900  91s
+  160/900  103s
+  180/900  114s
+  200/900  126s
+  220/900  138s
+  240/900  149s
+  260/900  160s
+  280/900  171s
+  300/900  183s
+  320/900  195s
+  340/900  208s
+  360/900  219s
+  380/900  231s
+  400/900  243s
+  420/900  254s
+  440/900  265s
+  460/900  277s
+  480/900  289s
+  500/900  300s
+  520/900  311s
+  540/900  323s
+  560/900  334s
+  580/900  346s
+  600/900  356s
+  620/900  368s
+  640/900  380s
+  660/900  393s
+  680/900  404s
+  700/900  415s
+  720/900  427s
+  740/900  439s
+  760/900  451s
+  780/900  461s
+  800/900  472s
+  820/900  483s
+  840/900  495s
+  860/900  506s
+  880/900  517s
+  900/900  529s
+
+== Qwen/Qwen3.5-2B+sft-direct-from-base-qwen3p5-2b-disjoint-4500-samples_run1-json-sft  (900 claims, predictions.jsonl) ==
+  format adherence      1.000   json=1.00  format=1.00  verdict=1.00  evidence=1.00  confidence=1.00
+  label accuracy        0.767
+  FEVER score           0.676
+  evidence F1 (non-NEI) 0.649
+  recall SUPPORTED        0.837  (n=300)
+  recall REFUTED          0.750  (n=300)
+  recall NOT_ENOUGH_INFO  0.713  (n=300)
+  ECE stated_conf       0.233   (available 1.00)
+      [0.9,1.0)  n=900  conf=1.00  acc=0.77
+  ECE token_conf        0.05   (available 1.00)
+      [0.3,0.4)  n=4    conf=0.38  acc=0.25
+      [0.4,0.5)  n=40   conf=0.46  acc=0.45
+      [0.5,0.6)  n=110  conf=0.55  acc=0.60
+      [0.6,0.7)  n=97   conf=0.65  acc=0.67
+      [0.7,0.8)  n=132  conf=0.75  acc=0.70
+      [0.8,0.9)  n=162  conf=0.86  acc=0.73
+      [0.9,1.0)  n=355  conf=0.96  acc=0.92
+  non-NEI, gold in  context: n=517  acc=0.841  FEVER=0.762
+  non-NEI, gold NOT in context: n=83   acc=0.494  FEVER=0.000
+  tokens in/out         1365 / 24 per claim
+  providers             {'local': 900}
+finished_at=2026-10-16T13:43:21Z
+predictions=verifier/evaluation/results/sft-direct-from-base-qwen3p5-2b-disjoint-4500-samples/direct-cap1024/run1/predictions.jsonl metrics=verifier/evaluation/results/sft-direct-from-base-qwen3p5-2b-disjoint-4500-samples/direct-cap1024/run1/metrics.json
