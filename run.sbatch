@@ -1,24 +1,20 @@
 #!/usr/bin/env bash
-#SBATCH --job-name=sft5500-eval-train
-#SBATCH --partition=gpu-long
-#SBATCH --time=06:00:00
+#SBATCH --job-name=cot-eval-sweep
+#SBATCH --partition=gpu
+#SBATCH --time=02:00:00
 #SBATCH --cpus-per-task=4
-#SBATCH --mem=32G
+#SBATCH --mem=24G
 #SBATCH --gpus=a100-40:1
 #SBATCH --exclude=xgpe2
 #SBATCH --array=0-1%2
 #SBATCH --output=slurm-%x-%A_%a.out
 
-# Array Task 0: Evaluate Direct SFT (5,500 claims) on FEVER dev (both direct and cot_brief, cap 1024).
-# Array Task 1: Train Native Thinking CoT SFT (5,500 claims) on Qwen3.5-2B (1 epoch, ~1.8h).
+# Array Task 0: Evaluate Native-Thinking CoT SFT (5,500 claims, run1) on FEVER dev (cot_native, cap 1024).
+# Array Task 1: Evaluate Unseen-Arm CoT GRPO (from SFT 4695, cot-grpo1) on FEVER dev (cot_native, cap 1024).
 set -euo pipefail
 cd "${SLURM_SUBMIT_DIR:?Submit from the repository root}"
 test -f verifier/evaluation/run_eval.sh || {
   echo "Submit from the repository root (missing verifier/evaluation/run_eval.sh)" >&2
-  exit 2
-}
-test -f verifier/experiments/sft-cot-from-base-qwen3p5-2b-5500-samples/train.py || {
-  echo "Submit from the repository root (missing CoT 5500 training script)" >&2
   exit 2
 }
 
@@ -47,54 +43,51 @@ resolve_adapter() {
   return 2
 }
 
+max_new_tokens="${MAX_NEW_TOKENS:-1024}"
+n_claims="${N_CLAIMS:-900}"
+prompt_style="${PROMPT_STYLE:-cot_native}"
+
 case "${SLURM_ARRAY_TASK_ID:?Expected array task 0 or 1}" in
   0)
-    direct_run_name="${DIRECT_RUN_NAME:-$run_tag}"
+    eval_model="sft-cot-from-base-qwen3p5-2b-5500-samples"
+    sft_run="${SFT_COT_RUN:-$run_tag}"
     checkpoint="$(resolve_adapter \
-      "${DIRECT_CHECKPOINTS:-verifier/experiments/sft-direct-from-base-qwen3p5-2b-5500-samples/runs/${direct_run_name}/artifacts/checkpoints}")"
-    max_new_tokens="${MAX_NEW_TOKENS:-1024}"
-    eval_styles="${DIRECT_EVAL_STYLES:-"direct cot_brief"}"
+      "${SFT_COT_CHECKPOINTS:-verifier/experiments/${eval_model}/runs/${sft_run}/artifacts/checkpoints}")"
 
-    echo "Task 0: Evaluate Direct SFT (5,500 claims): checkpoint=$checkpoint styles=$eval_styles cap=$max_new_tokens"
-    for style in $eval_styles; do
-      style_hyphen="${style//_/-}"
-      echo "--- Evaluating Direct SFT with style=$style (hierarchical layout: sft-direct-from-base-qwen3p5-2b-5500-samples/${style_hyphen}-cap${max_new_tokens}) ---"
-      export CHECKPOINTS="$checkpoint"
-      export EVAL_MODEL="sft-direct-from-base-qwen3p5-2b-5500-samples"
-      export PROMPT_STYLE="$style"
-      export THINKING=off
-      export MAX_NEW_TOKENS="$max_new_tokens"
-      export N_CLAIMS="${N_CLAIMS:-900}"
-      export RUN_NAME="${DIRECT_RUN_NAME:-$run_tag}"
-      unset EVAL_CONDITION
-      bash verifier/evaluation/run_eval.sh
-    done
+    echo "=== Task 0: Evaluate Native-Thinking CoT SFT (5,500 claims) ==="
+    echo "Checkpoint: $checkpoint"
+    echo "Prompt Style: $prompt_style | Cap: $max_new_tokens | Claims: $n_claims"
+
+    export CHECKPOINTS="$checkpoint"
+    export EVAL_MODEL="$eval_model"
+    export PROMPT_STYLE="$prompt_style"
+    export MAX_NEW_TOKENS="$max_new_tokens"
+    export N_CLAIMS="$n_claims"
+    export RUN_NAME="$sft_run"
+    unset EVAL_CONDITION
+    bash verifier/evaluation/run_eval.sh
     ;;
+
   1)
-    config="sft-cot-from-base-qwen3p5-2b-5500-samples"
-    run_name="${COT_RUN_NAME:-${run_tag}}"
-    [[ "$run_name" =~ ^[A-Za-z0-9][A-Za-z0-9_-]*$ ]] || {
-      echo "COT_RUN_NAME must use letters, digits, underscore or dash" >&2
-      exit 2
-    }
-    script="verifier/experiments/$config/train.py"
-    data="${COT_DATA:-verifier/data/train/sft/fever-oracle-cot-soclaas/cot_native_sft_labeled_prompts.jsonl}"
-    test -f "$data" || {
-      echo "Missing Native Thinking CoT 5500 data: $data" >&2
-      exit 2
-    }
-    seed="${SEED:-0}"
-    [[ "$seed" =~ ^[0-9]+$ ]] || {
-      echo "SEED must be a nonnegative integer" >&2
-      exit 2
-    }
-    args=(--run-name "$run_name" --seed "$seed" --data "$data")
-    if [[ -n "${OUTPUT_ROOT:-}" ]]; then
-      args+=(--output-root "$OUTPUT_ROOT")
-    fi
-    echo "Task 1: Train Native Thinking CoT SFT (5,500 claims): config=$config run=$run_name data=$data seed=$seed"
-    srun python "$script" "${args[@]}"
+    eval_model="grpo-cot-from-sft4695-qwen3p5-2b-no-calibration-kl0-1200-samples"
+    grpo_run="${GRPO_UNSEEN_RUN:-cot-grpo1-unseen-cot-grpo}"
+    checkpoint="$(resolve_adapter \
+      "${GRPO_UNSEEN_CHECKPOINTS:-verifier/experiments/${eval_model}/runs/${grpo_run}/artifacts/checkpoints}")"
+
+    echo "=== Task 1: Evaluate Unseen-Arm Native-Thinking CoT GRPO (from SFT 4695) ==="
+    echo "Checkpoint: $checkpoint"
+    echo "Prompt Style: $prompt_style | Cap: $max_new_tokens | Claims: $n_claims"
+
+    export CHECKPOINTS="$checkpoint"
+    export EVAL_MODEL="$eval_model"
+    export PROMPT_STYLE="$prompt_style"
+    export MAX_NEW_TOKENS="$max_new_tokens"
+    export N_CLAIMS="$n_claims"
+    export RUN_NAME="${GRPO_EVAL_RUN_NAME:-run1}"
+    unset EVAL_CONDITION
+    bash verifier/evaluation/run_eval.sh
     ;;
+
   *)
     echo "Unexpected array task: $SLURM_ARRAY_TASK_ID (expected 0 or 1)" >&2
     exit 2

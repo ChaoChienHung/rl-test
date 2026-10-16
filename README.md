@@ -11,7 +11,7 @@ This repository studies evidence-grounded claim verification on FEVER. A verifie
 
 | Path | What it contains |
 |---|---|
-| [`run.sbatch`](run.sbatch) | Two-task Slurm array: evaluates 5,500 direct SFT baseline and trains 5,500 native-thinking CoT SFT |
+| [`run.sbatch`](run.sbatch) | Two-task Slurm array: evaluates 5,500 Native CoT SFT (Task 0) and Unseen-Arm CoT GRPO 4695 (Task 1) |
 | [`verifier/TODO.md`](verifier/TODO.md) | Current priorities and experiment checklist |
 | [`verifier/docs/`](verifier/docs/) | Data guide, experiment results, architecture and background |
 | [`verifier/data/train/`](verifier/data/train/) | Committed SFT and GRPO training examples |
@@ -181,11 +181,11 @@ echo "Index Job: $job_id"
 squeue -j "$job_id"
 ```
 
-#### B. Submit one-command Slurm array follow-up (`run.sbatch`)
-Executes Task 0 (5,500 direct SFT baseline) and Task 1 (5,500 CoT SFT training):
+#### B. Submit one-command Slurm array evaluation sweep (`run.sbatch`)
+Executes Task 0 (evaluate 5,500 Native CoT SFT) and Task 1 (evaluate Unseen-Arm 4,695 CoT GRPO):
 ```bash
 job=$(sbatch --parsable run.sbatch)
-echo "5,500 SFT Comparison Array Job: $job"
+echo "CoT Evaluation Sweep Array Job: $job"
 squeue -j "$job"
 ```
 
