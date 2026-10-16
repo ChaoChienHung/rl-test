@@ -49,7 +49,69 @@ The core repository workflow consists of data and retrieval index preparation, v
   python -m retrieval.build_fever_index --db verifier/data/fever/pages.sqlite --bm25-dir verifier/data/fever/bm25_index
   ```
 
-### 2. Verifier Training & Methodology Taxonomy
+### 2. Course Focus: RL-Driven vs Non-RL Architectural Contributions
+
+As this project serves as a Reinforcement Learning research study, our engineering and methodological contributions are strictly partitioned into **RL-Driven Innovations** (the core research subject) and **Non-RL Structural Foundations** (the enabling infrastructure):
+
+```text
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                     RL-Driven Contributions (Course Core)                       │
+│  • Rule-Based Verifiable Rewards (RLVR): verdict harm, evidence F1, format pen. │
+│  • On-Policy Reasoning Exploration: GRPO group rollouts vs static SFT CoT       │
+│  • Advanced RLVR Algorithmic Frontier: Dr. GRPO (σ-removal) & DAPO (sampling)   │
+│  • Contrastive Offline Preference Alignment: DPO on teacher error traces        │
+│  • Exploration-Exploitation Search Loop: Dynamic multi-turn retrieval (agent/)  │
+└──────────────────────────────────────┬──────────────────────────────────────────┘
+                                       │ Built on top of
+┌──────────────────────────────────────▼──────────────────────────────────────────┐
+│               Non-RL Architectural & Structural Foundations                     │
+│  • Causal Attention Reordering: Evidence-First Tag format (<evidence> → <verdict>)│
+│  • Decoupled Representation Logits: Eliminating textual JSON confidence tax     │
+│  • Prefix Bidirectional Attention: Simulating T5 all-to-all encoder in prefill  │
+│  • Data Hygiene & Split Manifests: 5,500 clean repair & 4,500/1,000 partitions │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+### 3. Glossary of Terms & Metrics
+
+To ensure transparent cross-team readability and consistent terminology, the key methods, environments, partitions, and metrics used throughout this repository are defined below:
+
+#### Training Paradigms & Algorithms
+- **`sft-direct`**: Direct Supervised Fine-Tuning without intermediate reasoning. The model is trained directly on input claim-evidence pairs to emit the final verdict and evidence citations immediately, offering fast inference but limited attention conditioning.
+- **`sft-cot`**: Chain-of-Thought Supervised Fine-Tuning via teacher imitation. The model is fine-tuned to reproduce step-by-step explanatory rationales (distilled from Qwen-27B or Gemini) prior to generating the verdict.
+- **`grpo-cot`**: Group Relative Policy Optimization (RLVR) with native `<think>` tokens. Bootstrapped from an SFT checkpoint, the model actively explores reasoning paths via group rollouts ($G=8$) and optimizes against verifiable, rule-based reward functions (verdict harm penalty, evidence F1, and syntax compliance).
+- **`dr-grpo`**: A mathematically stabilized GRPO variant that removes the division by group reward standard deviation ($\sigma_R$), preventing gradient variance explosion on homogeneous rollouts and eliminating token-length bias.
+- **`dapo`**: Decoupled Clip and Dynamic Sampling Policy Optimization; an advanced RLVR method that discards uninformative unanimous rollout batches ($\sigma_R = 0$) and decouples the upper and lower PPO clipping thresholds.
+- **`dpo`**: Direct Preference Optimization; an offline alignment technique that trains policy weights directly on contrastive $(x, y_{\text{win}}, y_{\text{lose}})$ preference pairs extracted from teacher error audits, without requiring a separate reward model.
+
+#### Retrieval Environments & Conditions
+- **`oracle`**: An evaluation setting where the ground-truth Wikipedia article is guaranteed to be present in the verifier's input context alongside title-matched distractor pages, isolating verification reasoning from retrieval quality.
+- **`titles`**: A realistic, end-to-end evaluation condition that queries the corpus via Wikipedia article title exact-matching combined with BM25 sentence retrieval.
+- **`bm25`**: A baseline information-retrieval condition relying solely on keyword BM25 score ranking across the corpus without article title priors.
+
+#### Dataset Partitions & Experimental Arms
+- **`disjoint split`**: A strict claim-level dataset partitioning scheme (e.g., 4,695/1,200 or 4,500/1,000) that guarantees zero claim ID overlap between training stages, preventing data leakage.
+- **`seen arm`**: A control experiment setting where Stage 2 training (continuation SFT or RL) operates on claim IDs already seen during Stage 1 SFT, measuring memorization and in-distribution policy optimization.
+- **`unseen arm`**: The primary benchmark setting where Stage 2 models are exposed strictly to novel, held-out claim IDs, evaluating out-of-distribution reasoning generalization and zero-shot transfer.
+
+#### Evaluation Metrics & Scoring
+- **`accuracy`**: The fraction of evaluation claims where the model's predicted verdict matches the ground-truth label ($V = V^*$).
+- **`fever_score`**: The strict official FEVER benchmark metric, which requires **both** an accurate verdict AND a complete citation of the gold evidence sentence set ($V = V^* \land E^* \subseteq E$).
+- **`evidence_f1`**: The sentence-level harmonic mean of precision and recall between cited evidence IDs and gold evidence sets on non-NEI claims.
+- **`format_adherence` (`format_rate`)**: The percentage of completions that strictly conform to parseable syntax (valid JSON or well-formed Native Tags) without truncated or malformed tokens.
+- **`token_conf` / `ECE`**: Calibrated confidence and Expected Calibration Error computed directly from the normalized softmax logits over the model's first verdict token (extracted from the pre-softmax vocabulary head).
+- **`stated_conf` / `ECE`**: Confidence and Expected Calibration Error evaluated from a numeric float explicitly verbalized in the model's generated text (observed to suffer from severe overconfidence and poor calibration).
+
+#### Target Classification Labels
+- **`SUPPORTED`**: The claim is fully affirmed and proven by the provided evidence (corresponds to FEVER's `SUPPORTS`).
+- **`REFUTED`**: The claim is contradicted and disproven by the provided evidence (corresponds to FEVER's `REFUTES`).
+- **`NOT_ENOUGH_INFO` (`NEI`)**: The provided evidence lacks sufficient information to either confirm or deny the claim (corresponds to FEVER's `NOT ENOUGH INFO`).
+
+---
+
+### 4. Verifier Training & Methodology Taxonomy
 
 The verifier fine-tunes `Qwen/Qwen3.5-2B` using parameter-efficient LoRA (rank 16) across two distinct training paradigms and two output representations:
 
@@ -82,7 +144,7 @@ The verifier fine-tunes `Qwen/Qwen3.5-2B` using parameter-efficient LoRA (rank 1
 
 - **Outputs**: LoRA weights, metadata (`meta.json`), and step logs (`train_log.json`) save under `verifier/experiments/<config>/runs/<run>/artifacts/`.
 
-### 3. Verifier Evaluation & Scoring
+### 5. Verifier Evaluation & Scoring
 
 Evaluates claim verification on frozen dev claim sets (default 900 claims with title retrieval):
 - **Prompt Styles**:
