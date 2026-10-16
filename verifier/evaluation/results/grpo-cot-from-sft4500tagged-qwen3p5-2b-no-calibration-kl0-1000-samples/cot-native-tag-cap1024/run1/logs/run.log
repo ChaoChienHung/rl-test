@@ -44,3 +44,30 @@ started_at=2026-10-16T15:22:54Z
   720/900  1890s
   740/900  1935s
   760/900  1992s
+  780/900  2041s
+  800/900  2085s
+  820/900  2139s
+  840/900  2185s
+  860/900  2241s
+  880/900  2291s
+  900/900  2353s
+
+== Qwen/Qwen3.5-2B+grpo-cot-from-sft4500tagged-qwen3p5-2b-no-calibration-kl0-1000-samples_run1-tag-grpo  (900 claims, predictions.jsonl) ==
+  format adherence      0.994   json=0.99  format=0.99  verdict=0.99  evidence=0.99  confidence=0.00
+  label accuracy        0.676
+  FEVER score           0.580
+  evidence F1 (non-NEI) 0.722
+  recall SUPPORTED        0.790  (n=300)
+  recall REFUTED          0.900  (n=300)
+  recall NOT_ENOUGH_INFO  0.337  (n=300)
+  ECE stated_conf       None   (available 0.00)
+  ECE token_conf        0.318   (available 0.99)
+      [0.7,0.8)  n=3    conf=0.75  acc=0.00
+      [0.8,0.9)  n=8    conf=0.84  acc=0.50
+      [0.9,1.0)  n=884  conf=1.00  acc=0.68
+  non-NEI, gold in  context: n=517  acc=0.901  FEVER=0.814
+  non-NEI, gold NOT in context: n=83   acc=0.494  FEVER=0.000
+  tokens in/out         1334 / 165 per claim
+  providers             {'local': 900}
+finished_at=2026-10-16T16:02:52Z
+predictions=verifier/evaluation/results/grpo-cot-from-sft4500tagged-qwen3p5-2b-no-calibration-kl0-1000-samples/cot-native-tag-cap1024/run1/predictions.jsonl metrics=verifier/evaluation/results/grpo-cot-from-sft4500tagged-qwen3p5-2b-no-calibration-kl0-1000-samples/cot-native-tag-cap1024/run1/metrics.json
