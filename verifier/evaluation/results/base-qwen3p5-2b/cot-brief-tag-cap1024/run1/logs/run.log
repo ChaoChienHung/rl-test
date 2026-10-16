@@ -1,0 +1,75 @@
+job=956635 run=run1 commit=1273fe4b98638d95b85f5db27fb20d9b2ea95b29 n=900 thinking=off prompt_style=cot_brief_tag max_new_tokens=1024 retrieval=titles model=Qwen/Qwen3.5-2B checkpoints=none result_dir=verifier/evaluation/results/base-qwen3p5-2b/cot-brief-tag-cap1024/run1
+started_at=2026-10-16T05:26:07Z
+0 done, 900 to go -> verifier/evaluation/results/base-qwen3p5-2b/cot-brief-tag-cap1024/run1/predictions.jsonl
+Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]Loading weights:   4%|▍         | 13/320 [00:00<00:02, 121.07it/s]Loading weights:  14%|█▍        | 46/320 [00:00<00:01, 239.56it/s]Loading weights:  28%|██▊       | 88/320 [00:00<00:00, 311.63it/s]Loading weights:  38%|███▊      | 120/320 [00:00<00:00, 312.45it/s]Loading weights:  48%|████▊     | 152/320 [00:00<00:00, 309.75it/s]Loading weights:  62%|██████▏   | 197/320 [00:00<00:00, 346.09it/s]Loading weights:  73%|███████▎  | 235/320 [00:00<00:00, 354.29it/s]Loading weights:  85%|████████▍ | 271/320 [00:00<00:00, 344.65it/s]Loading weights:  96%|█████████▌| 306/320 [00:00<00:00, 336.47it/s]Loading weights: 100%|██████████| 320/320 [00:00<00:00, 321.99it/s]
+[transformers] `causal_conv1d_fn` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+[transformers] `chunk_gated_delta_rule` is falling back to its reference PyTorch implementation because `flash-linear-attention` is not installed. This is correct but much slower; install `flash-linear-attention` for the optimized kernel.
+[transformers] `causal_conv1d_update` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+[transformers] `fused_recurrent_gated_delta_rule` is falling back to its reference PyTorch implementation because `flash-linear-attention` is not installed. This is correct but much slower; install `flash-linear-attention` for the optimized kernel.
+  20/900  27s
+  40/900  56s
+  60/900  75s
+  80/900  98s
+  100/900  123s
+  120/900  139s
+  140/900  163s
+  160/900  190s
+  180/900  216s
+  200/900  235s
+  220/900  284s
+  240/900  305s
+  260/900  325s
+  280/900  345s
+  300/900  372s
+  320/900  394s
+  340/900  415s
+  360/900  435s
+  380/900  456s
+  400/900  478s
+  420/900  496s
+  440/900  524s
+  460/900  542s
+  480/900  561s
+  500/900  581s
+  520/900  604s
+  540/900  626s
+  560/900  646s
+  580/900  667s
+  600/900  683s
+  620/900  704s
+  640/900  726s
+  660/900  747s
+  680/900  764s
+  700/900  779s
+  720/900  800s
+  740/900  823s
+  760/900  841s
+  780/900  859s
+  800/900  874s
+  820/900  897s
+  840/900  920s
+  860/900  949s
+  880/900  970s
+  900/900  996s
+
+== Qwen/Qwen3.5-2B  (900 claims, predictions.jsonl) ==
+  format adherence      0.998   json=1.00  format=1.00  verdict=1.00  evidence=1.00  confidence=0.00
+  label accuracy        0.553
+  FEVER score           0.429
+  evidence F1 (non-NEI) 0.581
+  recall SUPPORTED        0.897  (n=300)
+  recall REFUTED          0.657  (n=300)
+  recall NOT_ENOUGH_INFO  0.107  (n=300)
+  ECE stated_conf       None   (available 0.00)
+  ECE token_conf        0.351   (available 1.00)
+      [0.5,0.6)  n=67   conf=0.55  acc=0.42
+      [0.6,0.7)  n=59   conf=0.65  acc=0.42
+      [0.7,0.8)  n=67   conf=0.75  acc=0.52
+      [0.8,0.9)  n=84   conf=0.85  acc=0.68
+      [0.9,1.0)  n=622  conf=0.99  acc=0.57
+  non-NEI, gold in  context: n=517  acc=0.797  FEVER=0.685
+  non-NEI, gold NOT in context: n=83   acc=0.651  FEVER=0.000
+  tokens in/out         1331 / 49 per claim
+  providers             {'local': 900}
+finished_at=2026-10-16T05:43:16Z
+predictions=verifier/evaluation/results/base-qwen3p5-2b/cot-brief-tag-cap1024/run1/predictions.jsonl metrics=verifier/evaluation/results/base-qwen3p5-2b/cot-brief-tag-cap1024/run1/metrics.json
