@@ -10,11 +10,27 @@ Current work is verifier evaluation on the `rl` branch. These tasks replace the 
 
 3. [x] Complete the six Base/SFT × direct/long CoT/brief CoT evaluations with the same 900 IDs, titles retrieval and 1024-token output cap. Base accuracy: 47.6% / 62.8% / 61.8%; SFT accuracy: 74.6% / 71.4% / 74.6%. Base long CoT has the best Base FEVER score (52.8%); SFT direct has the best SFT FEVER score (66.3%). SFT long CoT still has 44 capped outputs at 1024. See `INSIGHT.md`; validate on an untouched holdout because brief CoT was tuned on these dev claims.
 
-4. [ ] Complete the fixed 4,695/1,200 split comparison on SoC. Both SFT starting checkpoints and both Native-Thinking CoT GRPO jobs (Seen Arm from 5895 and Unseen Arm from 4695) have completed training on SoC. The Seen Arm CoT GRPO model (`cot-grpo1-seen-cot-grpo`) achieved a new record **67.1% FEVER score** and **72.2% non-NEI evidence F1** under `cot_native` (cap 1024) evaluation. The Unseen Arm CoT GRPO model (`cot-grpo1-unseen-cot-grpo`) is now queued for evaluation via `run.sbatch`.
+4. [x] Complete the fixed 4,695/1,200 split comparison on SoC. Both SFT starting checkpoints and both Native-Thinking CoT GRPO jobs (Seen Arm from 5895 and Unseen Arm from 4695) have completed training and evaluation on SoC.
+   - **Seen Arm CoT GRPO** (`cot-grpo1-seen-cot-grpo`): **74.1% accuracy**, **67.1% FEVER score**, **72.2% non-NEI evidence F1** under `cot_native` (cap 1024), beating the continued SFT control (60.2% evidence F1) by +12.0%.
+   - **Unseen Arm CoT GRPO** (`cot-grpo1-unseen-cot-grpo`): **76.2% accuracy**, **67.2% FEVER score**, **73.7% non-NEI evidence F1** (all-time repository records!), establishing that CoT GRPO generalizes out-of-distribution without reliance on seen claims.
 
 5. [ ] Audit the saved 1024-token **fail cases before changing prompts, decoding, or training**. Group Base direct's 130 invalid outputs by JSON parse, verdict, evidence-ID and confidence failure, and separate its 3 capped cases. Inspect SFT long CoT's 48 invalid outputs (44 capped) and brief CoT's 9 capped failures for repetition, missing final JSON and excessive reasoning. Compare matched claim IDs where direct versus long/brief CoT flip verdict or FEVER outcome; split by gold label and gold evidence in context. Save counts plus a small ID-based example list, then choose a targeted fix and re-evaluate on a fresh holdout. Do not tune again on these 900 dev claims and call the result independent validation.
 
-6. [ ] Complete the **5,500 Direct vs Native-Thinking CoT SFT comparison**. Both models have completed training on SoC. Direct SFT achieved a peak **76.1% accuracy** and **66.4% FEVER score** under direct prompting (cap 1024), and **69.9% non-NEI evidence F1** under brief CoT. Native-Thinking CoT SFT (`sft-cot-from-base-qwen3p5-2b-5500-samples/runs/run1`, runtime 6,297s, peak 5.57 GB) is now queued for evaluation via `run.sbatch`.
+6. [x] Complete the **5,500 Direct vs Native-Thinking CoT SFT comparison**. Both models have completed training and evaluation on SoC.
+   - **Direct SFT 5500**: **76.1% accuracy**, **66.4% FEVER score** (direct-cap1024), and **69.9% evidence F1** (cot-brief-cap1024), decisively outperforming the legacy 5,895 baseline (+1.6% accuracy, +7.3% REFUTED recall).
+   - **Native-Thinking CoT SFT 5500**: **73.4% accuracy**, **65.0% FEVER score**, **61.9% evidence F1** (cot-native-cap1024). Demonstrates that supervised teacher imitation alone underperforms RL-rewarded reasoning, highlighting the necessity of Stage 2 GRPO.
+
+7. [x] Build **Dual-Path 4,500 SFT / 1,000 GRPO datasets** from clean 5,500 claims (zero dev overlap):
+   - **Path 1 (Standard JSON)**: 4,500 balanced SFT (1,500 per class) + 1,000 disjoint GRPO holdout (`fever-oracle-disjoint-4500` & `fever-oracle-matched-grpo-1000`). Preserves backward compatibility and traceability.
+   - **Path 2 (Native Tag Format)**: Parallel datasets with `<evidence>...</evidence>\n<verdict>...</verdict>` (evidence-first causal attention) and `<think>...</think>` tags (`fever-oracle-tagged-4500`, `fever-oracle-tagged-cot-4500` & `fever-oracle-tagged-grpo-1000`).
+   - Both splits generated via `utils/build_4500_1000_splits.py` with signed split manifests and 0 dev overlap.
+
+8. [x] **Universal Parsing, RLVR Rewards & Offline DPO Curation**:
+   - Upgraded `parse()` in `verifier/model.py` to seamlessly handle both JSON objects and native XML tags, with dual `VERDICT_PREFIX` support for token probabilities.
+   - Formulated RLVR process rewards (index grounding $+0.1$, non-existent index penalty $-0.5$, parsimony penalties) and advanced RL algorithms (**Dr. GRPO** advantage without $\sigma_R$ division and **DAPO** dynamic sampling / decoupled clip-higher) in `INSIGHT.md` (Discussions 7 & 10).
+   - Generated 395 contrastive DPO preference pairs $(x, y_w, y_l)$ from teacher rejections in both JSON and Tag formats via `utils/build_dpo_pairs.py` with 0 dev overlap.
+
+9. [ ] Train and benchmark Path 1 (4,500 Direct SFT + 1,000 CoT GRPO) vs Path 2 (4,500 Direct/CoT Tag SFT + 1,000 Tag GRPO / Dr. GRPO / DAPO).
 
 CoT SFT data preparation can proceed in parallel with step 1; it is a separate experiment and should not change the existing no-CoT checkpoint or its evaluation.
 

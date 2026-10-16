@@ -1,0 +1,34 @@
+{
+  "description": "Dual-Path 4,500 SFT and 1,000 GRPO Disjoint Split from clean 5,500 FEVER set",
+  "split_seed": 0,
+  "counts": {
+    "source_5500": 5500,
+    "sft_4500": 4500,
+    "grpo_1000": 1000
+  },
+  "labels": {
+    "sft": {
+      "REFUTED": 1500,
+      "SUPPORTED": 1500,
+      "NOT_ENOUGH_INFO": 1500
+    },
+    "grpo": {
+      "NOT_ENOUGH_INFO": 295,
+      "SUPPORTED": 340,
+      "REFUTED": 365
+    }
+  },
+  "dev_overlap": 0,
+  "paths": {
+    "path1_json": {
+      "sft_direct": "verifier/data/train/sft/fever-oracle-disjoint-4500/labeled_prompts.jsonl",
+      "sft_cot": "verifier/data/train/sft/fever-oracle-cot-4500/labeled_prompts.jsonl",
+      "grpo": "verifier/data/train/sft/fever-oracle-matched-grpo-1000/labeled_prompts.jsonl"
+    },
+    "path2_tag": {
+      "sft_direct": "verifier/data/train/sft/fever-oracle-tagged-4500/labeled_prompts.jsonl",
+      "sft_cot": "verifier/data/train/sft/fever-oracle-tagged-cot-4500/labeled_prompts.jsonl",
+      "grpo": "verifier/data/train/sft/fever-oracle-tagged-grpo-1000/labeled_prompts.jsonl"
+    }
+  }
+}

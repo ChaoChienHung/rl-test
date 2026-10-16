@@ -95,7 +95,7 @@ Reply immediately with exactly one complete JSON object and nothing else:
 Use [] for NOT_ENOUGH_INFO evidence. For other verdicts, cite at most 5 decisive E ids. Finish the JSON after the four fields."""
 
 OUT_DIR = os.path.join(DATA, "..", "..", "evaluation", "results", "manual")
-VERDICT_PREFIX = re.compile(r'"verdict"\s*:\s*"')
+VERDICT_PREFIX = re.compile(r'(?:"verdict"\s*:\s*"|<verdict>\s*)')
 
 
 def adapter_label(path):
@@ -176,17 +176,48 @@ def render(claim, shown):
 # ---------------------------------------------------------------- parsing
 
 def parse(text):
-    """Return (parsed dict or None, per-field validity)."""
-    # Native Qwen thinking may itself mention JSON; score only the final answer.
-    text = text.rsplit("</think>", 1)[-1]
-    m = re.search(r"\{.*\}", text, re.S)
+    """Return (parsed dict or None, per-field validity). Supports both JSON and Tag formats."""
+    # Native Qwen thinking may itself mention JSON or tags; score only the final answer.
+    text_after_think = text.rsplit("</think>", 1)[-1]
+
+    # 1. Check for native tag format: <verdict>...</verdict> and <evidence>...</evidence>
+    vm = re.search(r"<verdict>\s*([A-Za-z_]+)\s*</verdict>", text_after_think, re.I)
+    if vm:
+        verdict = vm.group(1).upper()
+        em = re.search(r"<evidence>(.*?)</evidence>", text_after_think, re.I | re.S)
+        if em:
+            ev_raw = em.group(1).strip()
+            evidence = re.findall(r"\bE\d+\b", ev_raw)
+            evidence_valid = True
+        else:
+            evidence = []
+            evidence_valid = False
+
+        cm = re.search(r"<confidence>\s*([0-9.]+)\s*</confidence>", text_after_think, re.I)
+        conf = float(cm.group(1)) if cm else None
+
+        obj = {"verdict": verdict, "evidence": evidence}
+        if conf is not None:
+            obj["confidence"] = conf
+
+        ok = {
+            "json": True,  # True for backward compatibility with check all(ok[k] for k in ('json', 'verdict', 'evidence'))
+            "format": True,
+            "verdict": verdict in LABELS,
+            "evidence": evidence_valid,
+            "confidence": isinstance(conf, (int, float)) and 0 <= conf <= 1 if conf is not None else False,
+        }
+        return obj, ok
+
+    # 2. Standard JSON format
+    m = re.search(r"\{.*\}", text_after_think, re.S)
     obj = None
     if m:
         try:
             obj = json.loads(m.group(0))
         except json.JSONDecodeError:
             pass
-    ok = {"json": isinstance(obj, dict)}
+    ok = {"json": isinstance(obj, dict), "format": isinstance(obj, dict)}
     obj = obj if ok["json"] else {}
     ok["verdict"] = obj.get("verdict") in LABELS
     ev = obj.get("evidence")

@@ -1,0 +1,17 @@
+{
+  "description": "DPO preference pairs constructed from teacher rejection traces",
+  "count": 395,
+  "rejection_reasons": {
+    "duplicate_or_too_many_citations": 9,
+    "gold_not_justified_by_context": 91,
+    "unselected_repaired_nei": 103,
+    "wrong_relation": 162,
+    "reasoning_length": 22,
+    "gold_evidence_not_explained": 6,
+    "invalid_json_or_incomplete": 1,
+    "citation_mismatch": 1
+  },
+  "dev_overlap": 0,
+  "json_path": "verifier/data/train/dpo/fever-dpo-teacher-rejected-json/pairs.jsonl",
+  "tag_path": "verifier/data/train/dpo/fever-dpo-teacher-rejected-tag/pairs.jsonl"
+}
