@@ -1,0 +1,39 @@
+job=955267 run=run1 commit=f9594d365cdd50ffa8f61cc05f3281ea6168dfd0 n=900 thinking=off prompt_style=cot_native max_new_tokens=1024 retrieval=titles model=Qwen/Qwen3.5-2B checkpoints=verifier/experiments/grpo-cot-from-sft4695-qwen3p5-2b-no-calibration-kl0-1200-samples/runs/cot-grpo1-unseen-cot-grpo/artifacts/checkpoints result_dir=verifier/evaluation/results/grpo-cot-from-sft4695-qwen3p5-2b-no-calibration-kl0-1200-samples/cot-native-cap1024/run1
+started_at=2026-10-16T01:12:08Z
+0 done, 900 to go -> verifier/evaluation/results/grpo-cot-from-sft4695-qwen3p5-2b-no-calibration-kl0-1200-samples/cot-native-cap1024/run1/predictions.jsonl
+Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]Loading weights:   0%|          | 1/320 [00:02<12:35,  2.37s/it]Loading weights:   3%|▎         | 10/320 [00:02<00:56,  5.51it/s]Loading weights:   5%|▌         | 16/320 [00:02<00:33,  9.05it/s]Loading weights:   8%|▊         | 25/320 [00:02<00:19, 15.26it/s]Loading weights:   9%|▉         | 30/320 [00:02<00:15, 18.48it/s]Loading weights:  11%|█         | 35/320 [00:03<00:12, 22.26it/s]Loading weights:  12%|█▎        | 40/320 [00:03<00:10, 26.52it/s]Loading weights:  14%|█▍        | 45/320 [00:03<00:11, 24.51it/s]Loading weights:  15%|█▌        | 49/320 [00:03<00:11, 23.77it/s]Loading weights:  19%|█▉        | 61/320 [00:03<00:07, 35.36it/s]Loading weights:  21%|██        | 66/320 [00:04<00:09, 27.57it/s]Loading weights:  24%|██▍       | 76/320 [00:04<00:06, 38.30it/s]Loading weights:  26%|██▌       | 82/320 [00:04<00:07, 32.36it/s]Loading weights:  27%|██▋       | 87/320 [00:04<00:06, 33.72it/s]Loading weights:  29%|██▉       | 92/320 [00:04<00:06, 34.77it/s]Loading weights:  30%|███       | 97/320 [00:04<00:06, 32.33it/s]Loading weights:  32%|███▏      | 101/320 [00:05<00:08, 26.76it/s]Loading weights:  36%|███▌      | 114/320 [00:05<00:04, 41.63it/s]Loading weights:  37%|███▋      | 119/320 [00:05<00:05, 36.89it/s]Loading weights:  40%|████      | 128/320 [00:05<00:04, 44.49it/s]Loading weights:  42%|████▏     | 133/320 [00:05<00:04, 40.71it/s]Loading weights:  44%|████▍     | 142/320 [00:05<00:04, 44.44it/s]Loading weights:  46%|████▌     | 147/320 [00:06<00:04, 38.95it/s]Loading weights:  48%|████▊     | 152/320 [00:06<00:05, 32.96it/s]Loading weights:  49%|████▉     | 157/320 [00:06<00:04, 33.74it/s]Loading weights:  52%|█████▏    | 166/320 [00:06<00:03, 43.99it/s]Loading weights:  53%|█████▎    | 171/320 [00:06<00:03, 41.50it/s]Loading weights:  55%|█████▌    | 176/320 [00:06<00:03, 36.96it/s]Loading weights:  57%|█████▋    | 183/320 [00:07<00:03, 42.15it/s]Loading weights:  59%|█████▉    | 188/320 [00:07<00:03, 35.37it/s]Loading weights:  62%|██████▏   | 198/320 [00:07<00:02, 48.13it/s]Loading weights:  64%|██████▍   | 204/320 [00:07<00:03, 37.16it/s]Loading weights:  65%|██████▌   | 209/320 [00:07<00:03, 34.58it/s]Loading weights:  69%|██████▉   | 222/320 [00:07<00:01, 51.24it/s]Loading weights:  72%|███████▏  | 229/320 [00:08<00:01, 46.78it/s]Loading weights:  74%|███████▍  | 238/320 [00:08<00:01, 54.02it/s]Loading weights:  77%|███████▋  | 245/320 [00:08<00:01, 50.74it/s]Loading weights:  79%|███████▉  | 252/320 [00:08<00:01, 50.59it/s]Loading weights:  81%|████████  | 258/320 [00:08<00:01, 35.40it/s]Loading weights:  87%|████████▋ | 278/320 [00:08<00:00, 63.90it/s]Loading weights:  92%|█████████▏| 293/320 [00:09<00:00, 80.16it/s]Loading weights:  97%|█████████▋| 311/320 [00:09<00:00, 101.96it/s]Loading weights: 100%|██████████| 320/320 [00:09<00:00, 34.85it/s] 
+[transformers] `causal_conv1d_fn` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+[transformers] `chunk_gated_delta_rule` is falling back to its reference PyTorch implementation because `flash-linear-attention` is not installed. This is correct but much slower; install `flash-linear-attention` for the optimized kernel.
+[transformers] `causal_conv1d_update` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+[transformers] `fused_recurrent_gated_delta_rule` is falling back to its reference PyTorch implementation because `flash-linear-attention` is not installed. This is correct but much slower; install `flash-linear-attention` for the optimized kernel.
+  20/900  91s
+  40/900  169s
+  60/900  247s
+  80/900  323s
+  100/900  396s
+  120/900  470s
+  140/900  531s
+  160/900  626s
+  180/900  709s
+  200/900  786s
+  220/900  875s
+  240/900  947s
+  260/900  1017s
+  280/900  1103s
+  300/900  1180s
+  320/900  1259s
+  340/900  1331s
+  360/900  1419s
+  380/900  1483s
+  400/900  1569s
+  420/900  1643s
+  440/900  1709s
+  460/900  1773s
+  480/900  1852s
+  500/900  1917s
+  520/900  1997s
+  540/900  2067s
+  560/900  2144s
+  580/900  2237s
+  600/900  2341s
+  620/900  2427s

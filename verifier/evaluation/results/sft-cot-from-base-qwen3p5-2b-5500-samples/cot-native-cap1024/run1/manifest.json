@@ -1,0 +1,19 @@
+{
+  "job_id": "955282",
+  "run_name": "run1",
+  "commit": "f9594d365cdd50ffa8f61cc05f3281ea6168dfd0",
+  "model": "Qwen/Qwen3.5-2B",
+  "eval_model": "sft-cot-from-base-qwen3p5-2b-5500-samples",
+  "checkpoints": "verifier/experiments/sft-cot-from-base-qwen3p5-2b-5500-samples/runs/run1/artifacts/checkpoints",
+  "thinking": "on",
+  "native_thinking": true,
+  "prompt_style": "cot_native",
+  "retrieval": "titles",
+  "max_new_tokens": 1024,
+  "condition": "cot-native-cap1024",
+  "result_dir": "verifier/evaluation/results/sft-cot-from-base-qwen3p5-2b-5500-samples/cot-native-cap1024/run1",
+  "n_claims": 900,
+  "predictions": "verifier/evaluation/results/sft-cot-from-base-qwen3p5-2b-5500-samples/cot-native-cap1024/run1/predictions.jsonl",
+  "metrics": "verifier/evaluation/results/sft-cot-from-base-qwen3p5-2b-5500-samples/cot-native-cap1024/run1/metrics.json",
+  "log": "verifier/evaluation/results/sft-cot-from-base-qwen3p5-2b-5500-samples/cot-native-cap1024/run1/logs/run.log"
+}

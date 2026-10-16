@@ -1,0 +1,73 @@
+job=955282 run=run1 commit=f9594d365cdd50ffa8f61cc05f3281ea6168dfd0 n=900 thinking=off prompt_style=cot_native max_new_tokens=1024 retrieval=titles model=Qwen/Qwen3.5-2B checkpoints=verifier/experiments/sft-cot-from-base-qwen3p5-2b-5500-samples/runs/run1/artifacts/checkpoints result_dir=verifier/evaluation/results/sft-cot-from-base-qwen3p5-2b-5500-samples/cot-native-cap1024/run1
+started_at=2026-10-16T01:12:08Z
+0 done, 900 to go -> verifier/evaluation/results/sft-cot-from-base-qwen3p5-2b-5500-samples/cot-native-cap1024/run1/predictions.jsonl
+Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]Loading weights:   0%|          | 1/320 [00:02<11:37,  2.19s/it]Loading weights:   4%|▍         | 12/320 [00:02<00:44,  6.95it/s]Loading weights:   5%|▌         | 17/320 [00:02<00:29, 10.21it/s]Loading weights:   8%|▊         | 26/320 [00:02<00:16, 17.30it/s]Loading weights:  10%|▉         | 31/320 [00:02<00:13, 20.75it/s]Loading weights:  12%|█▏        | 37/320 [00:02<00:10, 25.92it/s]Loading weights:  13%|█▎        | 42/320 [00:03<00:10, 25.48it/s]Loading weights:  15%|█▍        | 47/320 [00:03<00:10, 25.73it/s]Loading weights:  18%|█▊        | 58/320 [00:03<00:06, 37.94it/s]Loading weights:  20%|██        | 65/320 [00:03<00:05, 43.91it/s]Loading weights:  22%|██▏       | 71/320 [00:03<00:05, 43.95it/s]Loading weights:  24%|██▍       | 77/320 [00:03<00:05, 46.44it/s]Loading weights:  26%|██▌       | 83/320 [00:03<00:06, 39.08it/s]Loading weights:  29%|██▉       | 92/320 [00:04<00:04, 49.53it/s]Loading weights:  31%|███       | 98/320 [00:04<00:05, 41.40it/s]Loading weights:  32%|███▏      | 103/320 [00:04<00:05, 39.33it/s]Loading weights:  35%|███▌      | 113/320 [00:04<00:04, 50.37it/s]Loading weights:  37%|███▋      | 119/320 [00:04<00:04, 46.59it/s]Loading weights:  40%|████      | 128/320 [00:04<00:03, 52.70it/s]Loading weights:  42%|████▏     | 134/320 [00:05<00:04, 42.07it/s]Loading weights:  44%|████▍     | 142/320 [00:05<00:03, 49.26it/s]Loading weights:  46%|████▋     | 148/320 [00:05<00:04, 37.54it/s]Loading weights:  48%|████▊     | 153/320 [00:05<00:04, 34.01it/s]Loading weights:  52%|█████▏    | 167/320 [00:05<00:03, 45.87it/s]Loading weights:  54%|█████▍    | 172/320 [00:06<00:03, 37.35it/s]Loading weights:  57%|█████▋    | 181/320 [00:06<00:03, 40.47it/s]Loading weights:  58%|█████▊    | 186/320 [00:06<00:03, 37.39it/s]Loading weights:  61%|██████    | 195/320 [00:06<00:02, 43.61it/s]Loading weights:  62%|██████▎   | 200/320 [00:06<00:02, 42.40it/s]Loading weights:  64%|██████▍   | 205/320 [00:06<00:03, 33.74it/s]Loading weights:  66%|██████▌   | 211/320 [00:07<00:03, 36.27it/s]Loading weights:  70%|██████▉   | 223/320 [00:07<00:01, 51.65it/s]Loading weights:  72%|███████▏  | 229/320 [00:07<00:01, 46.41it/s]Loading weights:  74%|███████▍  | 238/320 [00:07<00:01, 50.31it/s]Loading weights:  76%|███████▋  | 244/320 [00:07<00:01, 51.01it/s]Loading weights:  78%|███████▊  | 251/320 [00:07<00:01, 45.99it/s]Loading weights:  80%|████████  | 256/320 [00:07<00:01, 37.63it/s]Loading weights:  82%|████████▏ | 261/320 [00:08<00:01, 32.52it/s]Loading weights:  85%|████████▍ | 271/320 [00:08<00:01, 39.87it/s]Loading weights:  87%|████████▋ | 278/320 [00:08<00:01, 40.99it/s]Loading weights:  89%|████████▉ | 285/320 [00:08<00:00, 43.71it/s]Loading weights:  91%|█████████▏| 292/320 [00:08<00:00, 44.04it/s]Loading weights:  93%|█████████▎| 297/320 [00:08<00:00, 43.60it/s]Loading weights:  94%|█████████▍| 302/320 [00:09<00:00, 42.18it/s]Loading weights:  96%|█████████▌| 307/320 [00:09<00:00, 36.22it/s]Loading weights:  97%|█████████▋| 311/320 [00:09<00:00, 30.39it/s]Loading weights: 100%|██████████| 320/320 [00:09<00:00, 33.59it/s]
+[transformers] `causal_conv1d_fn` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+[transformers] `chunk_gated_delta_rule` is falling back to its reference PyTorch implementation because `flash-linear-attention` is not installed. This is correct but much slower; install `flash-linear-attention` for the optimized kernel.
+[transformers] `causal_conv1d_update` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+[transformers] `fused_recurrent_gated_delta_rule` is falling back to its reference PyTorch implementation because `flash-linear-attention` is not installed. This is correct but much slower; install `flash-linear-attention` for the optimized kernel.
+  20/900  32s
+  40/900  57s
+  60/900  81s
+  80/900  101s
+  100/900  124s
+  120/900  146s
+  140/900  166s
+  160/900  189s
+  180/900  212s
+  200/900  235s
+  220/900  258s
+  240/900  281s
+  260/900  302s
+  280/900  325s
+  300/900  349s
+  320/900  373s
+  340/900  396s
+  360/900  419s
+  380/900  441s
+  400/900  466s
+  420/900  488s
+  440/900  511s
+  460/900  533s
+  480/900  553s
+  500/900  572s
+  520/900  595s
+  540/900  618s
+  560/900  638s
+  580/900  663s
+  600/900  687s
+  620/900  707s
+  640/900  729s
+  660/900  752s
+  680/900  773s
+  700/900  796s
+  720/900  821s
+  740/900  844s
+  760/900  868s
+  780/900  888s
+  800/900  911s
+  820/900  934s
+  840/900  956s
+  860/900  980s
+  880/900  1004s
+  900/900  1027s
+
+== Qwen/Qwen3.5-2B+sft-cot-from-base-qwen3p5-2b-5500-samples_run1  (900 claims, predictions.jsonl) ==
+  format adherence      1.000   json=1.00  verdict=1.00  evidence=1.00  confidence=0.00
+  label accuracy        0.734
+  FEVER score           0.650
+  evidence F1 (non-NEI) 0.619
+  recall SUPPORTED        0.810  (n=300)
+  recall REFUTED          0.700  (n=300)
+  recall NOT_ENOUGH_INFO  0.693  (n=300)
+  ECE stated_conf       None   (available 0.00)
+  ECE token_conf        0.265   (available 1.00)
+      [0.6,0.7)  n=1    conf=0.65  acc=1.00
+      [0.8,0.9)  n=3    conf=0.87  acc=0.00
+      [0.9,1.0)  n=896  conf=1.00  acc=0.74
+  non-NEI, gold in  context: n=517  acc=0.809  FEVER=0.729
+  non-NEI, gold NOT in context: n=83   acc=0.422  FEVER=0.000
+  tokens in/out         1334 / 69 per claim
+  providers             {'local': 900}
+finished_at=2026-10-16T01:30:12Z
+predictions=verifier/evaluation/results/sft-cot-from-base-qwen3p5-2b-5500-samples/cot-native-cap1024/run1/predictions.jsonl metrics=verifier/evaluation/results/sft-cot-from-base-qwen3p5-2b-5500-samples/cot-native-cap1024/run1/metrics.json
