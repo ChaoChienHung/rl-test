@@ -1,3 +1,75 @@
 job=952536 run=run1 commit=e63933f3b3b00ffd1142d95449d9cc05cedea71e n=900 thinking=off prompt_style=cot_native max_new_tokens=1024 retrieval=titles model=Qwen/Qwen3.5-2B checkpoints=verifier/experiments/grpo-cot-from-sft5895-qwen3p5-2b-no-calibration-kl0-1200-samples/runs/cot-grpo1-seen-cot-grpo/artifacts/checkpoints result_dir=verifier/evaluation/results/grpo-cot-from-sft5895-qwen3p5-2b-no-calibration-kl0-1200-samples/cot-native-cap1024/run1
 started_at=2026-10-15T16:39:19Z
 0 done, 900 to go -> verifier/evaluation/results/grpo-cot-from-sft5895-qwen3p5-2b-no-calibration-kl0-1200-samples/cot-native-cap1024/run1/predictions.jsonl
+Loading weights:   0%|          | 0/320 [00:00<?, ?it/s]Loading weights:   0%|          | 1/320 [00:00<00:36,  8.81it/s]Loading weights:  15%|█▍        | 47/320 [00:00<00:01, 259.80it/s]Loading weights:  28%|██▊       | 89/320 [00:00<00:00, 327.04it/s]Loading weights:  38%|███▊      | 123/320 [00:00<00:00, 320.24it/s]Loading weights:  49%|████▉     | 156/320 [00:00<00:00, 314.97it/s]Loading weights:  60%|██████    | 193/320 [00:00<00:00, 329.61it/s]Loading weights:  71%|███████   | 227/320 [00:00<00:00, 325.44it/s]Loading weights:  81%|████████▏ | 260/320 [00:00<00:00, 318.88it/s]Loading weights:  93%|█████████▎| 298/320 [00:00<00:00, 333.88it/s]Loading weights: 100%|██████████| 320/320 [00:01<00:00, 309.25it/s]
+[transformers] `causal_conv1d_fn` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+[transformers] `chunk_gated_delta_rule` is falling back to its reference PyTorch implementation because `flash-linear-attention` is not installed. This is correct but much slower; install `flash-linear-attention` for the optimized kernel.
+[transformers] `causal_conv1d_update` is falling back to its reference PyTorch implementation because `causal_conv1d` is not installed. This is correct but much slower; install `causal_conv1d` for the optimized kernel.
+[transformers] `fused_recurrent_gated_delta_rule` is falling back to its reference PyTorch implementation because `flash-linear-attention` is not installed. This is correct but much slower; install `flash-linear-attention` for the optimized kernel.
+  20/900  41s
+  40/900  77s
+  60/900  105s
+  80/900  148s
+  100/900  176s
+  120/900  202s
+  140/900  243s
+  160/900  275s
+  180/900  305s
+  200/900  332s
+  220/900  361s
+  240/900  400s
+  260/900  424s
+  280/900  512s
+  300/900  544s
+  320/900  630s
+  340/900  659s
+  360/900  685s
+  380/900  712s
+  400/900  754s
+  420/900  789s
+  440/900  825s
+  460/900  879s
+  480/900  909s
+  500/900  935s
+  520/900  991s
+  540/900  1020s
+  560/900  1047s
+  580/900  1081s
+  600/900  1136s
+  620/900  1207s
+  640/900  1238s
+  660/900  1296s
+  680/900  1355s
+  700/900  1385s
+  720/900  1447s
+  740/900  1484s
+  760/900  1546s
+  780/900  1580s
+  800/900  1620s
+  820/900  1655s
+  840/900  1682s
+  860/900  1739s
+  880/900  1764s
+  900/900  1837s
+
+== Qwen/Qwen3.5-2B+grpo-cot-from-sft5895-qwen3p5-2b-no-calibration-kl0-1200-samples_cot-grpo1-seen-cot-grpo  (900 claims, predictions.jsonl) ==
+  format adherence      0.984   json=0.98  verdict=0.98  evidence=0.98  confidence=0.00
+  label accuracy        0.741
+  FEVER score           0.671
+  evidence F1 (non-NEI) 0.722
+  recall SUPPORTED        0.757  (n=300)
+  recall REFUTED          0.717  (n=300)
+  recall NOT_ENOUGH_INFO  0.750  (n=300)
+  ECE stated_conf       None   (available 0.00)
+  ECE token_conf        0.238   (available 0.98)
+      [0.5,0.6)  n=3    conf=0.56  acc=0.33
+      [0.6,0.7)  n=7    conf=0.65  acc=0.43
+      [0.7,0.8)  n=6    conf=0.75  acc=0.17
+      [0.8,0.9)  n=11   conf=0.85  acc=0.27
+      [0.9,1.0)  n=859  conf=1.00  acc=0.77
+  non-NEI, gold in  context: n=517  acc=0.799  FEVER=0.733
+  non-NEI, gold NOT in context: n=83   acc=0.349  FEVER=0.000
+  tokens in/out         1334 / 124 per claim
+  providers             {'local': 900}
+finished_at=2026-10-15T17:10:36Z
+predictions=verifier/evaluation/results/grpo-cot-from-sft5895-qwen3p5-2b-no-calibration-kl0-1200-samples/cot-native-cap1024/run1/predictions.jsonl metrics=verifier/evaluation/results/grpo-cot-from-sft5895-qwen3p5-2b-no-calibration-kl0-1200-samples/cot-native-cap1024/run1/metrics.json

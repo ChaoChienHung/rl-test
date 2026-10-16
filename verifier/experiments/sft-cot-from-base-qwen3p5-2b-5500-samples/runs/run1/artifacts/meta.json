@@ -1,0 +1,21 @@
+{
+  "experiment": "sft-cot-from-base-qwen3p5-2b-5500-samples",
+  "model": "Qwen/Qwen3.5-2B",
+  "mode": "native_thinking",
+  "data_file": "/home/c/chaoch/rl-test/verifier/data/train/sft/fever-oracle-cot-soclaas/cot_native_sft_labeled_prompts.jsonl",
+  "data_sha256": "6a788ad88399a2f74bab0f52b11c53743891ec308546f866d5945ddd7e01b52e",
+  "n_train": 5500,
+  "label_counts": {
+    "SUPPORTED": 1840,
+    "NOT_ENOUGH_INFO": 1795,
+    "REFUTED": 1865
+  },
+  "prompt_style": "cot_native",
+  "max_steps": 0,
+  "lr": 0.0001,
+  "rank": 16,
+  "seed": 0,
+  "train_seconds": 6297,
+  "peak_gpu_gb": 5.57,
+  "checkpoint_dir": "/home/c/chaoch/rl-test/verifier/experiments/sft-cot-from-base-qwen3p5-2b-5500-samples/runs/run1/artifacts/checkpoints"
+}
