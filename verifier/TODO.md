@@ -36,7 +36,13 @@ Current work is verifier evaluation on the `rl` branch. These tasks replace the 
    - Completed Path 2 (Native Tag) 4,500 SFT training (`run1-tag-sft`, 6,636s, 5.57 GB, loss $\to$ 0.029).
    - Created multi-condition validation array `verifier/evaluation/run_eval_4500_array.sbatch` and launcher `verifier/evaluation/submit_eval_4500.sh`.
 
-10. [ ] Evaluate 4,500 SFT models (Tasks 0-4) and complete 1,000-sample CoT GRPO training + evaluation (Tasks 5-6).
+10. [x] **Complete Dual-Path 4,500 SFT & 1,000-sample CoT GRPO Benchmarks (Tasks 0-6)**:
+    - **JSON SFT 4500 Direct**: **76.7% Acc** (All-time SFT Record!), **67.6% FEVER**, 64.9% Ev F1, **Token ECE 0.0503**.
+    - **JSON SFT 4500 Brief CoT**: 73.9% Acc, 64.3% FEVER, 65.7% Ev F1, Token ECE 0.2238.
+    - **Tag SFT 4500 Direct**: 75.6% Acc, **68.1% FEVER** (All-time SFT Record!), 63.6% Ev F1, **75.7% NEI Recall**.
+    - **Tag SFT 4500 Brief CoT**: 74.2% Acc, 67.6% FEVER, 60.6% Ev F1, **78.0% NEI Recall**.
+    - **JSON GRPO 1000 CoT** (`cot-native`): **74.7% Acc**, **67.3% FEVER**, **74.7% Non-NEI Ev F1** (All-time Repository Record!), 100% format rate, 67.7% NEI Recall.
+    - **Tag GRPO 1000 CoT** (`cot-native-tag`): **90.1% Acc, 81.4% FEVER, 81.3% Ev F1** on Gold-in-Context ($n=517$); 67.6% Acc, 58.0% FEVER overall due to unmasked evidence confirmation bias on NEI (33.7% NEI Recall). Validates the Fast/Slow Thinking architecture in `INSIGHT.md` (Discussions 15 & 16).
 
 
 ## P0 — comparable verifier evaluation (RL-1, AG-3)
