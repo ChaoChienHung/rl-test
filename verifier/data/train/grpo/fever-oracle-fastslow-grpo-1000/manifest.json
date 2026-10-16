@@ -1,0 +1,6 @@
+{
+  "name": "fever-oracle-fastslow-grpo-1000",
+  "n_samples": 1000,
+  "source": "/Users/ludwigchao/Desktop/Ludwig/assignment/rl-test/verifier/data/train/sft/fever-oracle-tagged-grpo-1000/labeled_prompts.jsonl",
+  "format": "fastslow_dual_process"
+}

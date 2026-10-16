@@ -21,8 +21,13 @@
 #     Task 5: Wait for Path 1 SFT checkpoint, then train Path 1 (JSON) CoT GRPO on 1,000 holdout claims.
 #     Task 6: Wait for Path 2 Tag SFT checkpoint, then train Path 2 (Tag) CoT GRPO on 1,000 holdout claims.
 #
+#   Array Tasks 7-9 (Fast-Slow Dual-Process Training & Evaluation Pipeline):
+#     Task 7: Train Fast-Slow SFT on 4,500 claims (<guess> + <think> + <evidence> + <verdict>).
+#     Task 8: Train Fast-Slow Native-Thinking GRPO with Cognitive Self-Correction Reward on 1,000 claims.
+#     Task 9: Evaluate Fast-Slow GRPO Model on FEVER Dev (900 claims, cot_fastslow, cap 1024).
+#
 # Note: For native Slurm job dependencies across partitions (gpu vs gpu-long), use:
-#   bash verifier/experiments/submit_4500_pipeline.sh
+#   bash verifier/experiments/submit_fastslow_pipeline.sh
 
 set -euo pipefail
 cd "${SLURM_SUBMIT_DIR:?Submit from the repository root}"
@@ -159,8 +164,51 @@ case "${SLURM_ARRAY_TASK_ID:?Expected array task 0 to 6}" in
     python "$script" --run-name "$grpo_run" --seed "$seed" --sft "$sft_cp" --data "$grpo_data"
     ;;
 
+  # -------------------------------------------------------------
+  # Fast-Slow Dual-Process Training & Evaluation Pipeline
+  # -------------------------------------------------------------
+  7)
+    config="sft-fastslow-from-base-qwen3p5-2b-4500-samples"
+    run_name="${SFT_FASTSLOW_RUN:-${run_tag}-fastslow-sft}"
+    script="verifier/experiments/$config/train.py"
+    echo "=== Task 7: Train Fast-Slow Dual-Process SFT (4,500 claims): config=$config run=$run_name ==="
+    python "$script" --run-name "$run_name" --seed "$seed"
+    ;;
+
+  8)
+    sft_config="sft-fastslow-from-base-qwen3p5-2b-4500-samples"
+    sft_run="${SFT_FASTSLOW_RUN:-${run_tag}-fastslow-sft}"
+    sft_cp="verifier/experiments/${sft_config}/runs/${sft_run}/artifacts/checkpoints"
+    wait_for_adapter "$sft_cp"
+
+    grpo_config="grpo-fastslow-from-sft4500-qwen3p5-2b-no-calibration-kl0-1000-samples"
+    grpo_run="${GRPO_FASTSLOW_RUN:-${run_tag}-fastslow-grpo}"
+    grpo_data="verifier/data/train/grpo/fever-oracle-fastslow-grpo-1000"
+    script="verifier/experiments/$grpo_config/train.py"
+
+    echo "=== Task 8: Train Fast-Slow GRPO with Self-Correction Reward (1,000 claims): config=$grpo_config run=$grpo_run ==="
+    python "$script" --run-name "$grpo_run" --seed "$seed" --sft "$sft_cp" --data "$grpo_data"
+    ;;
+
+  9)
+    grpo_config="grpo-fastslow-from-sft4500-qwen3p5-2b-no-calibration-kl0-1000-samples"
+    grpo_run="${GRPO_FASTSLOW_RUN:-${run_tag}-fastslow-grpo}"
+    grpo_cp="verifier/experiments/${grpo_config}/runs/${grpo_run}/artifacts/checkpoints"
+    wait_for_adapter "$grpo_cp"
+
+    echo "=== Task 9: Evaluate Fast-Slow GRPO Model on FEVER Dev (900 claims, cap $max_new_tokens) ==="
+    export EVAL_MODEL="$grpo_config"
+    export PROMPT_STYLE="cot_fastslow"
+    export MAX_NEW_TOKENS="$max_new_tokens"
+    export N_CLAIMS="$n_claims"
+    export RUN_NAME="$grpo_run"
+    export CHECKPOINTS="$grpo_cp"
+    unset EVAL_CONDITION
+    bash verifier/evaluation/run_eval.sh
+    ;;
+
   *)
-    echo "Unexpected array task: $SLURM_ARRAY_TASK_ID (expected 0 to 6)" >&2
+    echo "Unexpected array task: $SLURM_ARRAY_TASK_ID (expected 0 to 9)" >&2
     exit 2
     ;;
 esac

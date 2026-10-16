@@ -131,6 +131,13 @@ After thinking, finish with only the tags:
 
 Use at most 5 evidence ids. Use empty <evidence></evidence> for NOT_ENOUGH_INFO."""
 
+TAG_FASTSLOW_SYSTEM = """You are a fact-checker. You get a claim and numbered evidence sentences from Wikipedia.
+First, output your initial fast intuition in <guess>SUPPORTED | REFUTED | NOT_ENOUGH_INFO</guess>.
+Then, think through the claim step-by-step using only the evidence shown in <think>...</think>.
+Cite evidence sentences in <evidence>E3, ...</evidence> (or <evidence></evidence> if insufficient).
+Finally, output your verified decision in <verdict>SUPPORTED | REFUTED | NOT_ENOUGH_INFO</verdict>."""
+
+
 OUT_DIR = os.path.join(DATA, "..", "..", "evaluation", "results", "manual")
 VERDICT_PREFIX = re.compile(r'(?:"verdict"\s*:\s*"|<verdict>\s*)')
 
@@ -213,7 +220,11 @@ def render(claim, shown):
 # ---------------------------------------------------------------- parsing
 
 def parse(text):
-    """Return (parsed dict or None, per-field validity). Supports both JSON and Tag formats."""
+    """Return (parsed dict or None, per-field validity). Supports JSON, Tag, and Fast-Slow formats."""
+    # Look for <guess> anywhere in text (e.g. before <think>)
+    gm = re.search(r"<guess>\s*([A-Za-z_]+)\s*</guess>", text, re.I)
+    guess = gm.group(1).upper() if gm else None
+
     # Native Qwen thinking may itself mention JSON or tags; score only the final answer.
     text_after_think = text.rsplit("</think>", 1)[-1]
 
@@ -234,6 +245,8 @@ def parse(text):
         conf = float(cm.group(1)) if cm else None
 
         obj = {"verdict": verdict, "evidence": evidence}
+        if guess:
+            obj["guess"] = guess
         if conf is not None:
             obj["confidence"] = conf
 
@@ -243,6 +256,7 @@ def parse(text):
             "verdict": verdict in LABELS,
             "evidence": evidence_valid,
             "confidence": isinstance(conf, (int, float)) and 0 <= conf <= 1 if conf is not None else False,
+            "guess": (guess in LABELS) if guess else False,
         }
         return obj, ok
 
@@ -256,11 +270,14 @@ def parse(text):
             pass
     ok = {"json": isinstance(obj, dict), "format": isinstance(obj, dict)}
     obj = obj if ok["json"] else {}
+    if guess:
+        obj["guess"] = guess
     ok["verdict"] = obj.get("verdict") in LABELS
     ev = obj.get("evidence")
     ok["evidence"] = isinstance(ev, list) and all(isinstance(e, str) and re.fullmatch(r"E\d+", e) for e in ev)
     conf = obj.get("confidence")
     ok["confidence"] = isinstance(conf, (int, float)) and 0 <= conf <= 1
+    ok["guess"] = (guess in LABELS) if guess else False
     return obj, ok
 
 
@@ -440,13 +457,15 @@ def run(model_name, n, retrieval="bm25", chunk=20, adapter=None, output=None,
                      "cot_chain": COT_CHAIN_SYSTEM, "cot_brief": COT_BRIEF_SYSTEM,
                      "cot_native": NATIVE_THINKING_SYSTEM,
                      "direct_tag": TAG_DIRECT_SYSTEM, "cot_brief_tag": TAG_COT_BRIEF_SYSTEM,
-                     "cot_chain_tag": TAG_COT_CHAIN_SYSTEM, "cot_native_tag": TAG_NATIVE_THINKING_SYSTEM}[prompt_style]
+                     "cot_chain_tag": TAG_COT_CHAIN_SYSTEM, "cot_native_tag": TAG_NATIVE_THINKING_SYSTEM,
+                     "cot_fastslow": TAG_FASTSLOW_SYSTEM}[prompt_style]
     if max_new_tokens is None:
         max_new_tokens = {"direct": 160, "reasoning": 320, "cot_sft": 320,
                           "cot_chain": 512, "cot_brief": 512,
                           "cot_native": 1024,
                           "direct_tag": 160, "cot_brief_tag": 512,
-                          "cot_chain_tag": 512, "cot_native_tag": 1024}[prompt_style]
+                          "cot_chain_tag": 512, "cot_native_tag": 1024,
+                          "cot_fastslow": 1024}[prompt_style]
     if max_new_tokens <= 0:
         raise ValueError("max_new_tokens must be positive")
     if model_name.startswith("local"):
@@ -456,12 +475,12 @@ def run(model_name, n, retrieval="bm25", chunk=20, adapter=None, output=None,
                 base = json.load(f)["base_model_name_or_path"]
         model = LocalModel(base or LOCAL_MODEL, adapter=adapter,
                            system_prompt=system_prompt, max_new_tokens=max_new_tokens,
-                           enable_thinking=prompt_style in ("cot_native", "cot_native_tag"))
+                           enable_thinking=prompt_style in ("cot_native", "cot_native_tag", "cot_fastslow"))
     else:
-        if prompt_style in ("cot_native", "cot_native_tag"):
+        if prompt_style in ("cot_native", "cot_native_tag", "cot_fastslow"):
             raise ValueError(f"{prompt_style} currently requires a local Qwen model")
         model = OpenRouterModel(model_name, system_prompt=system_prompt,
-                                max_new_tokens=max_new_tokens)
+                                 max_new_tokens=max_new_tokens)
     retriever = FeverRetriever()
     t0 = time.time()
     for i in range(0, len(claims), chunk):
@@ -472,7 +491,7 @@ def run(model_name, n, retrieval="bm25", chunk=20, adapter=None, output=None,
             for c, x, g in zip(batch, ctxs, gens):
                 f.write(json.dumps({"model": model.name, "retrieval": retrieval,
                                     "prompt_style": prompt_style,
-                                    **score(c, x, g, require_confidence=prompt_style not in ("cot_sft", "cot_native", "direct_tag", "cot_brief_tag", "cot_chain_tag", "cot_native_tag"))},
+                                    **score(c, x, g, require_confidence=prompt_style not in ("cot_sft", "cot_native", "direct_tag", "cot_brief_tag", "cot_chain_tag", "cot_native_tag", "cot_fastslow"))},
                                    ensure_ascii=False) + "\n")
         print(f"  {i + len(batch)}/{len(claims)}  {time.time() - t0:.0f}s", flush=True)
     return path

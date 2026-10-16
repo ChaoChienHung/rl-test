@@ -1,0 +1,6 @@
+{
+  "name": "fever-oracle-fastslow-4500",
+  "n_samples": 4500,
+  "source": "/Users/ludwigchao/Desktop/Ludwig/assignment/rl-test/verifier/data/train/sft/fever-oracle-tagged-cot-4500/labeled_prompts.jsonl",
+  "format": "fastslow_dual_process"
+}

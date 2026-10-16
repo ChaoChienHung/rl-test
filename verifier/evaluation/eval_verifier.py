@@ -10,7 +10,7 @@ def main():
     parser.add_argument("--model", default="local", help='"local", "local:<hf id>", or an OpenRouter model id')
     parser.add_argument("--n", type=int, default=50)
     parser.add_argument("--retrieval", choices=["bm25", "titles", "oracle"], default="bm25")
-    parser.add_argument("--prompt-style", choices=["direct", "reasoning", "cot_chain", "cot_brief", "cot_sft", "cot_native", "direct_tag", "cot_brief_tag", "cot_chain_tag", "cot_native_tag"], default="direct")
+    parser.add_argument("--prompt-style", choices=["direct", "reasoning", "cot_chain", "cot_brief", "cot_sft", "cot_native", "direct_tag", "cot_brief_tag", "cot_chain_tag", "cot_native_tag", "cot_fastslow"], default="direct")
     parser.add_argument("--max-new-tokens", type=int, help="override the prompt style's output-token cap")
     parser.add_argument("--adapter", help="LoRA checkpoint dir from an SFT run (local models only)")
     parser.add_argument("--output", help="write to this JSONL file instead of the default (resume by claim id if it exists)")
