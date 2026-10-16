@@ -30,9 +30,13 @@ Current work is verifier evaluation on the `rl` branch. These tasks replace the 
    - Formulated RLVR process rewards (index grounding $+0.1$, non-existent index penalty $-0.5$, parsimony penalties) and advanced RL algorithms (**Dr. GRPO** advantage without $\sigma_R$ division and **DAPO** dynamic sampling / decoupled clip-higher) in `INSIGHT.md` (Discussions 7 & 10).
    - Generated 395 contrastive DPO preference pairs $(x, y_w, y_l)$ from teacher rejections in both JSON and Tag formats via `utils/build_dpo_pairs.py` with 0 dev overlap.
 
-9. [ ] Train and benchmark Path 1 (4,500 Direct SFT + 1,000 CoT GRPO) vs Path 2 (4,500 Direct/CoT Tag SFT + 1,000 Tag GRPO / Dr. GRPO / DAPO).
+9. [x] **Train Dual-Path 4,500 SFT Checkpoints & Base Model Tag Baselines**:
+   - Evaluated Base Qwen3.5-2B under Native Tag formats: `direct_tag` (Acc 40.7%, Evidence F1 0.513), `cot_brief_tag` (Acc 55.3%, Evidence F1 0.581), `cot_chain_tag` (Acc 55.8%, Evidence F1 0.511). Establishes format rate surge (98.0%) alongside confirmation-bias analysis in `INSIGHT.md` (Discussion 14).
+   - Completed Path 1 (JSON) 4,500 SFT training (`run1-json-sft`, 5,268s, 5.57 GB, loss $\to$ 0.024).
+   - Completed Path 2 (Native Tag) 4,500 SFT training (`run1-tag-sft`, 6,636s, 5.57 GB, loss $\to$ 0.029).
+   - Created multi-condition validation array `verifier/evaluation/run_eval_4500_array.sbatch` and launcher `verifier/evaluation/submit_eval_4500.sh`.
 
-CoT SFT data preparation can proceed in parallel with step 1; it is a separate experiment and should not change the existing no-CoT checkpoint or its evaluation.
+10. [ ] Evaluate 4,500 SFT models (Tasks 0-4) and complete 1,000-sample CoT GRPO training + evaluation (Tasks 5-6).
 
 
 ## P0 — comparable verifier evaluation (RL-1, AG-3)
