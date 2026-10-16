@@ -19,24 +19,24 @@ run_tag="${RUN_TAG:-run1}"
 
 echo "=== Submitting Fast-Slow Dual-Process Training & Evaluation Pipeline ==="
 
-# 1. Fast-Slow SFT (Task 7)
+# 1. Fast-Slow SFT (Task 1)
 sft_job=$(sbatch --parsable --partition=gpu --time=03:00:00 --exclude=xgpe2 \
   --job-name="fastslow-sft" \
-  --export=ALL,SLURM_ARRAY_TASK_ID=7,RUN_TAG="$run_tag" \
+  --export=ALL,STAGE=sft,RUN_TAG="$run_tag" \
   run.sbatch)
 
-# 2. Fast-Slow GRPO with Self-Correction Reward (Task 8, depends on SFT)
+# 2. Fast-Slow GRPO with Self-Correction Reward (Task 2, depends on SFT)
 grpo_job=$(sbatch --parsable --partition=gpu-long --time=1-00:00:00 --exclude=xgpe2 \
   --job-name="fastslow-grpo" \
   --dependency="afterok:$sft_job" \
-  --export=ALL,SLURM_ARRAY_TASK_ID=8,RUN_TAG="$run_tag" \
+  --export=ALL,STAGE=grpo,RUN_TAG="$run_tag" \
   run.sbatch)
 
-# 3. Fast-Slow Evaluation (Task 9, depends on GRPO)
+# 3. Fast-Slow Evaluation (Task 3, depends on GRPO)
 eval_job=$(sbatch --parsable --partition=gpu --time=01:30:00 --exclude=xgpe2 \
   --job-name="fastslow-eval" \
   --dependency="afterok:$grpo_job" \
-  --export=ALL,SLURM_ARRAY_TASK_ID=9,RUN_TAG="$run_tag" \
+  --export=ALL,STAGE=eval,RUN_TAG="$run_tag" \
   run.sbatch)
 
 echo "Pipeline successfully queued with dependencies:"

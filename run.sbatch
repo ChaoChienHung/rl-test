@@ -1,33 +1,28 @@
 #!/usr/bin/env bash
-#SBATCH --job-name=verifier-pipeline
-#SBATCH --partition=gpu
-#SBATCH --time=03:00:00
+#SBATCH --job-name=fastslow-pipeline
+#SBATCH --partition=gpu-long
+#SBATCH --time=14:00:00
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=32G
 #SBATCH --gpus=a100-40:1
 #SBATCH --exclude=xgpe2
-#SBATCH --array=0-2%3
-#SBATCH --output=slurm-%x-%A_%a.out
+#SBATCH --output=slurm-%x-%j.out
 
-# Master Execution & Evaluation Array:
-#   Array Tasks 0-2 (Default Baseline Evaluation under Native Tag Format):
-#     Task 0: Base Qwen3.5-2B on FEVER dev (900 claims) with direct_tag (cap 1024).
-#     Task 1: Base Qwen3.5-2B on FEVER dev (900 claims) with cot_brief_tag (cap 1024).
-#     Task 2: Base Qwen3.5-2B on FEVER dev (900 claims) with cot_chain_tag (cap 1024).
+# ==============================================================================
+# Fast-Slow Dual-Process Training & Evaluation Master Pipeline
+# ==============================================================================
+# Usage options:
+#   1. Run full end-to-end pipeline in one job (SFT -> GRPO -> Eval):
+#        sbatch run.sbatch
 #
-#   Array Tasks 3-6 (Dual-Path 4,500 SFT & 1,000 GRPO Training Pipeline):
-#     Task 3: Train Path 1 (JSON) Direct SFT on 4,500 disjoint claims.
-#     Task 4: Train Path 2 (Native Tag) Direct SFT on 4,500 disjoint claims.
-#     Task 5: Wait for Path 1 SFT checkpoint, then train Path 1 (JSON) CoT GRPO on 1,000 holdout claims.
-#     Task 6: Wait for Path 2 Tag SFT checkpoint, then train Path 2 (Tag) CoT GRPO on 1,000 holdout claims.
+#   2. Run a specific stage:
+#        sbatch --export=ALL,STAGE=sft run.sbatch
+#        sbatch --export=ALL,STAGE=grpo run.sbatch
+#        sbatch --export=ALL,STAGE=eval run.sbatch
 #
-#   Array Tasks 7-9 (Fast-Slow Dual-Process Training & Evaluation Pipeline):
-#     Task 7: Train Fast-Slow SFT on 4,500 claims (<guess> + <think> + <evidence> + <verdict>).
-#     Task 8: Train Fast-Slow Native-Thinking GRPO with Cognitive Self-Correction Reward on 1,000 claims.
-#     Task 9: Evaluate Fast-Slow GRPO Model on FEVER Dev (900 claims, cot_fastslow, cap 1024).
-#
-# Note: For native Slurm job dependencies across partitions (gpu vs gpu-long), use:
-#   bash verifier/experiments/submit_fastslow_pipeline.sh
+#   3. Slurm array mode (0=sft, 1=grpo, 2=eval):
+#        sbatch --array=0-2%1 run.sbatch
+# ==============================================================================
 
 set -euo pipefail
 cd "${SLURM_SUBMIT_DIR:?Submit from the repository root}"
@@ -41,27 +36,65 @@ export TMPDIR="${TMPDIR:-$HOME/.pip-tmp}"
 mkdir -p "$TMPDIR"
 export TOKENIZERS_PARALLELISM=false
 
-run_tag="${RUN_TAG:-run1}"
-[[ "$run_tag" =~ ^[A-Za-z0-9][A-Za-z0-9_-]*$ ]] || {
-  echo "RUN_TAG must use letters, digits, underscore or dash" >&2
-  exit 2
-}
-
 seed="${SEED:-0}"
-[[ "$seed" =~ ^[0-9]+$ ]] || {
-  echo "SEED must be a nonnegative integer" >&2
-  exit 2
-}
-
+[[ "$seed" =~ ^[0-9]+$ ]] || { echo "SEED must be a nonnegative integer" >&2; exit 2; }
 n_claims="${N_CLAIMS:-900}"
 max_new_tokens="${MAX_NEW_TOKENS:-1024}"
 
+# Base configurations
+SFT_CONFIG="sft-fastslow-from-base-qwen3p5-2b-4500-samples"
+GRPO_CONFIG="grpo-fastslow-from-sft4500-qwen3p5-2b-no-calibration-kl0-1000-samples"
+GRPO_DATA="verifier/data/train/grpo/fever-oracle-fastslow-grpo-1000"
+
+# Collision-proof unique run name resolver
+resolve_unique_run() {
+  local base_dir="$1"
+  local base_name="$2"
+  local candidate="$base_name"
+  local idx=1
+  while [[ -e "$base_dir/$candidate" ]]; do
+    idx=$((idx + 1))
+    candidate="${base_name}_${idx}"
+  done
+  echo "$candidate"
+}
+
+# Determine base run tag from RUN_TAG or default
+requested_tag="${RUN_TAG:-run1}"
+
+# Resolve unique non-colliding run names for each stage
+sft_runs_dir="verifier/experiments/$SFT_CONFIG/runs"
+mkdir -p "$sft_runs_dir"
+if [[ -n "${SFT_RUN:-}" ]]; then
+  SFT_RUN_NAME="$SFT_RUN"
+else
+  SFT_RUN_NAME="$(resolve_unique_run "$sft_runs_dir" "${requested_tag}-fastslow-sft")"
+fi
+SFT_CHECKPOINTS="verifier/experiments/$SFT_CONFIG/runs/$SFT_RUN_NAME/artifacts/checkpoints"
+
+grpo_runs_dir="verifier/experiments/$GRPO_CONFIG/runs"
+mkdir -p "$grpo_runs_dir"
+if [[ -n "${GRPO_RUN:-}" ]]; then
+  GRPO_RUN_NAME="$GRPO_RUN"
+else
+  GRPO_RUN_NAME="$(resolve_unique_run "$grpo_runs_dir" "${requested_tag}-fastslow-grpo")"
+fi
+GRPO_CHECKPOINTS="verifier/experiments/$GRPO_CONFIG/runs/$GRPO_RUN_NAME/artifacts/checkpoints"
+
+eval_results_dir="verifier/evaluation/results/$GRPO_CONFIG/cot-fastslow-cap${max_new_tokens}"
+mkdir -p "$eval_results_dir"
+if [[ -n "${EVAL_RUN:-}" ]]; then
+  EVAL_RUN_NAME="$EVAL_RUN"
+else
+  EVAL_RUN_NAME="$(resolve_unique_run "$eval_results_dir" "$GRPO_RUN_NAME")"
+fi
+
 wait_for_adapter() {
   local target="$1" max_wait=28800 elapsed=0
-  echo "Checking for completed adapter in: $target"
+  echo "Checking for adapter in: $target"
   while [[ $elapsed -lt $max_wait ]]; do
     if [[ -f "$target/adapter_config.json" && ( -s "$target/adapter_model.safetensors" || -s "$target/adapter_model.bin" ) ]]; then
-      echo "Completed adapter detected: $target (waited ${elapsed}s)"
+      echo "Ready adapter detected: $target (waited ${elapsed}s)"
       return 0
     fi
     echo "Adapter not ready yet (${elapsed}s elapsed). Sleeping 30s..."
@@ -72,143 +105,94 @@ wait_for_adapter() {
   return 2
 }
 
-case "${SLURM_ARRAY_TASK_ID:?Expected array task 0 to 6}" in
-  # -------------------------------------------------------------
-  # Baseline Evaluation under Native Tag Format (Base Qwen3.5-2B)
-  # -------------------------------------------------------------
-  0)
-    echo "=== Task 0: Evaluate Base Model under direct_tag (cap $max_new_tokens, $n_claims claims) ==="
-    export EVAL_MODEL="base-qwen3p5-2b"
-    export PROMPT_STYLE="direct_tag"
-    export MAX_NEW_TOKENS="$max_new_tokens"
-    export N_CLAIMS="$n_claims"
-    export RUN_NAME="$run_tag"
-    unset CHECKPOINTS
-    unset EVAL_CONDITION
-    bash verifier/evaluation/run_eval.sh
+run_sft() {
+  echo ""
+  echo "=========================================================================="
+  echo ">>> [STAGE 1] Train Fast-Slow SFT on 4,500 Claims"
+  echo ">>> Config: $SFT_CONFIG"
+  echo ">>> Run Name: $SFT_RUN_NAME"
+  echo ">>> Output Checkpoints: $SFT_CHECKPOINTS"
+  echo "=========================================================================="
+  python "verifier/experiments/$SFT_CONFIG/train.py" --run-name "$SFT_RUN_NAME" --seed "$seed"
+  echo ">>> [STAGE 1] SFT training completed successfully!"
+}
+
+run_grpo() {
+  echo ""
+  echo "=========================================================================="
+  echo ">>> [STAGE 2] Train Fast-Slow Native-Thinking GRPO on 1,000 Claims"
+  echo ">>> Config: $GRPO_CONFIG"
+  echo ">>> Run Name: $GRPO_RUN_NAME"
+  echo ">>> Initial SFT Adapter: $SFT_CHECKPOINTS"
+  echo ">>> Reward: Cognitive Self-Correction Reward Matrix"
+  echo "=========================================================================="
+  wait_for_adapter "$SFT_CHECKPOINTS"
+  python "verifier/experiments/$GRPO_CONFIG/train.py" \
+    --run-name "$GRPO_RUN_NAME" \
+    --seed "$seed" \
+    --sft "$SFT_CHECKPOINTS" \
+    --data "$GRPO_DATA"
+  echo ">>> [STAGE 2] GRPO training completed successfully!"
+}
+
+run_eval() {
+  echo ""
+  echo "=========================================================================="
+  echo ">>> [STAGE 3] Evaluate Fast-Slow GRPO Model on FEVER Dev"
+  echo ">>> Model: $GRPO_CONFIG"
+  echo ">>> Prompt Style: cot_fastslow"
+  echo ">>> Max Tokens: $max_new_tokens | Claims: $n_claims"
+  echo ">>> Adapter: $GRPO_CHECKPOINTS"
+  echo ">>> Run Name: $EVAL_RUN_NAME"
+  echo "=========================================================================="
+  wait_for_adapter "$GRPO_CHECKPOINTS"
+  export EVAL_MODEL="$GRPO_CONFIG"
+  export PROMPT_STYLE="cot_fastslow"
+  export MAX_NEW_TOKENS="$max_new_tokens"
+  export N_CLAIMS="$n_claims"
+  export RUN_NAME="$EVAL_RUN_NAME"
+  export CHECKPOINTS="$GRPO_CHECKPOINTS"
+  unset EVAL_CONDITION || true
+  bash verifier/evaluation/run_eval.sh
+  echo ">>> [STAGE 3] Evaluation completed successfully!"
+}
+
+# Determine execution mode:
+# If SLURM_ARRAY_TASK_ID is defined (array job) or STAGE is set, run only that stage.
+# Otherwise, run all 3 stages sequentially in this single job!
+selected_stage="${STAGE:-}"
+if [[ -n "${SLURM_ARRAY_TASK_ID:-}" ]]; then
+  case "$SLURM_ARRAY_TASK_ID" in
+    0|7) selected_stage="sft" ;;
+    1|8) selected_stage="grpo" ;;
+    2|9) selected_stage="eval" ;;
+    *) echo "Unknown array task ID: $SLURM_ARRAY_TASK_ID" >&2; exit 2 ;;
+  esac
+fi
+
+case "$selected_stage" in
+  sft)
+    run_sft
     ;;
-
-  1)
-    echo "=== Task 1: Evaluate Base Model under cot_brief_tag (cap $max_new_tokens, $n_claims claims) ==="
-    export EVAL_MODEL="base-qwen3p5-2b"
-    export PROMPT_STYLE="cot_brief_tag"
-    export MAX_NEW_TOKENS="$max_new_tokens"
-    export N_CLAIMS="$n_claims"
-    export RUN_NAME="$run_tag"
-    unset CHECKPOINTS
-    unset EVAL_CONDITION
-    bash verifier/evaluation/run_eval.sh
+  grpo)
+    run_grpo
     ;;
-
-  2)
-    echo "=== Task 2: Evaluate Base Model under cot_chain_tag (cap $max_new_tokens, $n_claims claims) ==="
-    export EVAL_MODEL="base-qwen3p5-2b"
-    export PROMPT_STYLE="cot_chain_tag"
-    export MAX_NEW_TOKENS="$max_new_tokens"
-    export N_CLAIMS="$n_claims"
-    export RUN_NAME="$run_tag"
-    unset CHECKPOINTS
-    unset EVAL_CONDITION
-    bash verifier/evaluation/run_eval.sh
+  eval)
+    run_eval
     ;;
-
-  # -------------------------------------------------------------
-  # Dual-Path 4,500 SFT Training Tasks
-  # -------------------------------------------------------------
-  3)
-    config="sft-direct-from-base-qwen3p5-2b-disjoint-4500-samples"
-    run_name="${SFT_JSON_RUN:-${run_tag}-json-sft}"
-    script="verifier/experiments/$config/train.py"
-    echo "=== Task 3: Train Path 1 (JSON) Direct SFT (4,500 claims): config=$config run=$run_name ==="
-    python "$script" --run-name "$run_name" --seed "$seed"
+  "")
+    echo "=== Running Full Fast-Slow Pipeline Sequentially (SFT -> GRPO -> Eval) ==="
+    run_sft
+    run_grpo
+    run_eval
+    echo ""
+    echo "=========================================================================="
+    echo ">>> Fast-Slow Pipeline Finished End-to-End!"
+    echo ">>> Evaluated: $eval_results_dir/$EVAL_RUN_NAME/metrics.json"
+    echo "=========================================================================="
     ;;
-
-  4)
-    config="sft-direct-from-base-qwen3p5-2b-tagged-4500-samples"
-    run_name="${SFT_TAG_RUN:-${run_tag}-tag-sft}"
-    script="verifier/experiments/$config/train.py"
-    echo "=== Task 4: Train Path 2 (Native Tag) Direct SFT (4,500 claims): config=$config run=$run_name ==="
-    python "$script" --run-name "$run_name" --seed "$seed"
-    ;;
-
-  # -------------------------------------------------------------
-  # Dual-Path 1,000 GRPO Training Tasks (with checkpoint dependency)
-  # -------------------------------------------------------------
-  5)
-    sft_config="sft-direct-from-base-qwen3p5-2b-disjoint-4500-samples"
-    sft_run="${SFT_JSON_RUN:-${run_tag}-json-sft}"
-    sft_cp="verifier/experiments/${sft_config}/runs/${sft_run}/artifacts/checkpoints"
-    wait_for_adapter "$sft_cp"
-
-    grpo_config="grpo-cot-from-sft4500-qwen3p5-2b-no-calibration-kl0-1000-samples"
-    grpo_run="${GRPO_JSON_RUN:-${run_tag}-json-grpo}"
-    grpo_data="verifier/data/train/sft/fever-oracle-matched-grpo-1000"
-    script="verifier/experiments/$grpo_config/train.py"
-
-    echo "=== Task 5: Train Path 1 (JSON) CoT GRPO (1,000 claims): config=$grpo_config run=$grpo_run ==="
-    python "$script" --run-name "$grpo_run" --seed "$seed" --sft "$sft_cp" --data "$grpo_data"
-    ;;
-
-  6)
-    sft_config="sft-direct-from-base-qwen3p5-2b-tagged-4500-samples"
-    sft_run="${SFT_TAG_RUN:-${run_tag}-tag-sft}"
-    sft_cp="verifier/experiments/${sft_config}/runs/${sft_run}/artifacts/checkpoints"
-    wait_for_adapter "$sft_cp"
-
-    grpo_config="grpo-cot-from-sft4500tagged-qwen3p5-2b-no-calibration-kl0-1000-samples"
-    grpo_run="${GRPO_TAG_RUN:-${run_tag}-tag-grpo}"
-    grpo_data="verifier/data/train/sft/fever-oracle-tagged-grpo-1000"
-    script="verifier/experiments/$grpo_config/train.py"
-
-    echo "=== Task 6: Train Path 2 (Native Tag) CoT GRPO (1,000 claims): config=$grpo_config run=$grpo_run ==="
-    python "$script" --run-name "$grpo_run" --seed "$seed" --sft "$sft_cp" --data "$grpo_data"
-    ;;
-
-  # -------------------------------------------------------------
-  # Fast-Slow Dual-Process Training & Evaluation Pipeline
-  # -------------------------------------------------------------
-  7)
-    config="sft-fastslow-from-base-qwen3p5-2b-4500-samples"
-    run_name="${SFT_FASTSLOW_RUN:-${run_tag}-fastslow-sft}"
-    script="verifier/experiments/$config/train.py"
-    echo "=== Task 7: Train Fast-Slow Dual-Process SFT (4,500 claims): config=$config run=$run_name ==="
-    python "$script" --run-name "$run_name" --seed "$seed"
-    ;;
-
-  8)
-    sft_config="sft-fastslow-from-base-qwen3p5-2b-4500-samples"
-    sft_run="${SFT_FASTSLOW_RUN:-${run_tag}-fastslow-sft}"
-    sft_cp="verifier/experiments/${sft_config}/runs/${sft_run}/artifacts/checkpoints"
-    wait_for_adapter "$sft_cp"
-
-    grpo_config="grpo-fastslow-from-sft4500-qwen3p5-2b-no-calibration-kl0-1000-samples"
-    grpo_run="${GRPO_FASTSLOW_RUN:-${run_tag}-fastslow-grpo}"
-    grpo_data="verifier/data/train/grpo/fever-oracle-fastslow-grpo-1000"
-    script="verifier/experiments/$grpo_config/train.py"
-
-    echo "=== Task 8: Train Fast-Slow GRPO with Self-Correction Reward (1,000 claims): config=$grpo_config run=$grpo_run ==="
-    python "$script" --run-name "$grpo_run" --seed "$seed" --sft "$sft_cp" --data "$grpo_data"
-    ;;
-
-  9)
-    grpo_config="grpo-fastslow-from-sft4500-qwen3p5-2b-no-calibration-kl0-1000-samples"
-    grpo_run="${GRPO_FASTSLOW_RUN:-${run_tag}-fastslow-grpo}"
-    grpo_cp="verifier/experiments/${grpo_config}/runs/${grpo_run}/artifacts/checkpoints"
-    wait_for_adapter "$grpo_cp"
-
-    echo "=== Task 9: Evaluate Fast-Slow GRPO Model on FEVER Dev (900 claims, cap $max_new_tokens) ==="
-    export EVAL_MODEL="$grpo_config"
-    export PROMPT_STYLE="cot_fastslow"
-    export MAX_NEW_TOKENS="$max_new_tokens"
-    export N_CLAIMS="$n_claims"
-    export RUN_NAME="$grpo_run"
-    export CHECKPOINTS="$grpo_cp"
-    unset EVAL_CONDITION
-    bash verifier/evaluation/run_eval.sh
-    ;;
-
   *)
-    echo "Unexpected array task: $SLURM_ARRAY_TASK_ID (expected 0 to 9)" >&2
+    echo "Unknown stage: $selected_stage (expected 'sft', 'grpo', 'eval', or empty for full pipeline)" >&2
     exit 2
     ;;
 esac
