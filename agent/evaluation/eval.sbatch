@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-#SBATCH --job-name=agent-sampling-eval
+#SBATCH --job-name=agent-sampling-retry
 #SBATCH --partition=gpu
 #SBATCH --time=03:00:00
 #SBATCH --cpus-per-task=4
@@ -10,10 +10,15 @@
 
 # Submit from the repo root: sbatch agent/evaluation/eval.sbatch
 # Default: direct SFT 5500, 900 frozen dev claims, 3 stochastic draws each.
+# The Slurm log is written at the repo root as slurm-agent-sampling-retry-<job-id>.out.
 
 set -euo pipefail
 cd "${SLURM_SUBMIT_DIR:?submit from the repo root}"
+echo "agent sampling retry job ${SLURM_JOB_ID:?} started in $PWD"
 test -f README.md || { echo 'Submit from the repository root' >&2; exit 2; }
+test -f agent/evaluation/results/sampling_retry/eval_sampling_retry.py || {
+  echo 'Missing sampling retry evaluator; pull the latest rl branch' >&2; exit 2;
+}
 test -f verifier/data/fever/shared_task_dev.jsonl || { echo 'Missing FEVER dev data' >&2; exit 2; }
 test -f verifier/data/fever/pages.sqlite || { echo 'Missing SQLite index' >&2; exit 2; }
 test -f verifier/data/fever/bm25_index/doc_ids.json || { echo 'Missing BM25 index' >&2; exit 2; }
