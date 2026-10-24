@@ -5,7 +5,7 @@ bins, ops-vs-accuracy).
 No training here on purpose. The question this answers is only "does the MDP
 hold together and do the metrics compute", not "does RL win".
 
-    python run_scaffold.py
+    python -m agent.experiments.toy_scaffold.run
 """
 
 from __future__ import annotations
@@ -14,7 +14,9 @@ from collections import defaultdict
 
 import numpy as np
 
-from agent.verification_env import ABSTAIN, CROSS_CHECK, DECOMPOSE, RETRIEVE, ClaimVerificationEnv
+from agent.experiments.toy_scaffold.environment import (
+    ABSTAIN, CROSS_CHECK, DECOMPOSE, RETRIEVE, ClaimVerificationEnv,
+)
 
 N_EPISODES = 200
 

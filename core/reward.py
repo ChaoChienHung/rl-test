@@ -23,7 +23,7 @@ from __future__ import annotations
 import random
 from dataclasses import dataclass
 
-from agent.toy_corpus import NEI, REFUTED, SUPPORTED
+SUPPORTED, REFUTED, NEI = "SUPPORTED", "REFUTED", "NEI"
 
 L1_EVIDENCE = 0.5
 L2_CALIBRATION = 0.5

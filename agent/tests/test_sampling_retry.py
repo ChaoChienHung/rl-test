@@ -1,6 +1,6 @@
 import unittest
 
-from agent.evaluation.eval_sampling_retry import stopping_index, summarize
+from agent.evaluation.results.sampling_retry.eval_sampling_retry import stopping_index, summarize
 
 
 def sample(pred, gold="REFUTED", confidence=0.8, evidence=(), format_ok=True):

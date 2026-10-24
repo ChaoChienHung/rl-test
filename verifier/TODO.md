@@ -96,8 +96,6 @@ Current work is verifier evaluation on the `rl` branch. These tasks replace the 
 
 - [ ] Connect the verifier to the agent loop's `verify()` interface. Compare one search, fixed NEI retry and confidence-guided retry before training a controller.
 
-- [ ] Run `agent/evaluation/eval.sbatch` on the frozen 900 FEVER dev claims with one chosen verifier checkpoint. Compare all three stochastic draws with the simulated NEI/low-token-confidence stopping rule; inspect accuracy, FEVER, evidence disagreement, early wrong stops, actual versus simulated cost, and gold-evidence-in-context strata. This is evaluation, not controller training.
-
-- [ ] Train or evaluate a real-data controller only if simple fixed policies leave a measurable accuracy–cost gap. Check retrieval misses and transfer to SciFact / AVeriTeC.
+Agent-specific evaluation and controller work is tracked in [`agent/TODO.md`](../agent/TODO.md).
 
 - [ ] Prepare the team failure audit, shortcut checks, transfer results and final demo from the same evaluation definitions.

@@ -3,6 +3,7 @@
 This repository studies evidence-grounded claim verification on FEVER. A verifier reads a claim and retrieved sentences, then returns a JSON verdict and cited sentence IDs; some configurations also return a stated confidence. The `rl` branch contains historical SFT and GRPO runs plus direct, CoT, and brief reasoning baselines.
 
 - **Current priorities & experiment checklist**: [`verifier/TODO.md`](verifier/TODO.md)
+- **Agent evaluation and controller checklist**: [`agent/TODO.md`](agent/TODO.md)
 - **Research journal, experimental insights & error analyses**: `verifier/INSIGHT.md` (local / Git-ignored) and [`verifier/docs/`](verifier/docs/)
 
 ---
@@ -21,16 +22,24 @@ This repository studies evidence-grounded claim verification on FEVER. A verifie
 | [`verifier/evaluation/`](verifier/evaluation/) | Shared evaluator, `evaluate.sbatch` and `results/` |
 | [`retrieval/`](retrieval/) | FEVER index and search code |
 | [`core/`](core/) | Shared reward and interfaces |
-| [`agent/`](agent/) | Search/verify loop and controller scaffold |
-| [`agent/evaluation/`](agent/evaluation/) | Three-draw sampling retry evaluator, Slurm entry point and separate `results/` |
+| [`agent/`](agent/) | Runnable FEVER search/verify loop and agent-specific work |
+| [`agent/evaluation/`](agent/evaluation/) | Agent evaluation Slurm entry point and method-specific `results/` |
+| [`agent/evaluation/results/sampling_retry/`](agent/evaluation/results/sampling_retry/) | Three-draw retry evaluator and its `runs/` outputs |
+| [`agent/experiments/`](agent/experiments/) | Isolated controller experiments; currently a toy scaffold, not FEVER results |
+| [`agent/data/traces/`](agent/data/traces/) | Archived fixed-loop FEVER traces |
+| [`agent/docs/`](agent/docs/) | Agent trace schema and method notes |
+| [`agent/tests/`](agent/tests/) | Agent evaluation and policy tests |
+| [`agent/TODO.md`](agent/TODO.md) | Agent-only experiment checklist |
 | [`utils/`](utils/) | Data preparation and experiment helpers |
 | [`AGENTS.md`](AGENTS.md) | Conventions for collaborators and coding agents |
 
-Detailed document map: [data and downloads](verifier/docs/data.md), [system plan](verifier/docs/plan.md), [prompted baseline](verifier/docs/prompted-baseline-results.md), [SFT](verifier/docs/sft-probe.md), [CoT teacher rejection audit](verifier/docs/cot-teacher-rejection-audit.md), [GRPO](verifier/docs/grpo-results.md), [agent traces](verifier/docs/trace-format.md), [models](verifier/docs/models.md), and [related work](verifier/docs/related-work.md).
+Detailed document map: [data and downloads](verifier/docs/data.md), [system plan](verifier/docs/plan.md), [prompted baseline](verifier/docs/prompted-baseline-results.md), [SFT](verifier/docs/sft-probe.md), [CoT teacher rejection audit](verifier/docs/cot-teacher-rejection-audit.md), [GRPO](verifier/docs/grpo-results.md), [agent traces](agent/docs/trace-format.md), [models](verifier/docs/models.md), and [related work](verifier/docs/related-work.md).
+
+The runnable FEVER loop stays at `agent/agent_loop.py`; its traces are under `agent/data/traces/`. The 12-claim synthetic controller scaffold lives under `agent/experiments/toy_scaffold/` and runs with `python -m agent.experiments.toy_scaffold.run`. It is separate from FEVER evaluation and does not establish a controller gain. Agent-specific next steps are in [`agent/TODO.md`](agent/TODO.md).
 
 ### Agent sampling retry evaluation
 
-The existing `agent/agent_loop.py` is the one-search, one-verification fixed baseline. The separate `agent/evaluation/eval_sampling_retry.py` experiment uses the **same frozen 900 FEVER dev IDs** and title-plus-BM25 retrieval context for each claim, then samples the verifier three times from the identical prompt (`temperature=0.7`, `top_p=0.9` by default). It saves all three verdicts, global evidence IDs, stated and verdict-token confidence, raw completions, and whether gold evidence was actually shown. No new evidence is retrieved between draws.
+The existing `agent/agent_loop.py` is the one-search, one-verification fixed baseline. The separate [`agent/evaluation/results/sampling_retry/eval_sampling_retry.py`](agent/evaluation/results/sampling_retry/eval_sampling_retry.py) experiment uses the **same frozen 900 FEVER dev IDs** and title-plus-BM25 retrieval context for each claim, then samples the verifier three times from the identical prompt (`temperature=0.7`, `top_p=0.9` by default). It saves all three verdicts, global evidence IDs, stated and verdict-token confidence, raw completions, and whether gold evidence was actually shown. No new evidence is retrieved between draws.
 
 The offline heuristic selects the first valid `SUPPORTED` or `REFUTED` output with verdict-token confidence at least `0.5`; `NOT_ENOUGH_INFO`, invalid output, and missing or lower confidence trigger another draw, up to three. All three draws are generated for every claim even if the simulated policy would stop early. Therefore `metrics.json` reports both **actual three-call cost** and **simulated stopping cost**, along with first-draw versus heuristic accuracy/FEVER, verdict/evidence disagreement, and separate `gold_in_context`, `gold_not_in_context`, and gold-NEI results. The threshold is an exploratory rule, not a calibrated probability guarantee. FEVER gold labels describe the claim against Wikipedia, so a retrieval miss can make the original label impossible to justify from the shown context.
 
@@ -40,7 +49,9 @@ On SoC, submit from the repository root. The default adapter is the direct 5,500
 sbatch agent/evaluation/eval.sbatch
 ```
 
-To use another checkpoint, set `CHECKPOINTS` when submitting, for example `CHECKPOINTS=<adapter-path> PROMPT_STYLE=direct sbatch --export=ALL agent/evaluation/eval.sbatch`. For a composed SFT+GRPO adapter, export `CHECKPOINTS="<sft-checkpoint>,<grpo-checkpoint>"` before `sbatch --export=ALL`; set `PROMPT_STYLE=cot_native` for the native-thinking GRPO model. Optional `RUN_NAME`, `N_CLAIMS`, `TEMPERATURE`, `TOP_P`, `THRESHOLD`, `MAX_NEW_TOKENS`, `SEED`, `EVAL_MODEL`, and `RESULT_DIR` override the defaults. The new run directory is `agent/evaluation/results/<eval_model>/sampling-retry-<prompt>-cap<tokens>/<run>/` unless `RESULT_DIR` is set. Read `predictions.jsonl` for each claim's three draws, `metrics.json` for the comparison, and `slurm-agent-sampling-eval-<job-id>.out` for progress and errors. The run refuses to overwrite an existing result directory.
+To use another checkpoint, set `CHECKPOINTS` when submitting, for example `CHECKPOINTS=<adapter-path> PROMPT_STYLE=direct sbatch --export=ALL agent/evaluation/eval.sbatch`. For a composed SFT+GRPO adapter, export `CHECKPOINTS="<sft-checkpoint>,<grpo-checkpoint>"` before `sbatch --export=ALL`; set `PROMPT_STYLE=cot_native` for the native-thinking GRPO model. Optional `RUN_NAME`, `N_CLAIMS`, `TEMPERATURE`, `TOP_P`, `THRESHOLD`, `MAX_NEW_TOKENS`, `SEED`, `EVAL_MODEL`, and `RESULT_DIR` override the defaults. The new run directory is `agent/evaluation/results/sampling_retry/runs/<eval_model>/<prompt>-cap<tokens>/<run>/` unless `RESULT_DIR` is set. Read `predictions.jsonl` for each claim's three draws and `metrics.json` for the comparison. The run refuses to overwrite an existing result directory.
+
+After `sbatch` returns a job ID, check `squeue -j <job-id>` for a pending or running job. Slurm creates `slurm-agent-sampling-eval-<job-id>.out` in the repository root only when the job starts; read it with `tail -f slurm-agent-sampling-eval-<job-id>.out`. After the job leaves the queue, check `sacct -j <job-id> --format=JobID,State,ExitCode,Elapsed` and the log for completion or errors. Jobs submitted before this layout change keep their original output path; the old Python module path remains as a compatibility entry point for those jobs.
 
 The 900 dev claims are for **evaluation only**. Training a learned `STOP/RETRY` controller requires separate FEVER train claims and rollout data. Copying the heuristic's actions as labels would be imitation learning; it would not establish an RL result.
 

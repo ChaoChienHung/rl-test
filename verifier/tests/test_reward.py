@@ -9,7 +9,7 @@ import numpy as np
 import pytest
 
 from core import reward as R
-from agent.toy_corpus import NEI, REFUTED, SUPPORTED
+from core.reward import NEI, REFUTED, SUPPORTED
 
 
 def expected_calibration(p_right: float, confidence: float) -> float:

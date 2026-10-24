@@ -20,7 +20,7 @@ plan claims is needed:
 
 from __future__ import annotations
 
-SUPPORTED, REFUTED, NEI = "SUPPORTED", "REFUTED", "NEI"
+from core.reward import NEI, REFUTED, SUPPORTED
 
 # sentence_id -> sentence text
 SENTENCES = {

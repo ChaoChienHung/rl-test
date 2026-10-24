@@ -119,8 +119,9 @@ results (AG-1's sentence-level `search()` with a small k).
 ## 6. Agent loop reproduces untrained baseline (2026-10-12)
 
 `agent/agent_loop.py`, fixed policy (search the claim once, verify, abstain
-on NEI else commit), writing `verifier/data/traces/fever_dev_<run>_n900.jsonl` in the
-frozen trace format. With the same retrieval as untrained baseline's `titles`:
+on NEI else commit). Its historical trace rows are now archived at
+`agent/data/traces/fever_dev_<run>_n900.jsonl` in the frozen trace format.
+With the same retrieval as untrained baseline's `titles`:
 
 | Verifier | Loop acc | Untrained baseline acc | Same verdict | s / claim |
 |---|---|---|---|---|

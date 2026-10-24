@@ -28,7 +28,9 @@ import gymnasium as gym
 from gymnasium import spaces
 
 from core import reward as R
-from agent.toy_corpus import CLAIMS, NEI, REFUTED, SENTENCES, SUPPORTED, decompose, retrieve, tokens
+from agent.experiments.toy_scaffold.corpus import (
+    CLAIMS, NEI, REFUTED, SENTENCES, SUPPORTED, decompose, retrieve, tokens,
+)
 
 MAX_EVIDENCE = 6
 MAX_OPS = 8

@@ -2,13 +2,13 @@
 
 Frozen 2026-10-11 (schema 1). AG-2 writes it, RL-3 trains the controller
 on it, AG-3's eval script and the demo read it. Interface 4 of the four
-frozen in week 1 ([`plan.md`](plan.md)). The `search` and `verify` signatures
+frozen in week 1 ([`plan.md`](../../verifier/docs/plan.md)). The `search` and `verify` signatures
 the steps log are in `core/interfaces.py`.
 
 ## Rules
 
 - One line per claim per run, UTF-8 JSON. File name
-  `<dataset>_<split>_<run>.jsonl` under `verifier/data/traces/`.
+  `<dataset>_<split>_<run>.jsonl` under `agent/data/traces/`.
 - Labels use untrained baseline's spelling: `SUPPORTED`, `REFUTED`, `NOT_ENOUGH_INFO`.
   `reward.py` maps the last to `NEI` internally.
 - Evidence is always the global id `"<page>:<line>"`, never the

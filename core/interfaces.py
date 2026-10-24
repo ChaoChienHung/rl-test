@@ -1,8 +1,8 @@
-"""The two tool signatures frozen in week 1 (docs/plan.md and docs/trace-format.md).
+"""The two tool signatures frozen in week 1 (verifier/docs/plan.md and agent/docs/trace-format.md).
 
 Frozen 2026-10-11. The loop (AG-2) calls these; AG-1 implements `search`,
 RL-1's trained model sits behind `verify`. Implementations live elsewhere and
-only have to match these shapes. Field names follow docs/trace-format.md,
+only have to match these shapes. Field names follow agent/docs/trace-format.md,
 which logs both calls as steps.
 
 Fields may be added after freezing, never renamed or removed.

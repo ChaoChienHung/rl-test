@@ -61,12 +61,12 @@ case "$style" in
   cot_native|cot_native_tag) cap="${MAX_NEW_TOKENS:-1024}" ;;
 esac
 [[ "$cap" =~ ^[1-9][0-9]*$ ]] || { echo 'MAX_NEW_TOKENS must be positive' >&2; exit 2; }
-condition="sampling-retry-${style//_/-}-cap${cap}"
-result_dir="${RESULT_DIR:-agent/evaluation/results/$eval_model/$condition/$run_name}"
+condition="${style//_/-}-cap${cap}"
+result_dir="${RESULT_DIR:-agent/evaluation/results/sampling_retry/runs/$eval_model/$condition/$run_name}"
 test ! -e "$result_dir" || { echo "Result directory exists: $result_dir" >&2; exit 2; }
 
-echo "job=${SLURM_JOB_ID} code=agent.evaluation.eval_sampling_retry model=$model adapters=$checkpoints n=$n style=$style result=$result_dir"
-srun python -m agent.evaluation.eval_sampling_retry \
+echo "job=${SLURM_JOB_ID} code=agent.evaluation.results.sampling_retry.eval_sampling_retry model=$model adapters=$checkpoints n=$n style=$style result=$result_dir"
+srun python -m agent.evaluation.results.sampling_retry.eval_sampling_retry \
   --model "$model" --adapter "$checkpoints" --prompt-style "$style" \
   --n "$n" --seed "${SEED:-0}" \
   --temperature "${TEMPERATURE:-0.7}" --top-p "${TOP_P:-0.9}" \

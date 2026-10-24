@@ -7,10 +7,10 @@ retrieval shows it, in the same order and batches, so the loop must reproduce
 untrained baseline before anything smarter is built on it:
 
     python -m agent.agent_loop                                              # base 2B, untrained baseline: acc 0.459
-    python -m agent.agent_loop --adapter verifier/experiments/sft-direct-from-base-qwen3p5-2b-5895-samples/runs/run1/artifacts/checkpoints   # SFT: acc 0.759
+    python -m agent.agent_loop --adapter verifier/experiments/sft-direct-from-base-qwen3p5-2b-5895-samples/runs/run2/artifacts/checkpoints   # SFT example
     python -m agent.agent_loop --n 30 --tag smoke
 
-Writes verifier/data/traces/fever_dev_<run>.jsonl in docs/trace-format.md (schema 1),
+Writes agent/data/traces/fever_dev_<run>.jsonl in agent/docs/trace-format.md (schema 1),
 then prints accuracy and per-claim agreement with the matching untrained baseline file.
 A rerun skips claims already in the trace file.
 
@@ -33,7 +33,7 @@ from retrieval.build_bm25_index import DATA
 from verifier.model import (FEVER_LABEL, K_PAGES, LABELS, LOCAL_MODEL, MAX_CITED, MAX_SENTS_PER_PAGE, SEED,
                     adapter_label, gold_sets, label_probs, parse, render, sample_claims)
 
-TRACE_DIR = os.path.join(DATA, "..", "traces")
+TRACE_DIR = os.path.join(os.path.dirname(__file__), "data", "traces")
 ARCHIVED_EVAL_DIR = os.path.join(DATA, "..", "..", "evaluation", "results", "archive")
 SCHEMA = 1
 NEI = "NOT_ENOUGH_INFO"
