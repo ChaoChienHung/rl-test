@@ -8,14 +8,15 @@
 #SBATCH --exclude=xgpe2
 #SBATCH --output=slurm-%x-%j.out
 
-# Submit from the repo root: sbatch agent/evaluation/eval.sbatch
+# Submit from anywhere inside this repo; see README for examples.
 # Default: direct SFT 5500, 900 frozen dev claims, 3 stochastic draws each.
-# The Slurm log is written at the repo root as slurm-agent-sampling-retry-<job-id>.out.
+# Slurm writes slurm-agent-sampling-retry-<job-id>.out in the submission directory.
 
 set -euo pipefail
-cd "${SLURM_SUBMIT_DIR:?submit from the repo root}"
+repo_root="$(git -C "${SLURM_SUBMIT_DIR:?missing Slurm submission directory}" rev-parse --show-toplevel)"
+cd "$repo_root"
 echo "agent sampling retry job ${SLURM_JOB_ID:?} started in $PWD"
-test -f README.md || { echo 'Submit from the repository root' >&2; exit 2; }
+test -f README.md || { echo 'Repository root has no README.md' >&2; exit 2; }
 test -f agent/evaluation/results/sampling_retry/eval_sampling_retry.py || {
   echo 'Missing sampling retry evaluator; pull the latest rl branch' >&2; exit 2;
 }

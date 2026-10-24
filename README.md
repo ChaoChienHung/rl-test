@@ -43,7 +43,7 @@ The existing `agent/agent_loop.py` is the one-search, one-verification fixed bas
 
 The offline heuristic selects the first valid `SUPPORTED` or `REFUTED` output with verdict-token confidence at least `0.5`; `NOT_ENOUGH_INFO`, invalid output, and missing or lower confidence trigger another draw, up to three. All three draws are generated for every claim even if the simulated policy would stop early. Therefore `metrics.json` reports both **actual three-call cost** and **simulated stopping cost**, along with first-draw versus heuristic accuracy/FEVER, verdict/evidence disagreement, and separate `gold_in_context`, `gold_not_in_context`, and gold-NEI results. The threshold is an exploratory rule, not a calibrated probability guarantee. FEVER gold labels describe the claim against Wikipedia, so a retrieval miss can make the original label impossible to justify from the shown context.
 
-On SoC, submit from the repository root. The default adapter is the direct 5,500-row SFT checkpoint, with 900 claims and the direct prompt:
+On SoC, submit from the repository root or `agent/evaluation/`. The job changes to the repository root before checking data and running the evaluator. The default adapter is the direct 5,500-row SFT checkpoint, with 900 claims and the direct prompt:
 
 ```bash
 sbatch agent/evaluation/eval.sbatch
@@ -51,7 +51,7 @@ sbatch agent/evaluation/eval.sbatch
 
 To use another checkpoint, set `CHECKPOINTS` when submitting, for example `CHECKPOINTS=<adapter-path> PROMPT_STYLE=direct sbatch --export=ALL agent/evaluation/eval.sbatch`. For a composed SFT+GRPO adapter, export `CHECKPOINTS="<sft-checkpoint>,<grpo-checkpoint>"` before `sbatch --export=ALL`; set `PROMPT_STYLE=cot_native` for the native-thinking GRPO model. Optional `RUN_NAME`, `N_CLAIMS`, `TEMPERATURE`, `TOP_P`, `THRESHOLD`, `MAX_NEW_TOKENS`, `SEED`, `EVAL_MODEL`, and `RESULT_DIR` override the defaults. The new run directory is `agent/evaluation/results/sampling_retry/runs/<eval_model>/<prompt>-cap<tokens>/<run>/` unless `RESULT_DIR` is set. Read `predictions.jsonl` for each claim's three draws and `metrics.json` for the comparison. The run refuses to overwrite an existing result directory.
 
-After `sbatch` returns a job ID, check `squeue -j <job-id>` for a pending or running job. Slurm creates `slurm-agent-sampling-retry-<job-id>.out` in the repository root only when the job starts; read it with `tail -f slurm-agent-sampling-retry-<job-id>.out`. After the job leaves the queue, check `sacct -j <job-id> --format=JobID,State,ExitCode,Elapsed` and the log for completion or errors. Cancel any pending job submitted with the old script before pulling and resubmitting this version.
+After `sbatch` returns a job ID, check `squeue -j <job-id>` for a pending or running job. Slurm creates `slurm-agent-sampling-retry-<job-id>.out` in the **directory where you ran `sbatch`** only when the job starts; read it there with `tail -f slurm-agent-sampling-retry-<job-id>.out`. After the job leaves the queue, check `sacct -j <job-id> --format=JobID,State,ExitCode,Elapsed` and the log for completion or errors. For example, if you submit with `sbatch eval.sbatch` from `agent/evaluation/`, its log is in `agent/evaluation/`. Cancel any pending job submitted with the old script before pulling and resubmitting this version.
 
 The 900 dev claims are for **evaluation only**. Training a learned `STOP/RETRY` controller requires separate FEVER train claims and rollout data. Copying the heuristic's actions as labels would be imitation learning; it would not establish an RL result.
 
