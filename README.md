@@ -11,20 +11,38 @@ This repository studies evidence-grounded claim verification on FEVER. A verifie
 
 | Path | What it contains |
 |---|---|
-| [`run.sbatch`](run.sbatch) | Two-task Slurm array: evaluates 5,500 Native CoT SFT (Task 0) and Unseen-Arm CoT GRPO 4695 (Task 1) |
+| [`verifier/train.sbatch`](verifier/train.sbatch) | Single training entry point; select a configuration with `TRAIN_SCRIPT` |
+| [`agent/evaluation/eval.sbatch`](agent/evaluation/eval.sbatch) | Three-draw verifier sampling and retry-policy evaluation |
 | [`verifier/TODO.md`](verifier/TODO.md) | Current priorities and experiment checklist |
 | [`verifier/docs/`](verifier/docs/) | Data guide, experiment results, architecture and background |
 | [`verifier/data/train/`](verifier/data/train/) | Committed SFT and GRPO training examples |
 | [`verifier/data/eval/`](verifier/data/eval/) | Frozen FEVER dev claim IDs |
 | [`verifier/experiments/`](verifier/experiments/) | SFT and GRPO training configurations |
-| [`verifier/evaluation/`](verifier/evaluation/) | Shared evaluator, Slurm launcher and `results/` |
+| [`verifier/evaluation/`](verifier/evaluation/) | Shared evaluator, `evaluate.sbatch` and `results/` |
 | [`retrieval/`](retrieval/) | FEVER index and search code |
 | [`core/`](core/) | Shared reward and interfaces |
 | [`agent/`](agent/) | Search/verify loop and controller scaffold |
+| [`agent/evaluation/`](agent/evaluation/) | Three-draw sampling retry evaluator, Slurm entry point and separate `results/` |
 | [`utils/`](utils/) | Data preparation and experiment helpers |
 | [`AGENTS.md`](AGENTS.md) | Conventions for collaborators and coding agents |
 
 Detailed document map: [data and downloads](verifier/docs/data.md), [system plan](verifier/docs/plan.md), [prompted baseline](verifier/docs/prompted-baseline-results.md), [SFT](verifier/docs/sft-probe.md), [CoT teacher rejection audit](verifier/docs/cot-teacher-rejection-audit.md), [GRPO](verifier/docs/grpo-results.md), [agent traces](verifier/docs/trace-format.md), [models](verifier/docs/models.md), and [related work](verifier/docs/related-work.md).
+
+### Agent sampling retry evaluation
+
+The existing `agent/agent_loop.py` is the one-search, one-verification fixed baseline. The separate `agent/evaluation/eval_sampling_retry.py` experiment uses the **same frozen 900 FEVER dev IDs** and title-plus-BM25 retrieval context for each claim, then samples the verifier three times from the identical prompt (`temperature=0.7`, `top_p=0.9` by default). It saves all three verdicts, global evidence IDs, stated and verdict-token confidence, raw completions, and whether gold evidence was actually shown. No new evidence is retrieved between draws.
+
+The offline heuristic selects the first valid `SUPPORTED` or `REFUTED` output with verdict-token confidence at least `0.5`; `NOT_ENOUGH_INFO`, invalid output, and missing or lower confidence trigger another draw, up to three. All three draws are generated for every claim even if the simulated policy would stop early. Therefore `metrics.json` reports both **actual three-call cost** and **simulated stopping cost**, along with first-draw versus heuristic accuracy/FEVER, verdict/evidence disagreement, and separate `gold_in_context`, `gold_not_in_context`, and gold-NEI results. The threshold is an exploratory rule, not a calibrated probability guarantee. FEVER gold labels describe the claim against Wikipedia, so a retrieval miss can make the original label impossible to justify from the shown context.
+
+On SoC, submit from the repository root. The default adapter is the direct 5,500-row SFT checkpoint, with 900 claims and the direct prompt:
+
+```bash
+sbatch agent/evaluation/eval.sbatch
+```
+
+To use another checkpoint, set `CHECKPOINTS` when submitting, for example `CHECKPOINTS=<adapter-path> PROMPT_STYLE=direct sbatch --export=ALL agent/evaluation/eval.sbatch`. For a composed SFT+GRPO adapter, export `CHECKPOINTS="<sft-checkpoint>,<grpo-checkpoint>"` before `sbatch --export=ALL`; set `PROMPT_STYLE=cot_native` for the native-thinking GRPO model. Optional `RUN_NAME`, `N_CLAIMS`, `TEMPERATURE`, `TOP_P`, `THRESHOLD`, `MAX_NEW_TOKENS`, `SEED`, `EVAL_MODEL`, and `RESULT_DIR` override the defaults. The new run directory is `agent/evaluation/results/<eval_model>/sampling-retry-<prompt>-cap<tokens>/<run>/` unless `RESULT_DIR` is set. Read `predictions.jsonl` for each claim's three draws, `metrics.json` for the comparison, and `slurm-agent-sampling-eval-<job-id>.out` for progress and errors. The run refuses to overwrite an existing result directory.
+
+The 900 dev claims are for **evaluation only**. Training a learned `STOP/RETRY` controller requires separate FEVER train claims and rollout data. Copying the heuristic's actions as labels would be imitation learning; it would not establish an RL result.
 
 ---
 
@@ -261,28 +279,28 @@ echo "Index Job: $job_id"
 squeue -j "$job_id"
 ```
 
-#### B. Submit one-command Slurm array evaluation sweep (`run.sbatch`)
-Executes Task 0 (evaluate 5,500 Native CoT SFT) and Task 1 (evaluate Unseen-Arm 4,695 CoT GRPO):
+#### B. Submit agent sampling and retry evaluation
 ```bash
-job=$(sbatch --parsable run.sbatch)
-echo "CoT Evaluation Sweep Array Job: $job"
+job=$(sbatch --parsable agent/evaluation/eval.sbatch)
+echo "Agent evaluation job: $job"
 squeue -j "$job"
 ```
 
-#### C. Submit single model training job (`verifier/experiments/run_train.sbatch`)
+#### C. Submit a verifier training configuration (`verifier/train.sbatch`)
 ```bash
-# Example: train standard 5,895-row no-CoT SFT (<3 hours)
-job_id=$(sbatch --parsable --partition=gpu --gpus=a100-40:1 --time=03:00:00 \
-  --export=ALL,RUN_NAME=run3,SEED=0 verifier/experiments/run_train.sbatch)
+# Example: train the direct 5,895-row SFT configuration with a new run name.
+TRAIN_SCRIPT=verifier/experiments/sft-direct-from-base-qwen3p5-2b-5895-samples/train.py \
+RUN_NAME=run3 sbatch --partition=gpu --gpus=a100-40:1 --time=03:00:00 \
+  --export=ALL verifier/train.sbatch
 ```
 
-#### D. Submit single model evaluation job (`verifier/evaluation/run.sbatch`)
+#### D. Submit single model evaluation job (`verifier/evaluation/evaluate.sbatch`)
 ```bash
 # Example: evaluate SFT checkpoint under cot_brief prompt
 adapter=verifier/experiments/sft-direct-from-base-qwen3p5-2b-5500-samples/runs/run1/artifacts/checkpoints
 sbatch --partition=gpu --gpus=a100-40:1 --time=01:30:00 \
   --export=ALL,N_CLAIMS=900,RUN_NAME=run1,PROMPT_STYLE=cot_brief,CHECKPOINTS="$adapter" \
-  verifier/evaluation/run.sbatch
+  verifier/evaluation/evaluate.sbatch
 ```
 
 #### E. Job monitoring and status checks

@@ -5,17 +5,21 @@
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=32G
 #SBATCH --gpus=a100-40:1
+#SBATCH --exclude=xgpe2
 #SBATCH --output=slurm-%x-%j.out
+
+# Submit from the repository root with TRAIN_SCRIPT set to a configuration's train.py.
 
 set -euo pipefail
 cd "${SLURM_SUBMIT_DIR:?submit from the repo root}"
 test -f README.md || { echo "Submit from the repository root (README.md missing)" >&2; exit 2; }
+test -x .venv/bin/python || { echo "Missing .venv/bin/python" >&2; exit 2; }
 source .venv/bin/activate
 export TMPDIR="${TMPDIR:-$HOME/.pip-tmp}"
 mkdir -p "$TMPDIR"
 export TOKENIZERS_PARALLELISM=false
 
-train_script="${TRAIN_SCRIPT:-verifier/experiments/sft-direct-from-base-qwen3p5-2b-5895-samples/train.py}"
+train_script="${TRAIN_SCRIPT:?Set TRAIN_SCRIPT=verifier/experiments/<config>/train.py}"
 case "$train_script" in
   verifier/experiments/*/train.py) ;;
   *) echo "TRAIN_SCRIPT must be a verifier/experiments/<config>/train.py path" >&2; exit 2 ;;

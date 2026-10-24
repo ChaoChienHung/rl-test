@@ -313,7 +313,8 @@ def label_probs(tokens):
 
 class LocalModel:
     def __init__(self, name=LOCAL_MODEL, batch_size=4, adapter=None,
-                 system_prompt=SYSTEM, max_new_tokens=160, enable_thinking=False):
+                 system_prompt=SYSTEM, max_new_tokens=160, enable_thinking=False,
+                 do_sample=False, temperature=1.0, top_p=1.0):
         import torch
         from transformers import AutoModelForCausalLM, AutoTokenizer
         self.torch = torch
@@ -330,9 +331,13 @@ class LocalModel:
         self.system_prompt = system_prompt
         self.max_new_tokens = max_new_tokens
         self.enable_thinking = enable_thinking
+        self.do_sample = do_sample
+        self.temperature = temperature
+        self.top_p = top_p
         self.name = name if not adapter else f"{name}+{adapter_label(adapter)}"
 
-    def run(self, prompts):
+    def run(self, prompts, seed=SEED):
+        self.torch.manual_seed(seed)
         out = []
         for i in range(0, len(prompts), self.batch_size):
             out += self._batch(prompts[i:i + self.batch_size])
@@ -344,8 +349,10 @@ class LocalModel:
             tokenize=False, add_generation_prompt=True,
             enable_thinking=self.enable_thinking) for p in prompts]
         inp = self.tok(texts, return_tensors="pt", padding=True).to("cuda")
-        self.torch.manual_seed(SEED)
-        gen = self.model.generate(**inp, max_new_tokens=self.max_new_tokens, do_sample=False,
+        sampling = ({"temperature": self.temperature, "top_p": self.top_p}
+                    if self.do_sample else {})
+        gen = self.model.generate(**inp, max_new_tokens=self.max_new_tokens,
+                                  do_sample=self.do_sample, **sampling,
                                   output_logits=True, return_dict_in_generate=True)
         n_in = inp["input_ids"].shape[1]
         res = []
