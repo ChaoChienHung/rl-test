@@ -1,4 +1,4 @@
-"""Verify every evidence batch, then reverify the union of cited sentences.
+"""Verify every evidence batch; optionally run the historical fixed-union evaluation.
 
 The matched single-pass baseline and the batched method use the same claim,
 retrieval context, model, adapter, prompt style and deterministic decoding.
@@ -10,7 +10,7 @@ import subprocess
 import time
 from pathlib import Path
 
-from verifier.model import (LOCAL_MODEL, SEED, LocalModel, build_context, gold_sets,
+from verifier.model import (FEVER_LABEL, LOCAL_MODEL, SEED, LocalModel, build_context, gold_sets,
                             render, sample_claims, score)
 from agent.evaluation.results.sampling_retry.eval_sampling_retry import PROMPTS, LABELS, NEI
 
@@ -128,8 +128,11 @@ def run(args):
                 "n_claims": args.n, "claim_seed": SEED, "generation_seed": args.seed,
                 "batch_size": args.batch_size, "model_batch_size": args.model_batch_size,
                 "max_new_tokens": args.max_new_tokens, "do_sample": False,
+                "batches_only": args.batches_only,
                 "commit": revision,
-                "method": "Run every nonempty evidence batch; union valid citations in original retrieval order; reverify once. No gold labels or confidence in aggregation."}
+                "method": ("Run every nonempty evidence batch and save the citation union for later controller decisions. No final verification in this run."
+                           if args.batches_only else
+                           "Run every nonempty evidence batch; union valid citations in original retrieval order; reverify once. No gold labels or confidence in aggregation.")}
     output_dir.mkdir(parents=True)
     (output_dir / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
     rows = []
@@ -138,35 +141,56 @@ def run(args):
         for index, claim in enumerate(claims, 1):
             ctx = build_context(retriever, [claim], retrieval="titles")[0]
             shown = ctx["shown"]
-            baseline_gen = model.run([render(claim["claim"], shown)],
-                                     seed=args.seed + int(claim["id"]))[0]
-            baseline = scored(claim, shown, baseline_gen)
+            baseline = None
+            if not args.batches_only:
+                baseline_gen = model.run([render(claim["claim"], shown)],
+                                         seed=args.seed + int(claim["id"]))[0]
+                baseline = scored(claim, shown, baseline_gen)
             chunks = list(batches(shown, args.batch_size))
             chunk_gens = model.run([render(claim["claim"], part) for part in chunks],
                                    seed=args.seed + int(claim["id"])) if chunks else []
             outputs = [scored(claim, part, generation)
                        for part, generation in zip(chunks, chunk_gens)]
             union = citation_union(shown, outputs)
-            final_gen = model.run([render(claim["claim"], union)],
-                                  seed=args.seed + int(claim["id"]))[0]
-            final = scored(claim, union, final_gen)
+            final = None
+            if not args.batches_only:
+                final_gen = model.run([render(claim["claim"], union)],
+                                      seed=args.seed + int(claim["id"]))[0]
+                final = scored(claim, union, final_gen)
             row = {"id": claim["id"], "claim": claim["claim"],
-                   "gold": baseline["gold"], "retrieval": "titles",
+                   "gold": (baseline["gold"] if baseline else FEVER_LABEL[claim["label"]]),
+                   "retrieval": "titles",
                    "n_shown": len(shown), "n_union": len(union),
                    "gold_in_context": ctx["gold_in_context"],
                    "gold_page_retrieved": ctx["gold_page_retrieved"],
-                   "gold_in_union": final["gold_in_context"],
+                   "gold_in_union": context_for(claim, union)["gold_in_context"],
                    "shown": [{"id": f"{page}:{line}", "text": text}
                              for _, page, line, text in shown],
                    "union": [{"id": f"{page}:{line}", "text": text}
                              for _, page, line, text in union],
-                   "baseline": baseline, "batches": outputs, "final": final}
+                   "batches": outputs}
+            if not args.batches_only:
+                row["baseline"] = baseline
+                row["final"] = final
             rows.append(row)
             stream.write(json.dumps(row, ensure_ascii=False) + "\n")
             stream.flush()
             if index % 10 == 0 or index == len(claims):
                 print(f"{index}/{len(claims)} claims in {time.monotonic() - started:.0f}s", flush=True)
-    metrics = summarize(rows)
+    if args.batches_only:
+        def mean(values):
+            return sum(values) / len(values) if values else None
+
+        metrics = {"n_claims": len(rows),
+                   "batch_verifier_calls": sum(len(r["batches"]) for r in rows),
+                   "mean_batches": mean([len(r["batches"]) for r in rows]),
+                   "mean_union_sentences": mean([r["n_union"] for r in rows]),
+                   "empty_union_claims": sum(r["n_union"] == 0 for r in rows),
+                   "gold_in_union": sum(r["gold_in_union"] is True for r in rows),
+                   "batch_input_tokens": sum(s["in_tokens"] for r in rows for s in r["batches"]),
+                   "batch_output_tokens": sum(s["out_tokens"] for r in rows for s in r["batches"])}
+    else:
+        metrics = summarize(rows)
     (output_dir / "metrics.json").write_text(json.dumps(metrics, indent=2) + "\n")
     print(json.dumps(metrics, indent=2))
     print(f"Results: {output_dir}")
@@ -182,6 +206,7 @@ def main():
     parser.add_argument("--batch-size", type=int, default=10)
     parser.add_argument("--model-batch-size", type=int, default=4)
     parser.add_argument("--max-new-tokens", type=int)
+    parser.add_argument("--batches-only", action="store_true")
     parser.add_argument("--output-dir", required=True)
     args = parser.parse_args()
     if args.max_new_tokens is None:

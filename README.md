@@ -13,7 +13,7 @@ This repository studies evidence-grounded claim verification on FEVER. A verifie
 | Path | What it contains |
 |---|---|
 | [`verifier/train.sbatch`](verifier/train.sbatch) | Single training entry point; select a configuration with `TRAIN_SCRIPT` |
-| [`agent/evaluation/eval.sbatch`](agent/evaluation/eval.sbatch) | Agent evaluation entry point; choose the method with `EVAL_METHOD` |
+| [`agent/eval.sbatch`](agent/eval.sbatch) | Agent batch-data and controller evaluation entry point; choose the method with `EVAL_METHOD` |
 | [`verifier/TODO.md`](verifier/TODO.md) | Current priorities and experiment checklist |
 | [`verifier/docs/`](verifier/docs/) | Data guide, experiment results, architecture and background |
 | [`verifier/data/train/`](verifier/data/train/) | Committed SFT and GRPO training examples |
@@ -23,12 +23,13 @@ This repository studies evidence-grounded claim verification on FEVER. A verifie
 | [`retrieval/`](retrieval/) | FEVER index and search code |
 | [`core/`](core/) | Shared reward and interfaces |
 | [`agent/`](agent/) | Runnable FEVER search/verify loop and agent-specific work |
-| [`agent/evaluation/`](agent/evaluation/) | Agent evaluation Slurm entry point and method-specific `results/` |
+| [`agent/evaluation/`](agent/evaluation/) | Agent evaluators and method-specific `results/`; submit jobs with `agent/eval.sbatch` |
 | [`agent/evaluation/results/sampling_retry/`](agent/evaluation/results/sampling_retry/) | Three-draw retry evaluator and its `runs/` outputs |
-| [`agent/evaluation/results/evidence_batches/`](agent/evaluation/results/evidence_batches/) | Exhaustive 10-sentence batches and final citation-union verifier |
-| [`agent/evaluation/results/jev_decision/`](agent/evaluation/results/jev_decision/) | OpenJev verdict and per-sentence citation decisions on full and batched evidence |
+| [`agent/evaluation/results/evidence_batches/`](agent/evaluation/results/evidence_batches/) | Exhaustive 10-sentence batch-data producer; historical full evaluation is preserved |
+| [`agent/evaluation/results/jev_controller/`](agent/evaluation/results/jev_controller/) | RSI-Jev 2B or OpenJev controller chooses the final Qwen evidence route from batch summaries |
 | [`agent/experiments/`](agent/experiments/) | Isolated controller experiments; currently a toy scaffold, not FEVER results |
 | [`agent/data/traces/`](agent/data/traces/) | Archived fixed-loop FEVER traces |
+| `agent/data/evidence_batches/` | Local, Git-ignored Qwen batch outputs shared by controller evaluations |
 | [`agent/docs/`](agent/docs/) | Agent trace schema and method notes |
 | [`agent/tests/`](agent/tests/) | Agent evaluation and policy tests |
 | [`agent/TODO.md`](agent/TODO.md) | Agent-only experiment checklist |
@@ -45,38 +46,37 @@ The existing `agent/agent_loop.py` is the one-search, one-verification fixed bas
 
 The offline heuristic selects the first valid `SUPPORTED` or `REFUTED` output with verdict-token confidence at least `0.5`; `NOT_ENOUGH_INFO`, invalid output, and missing or lower confidence trigger another draw, up to three. All three draws are generated for every claim even if the simulated policy would stop early. Therefore `metrics.json` reports both **actual three-call cost** and **simulated stopping cost**, along with first-draw versus heuristic accuracy/FEVER, verdict/evidence disagreement, and separate `gold_in_context`, `gold_not_in_context`, and gold-NEI results. The threshold is an exploratory rule, not a calibrated probability guarantee. FEVER gold labels describe the claim against Wikipedia, so a retrieval miss can make the original label impossible to justify from the shown context.
 
-On SoC, submit from the repository root or `agent/evaluation/`. The job changes to the repository root before checking data and running the evaluator. The default adapter is the direct 5,500-row SFT checkpoint, with 900 claims and the direct prompt:
+On SoC, submit from the repository root. The job changes to the repository root before checking data and running the evaluator. The default adapter is the direct 5,500-row SFT checkpoint, with 900 claims and the direct prompt:
 
 ```bash
-sbatch agent/evaluation/eval.sbatch
+EVAL_METHOD=sampling_retry sbatch --export=ALL agent/eval.sbatch
 ```
 
-To use another checkpoint, set `CHECKPOINTS` when submitting, for example `CHECKPOINTS=<adapter-path> PROMPT_STYLE=direct sbatch --export=ALL agent/evaluation/eval.sbatch`. For a composed SFT+GRPO adapter, export `CHECKPOINTS="<sft-checkpoint>,<grpo-checkpoint>"` before `sbatch --export=ALL`; set `PROMPT_STYLE=cot_native` for the native-thinking GRPO model. Optional `RUN_NAME`, `N_CLAIMS`, `TEMPERATURE`, `TOP_P`, `THRESHOLD`, `MAX_NEW_TOKENS`, `SEED`, `EVAL_MODEL`, and `RESULT_DIR` override the defaults. The new run directory is `agent/evaluation/results/sampling_retry/runs/<eval_model>/<prompt>-cap<tokens>/<run>/` unless `RESULT_DIR` is set. Read `predictions.jsonl` for each claim's three draws and `metrics.json` for the comparison. The run refuses to overwrite an existing result directory.
+To use another checkpoint, set `CHECKPOINTS` when submitting, for example `EVAL_METHOD=sampling_retry CHECKPOINTS=<adapter-path> PROMPT_STYLE=direct sbatch --export=ALL agent/eval.sbatch`. For a composed SFT+GRPO adapter, export `CHECKPOINTS="<sft-checkpoint>,<grpo-checkpoint>"` before `EVAL_METHOD=sampling_retry sbatch --export=ALL`; set `PROMPT_STYLE=cot_native` for the native-thinking GRPO model. Optional `RUN_NAME`, `N_CLAIMS`, `TEMPERATURE`, `TOP_P`, `THRESHOLD`, `MAX_NEW_TOKENS`, `SEED`, `EVAL_MODEL`, and `RESULT_DIR` override the defaults. The new run directory is `agent/evaluation/results/sampling_retry/runs/<eval_model>/<prompt>-cap<tokens>/<run>/` unless `RESULT_DIR` is set. Read `predictions.jsonl` for each claim's three draws and `metrics.json` for the comparison. The run refuses to overwrite an existing result directory.
 
-After `sbatch` returns a job ID, check `squeue -j <job-id>` for a pending or running job. New jobs create `slurm-agent-eval-<job-id>.out` in the **directory where you ran `sbatch`** only when the job starts; read it there with `tail -f slurm-agent-eval-<job-id>.out`. Historical sampling-retry jobs retain their old log name. After the job leaves the queue, check `sacct -j <job-id> --format=JobID,State,ExitCode,Elapsed` and the log for completion or errors. For example, if you submit with `sbatch eval.sbatch` from `agent/evaluation/`, its log is in `agent/evaluation/`.
+After `sbatch` returns a job ID, check `squeue -j <job-id>` for a pending or running job. New jobs create `slurm-agent-eval-<job-id>.out` in the **directory where you ran `sbatch`** only when the job starts; read it there with `tail -f slurm-agent-eval-<job-id>.out`. Historical sampling-retry jobs retain their old log name. After the job leaves the queue, check `sacct -j <job-id> --format=JobID,State,ExitCode,Elapsed` and the log for completion or errors.
 
 The 900 dev claims are for **evaluation only**. Training a learned `STOP/RETRY` controller requires separate FEVER train claims and rollout data. Copying the heuristic's actions as labels would be imitation learning; it would not establish an RL result.
 
-### Agent evidence batching and OpenJev evaluation
+### Agent evidence batching and Jev-style controller evaluation
 
-The [evidence-batch evaluator](agent/evaluation/results/evidence_batches/README.md) keeps the same title-plus-BM25 retrieval result, splits its sentences into batches of 10, verifies **every** batch, and makes one final verifier pass over the union of cited sentences. The final union can have **more than 10 sentences**. A matched single-pass full-context verifier runs on the same claim and model in the same job. By default this run uses all 900 frozen dev claims, deterministic direct decoding and the direct 5,500-row SFT adapter. Check current SoC partition/resource limits before submitting; this multi-pass run uses a longer time limit:
-
-```bash
-EVAL_METHOD=evidence_batches RUN_NAME=full900-run1 \
-  sbatch --partition=gpu-long --time=12:00:00 --export=ALL agent/evaluation/eval.sbatch
-```
-
-Read `agent/evaluation/results/evidence_batches/runs/<eval_model>/direct-cap160/full900-run1/{manifest.json,metrics.json,predictions.jsonl}`. For another checkpoint, set `CHECKPOINTS=<adapter-path>` and optionally `EVAL_MODEL=<name>`. `EVIDENCE_BATCH_SIZE` changes the first-pass chunk size. The extra calls and prompt tokens are reported alongside paired accuracy and FEVER results. Empty citation unions and complete gold evidence missing from the union are reported separately.
-
-The [OpenJev decision evaluator](agent/evaluation/results/jev_decision/README.md) reads that completed run's exact claim and evidence text. [OpenJev-1.7B](https://huggingface.co/alanhuangya/OpenJev-1.7B) makes a three-way verdict choice plus one binary citation decision per sentence. It evaluates both full-context and exhaustive-batch→Jev-citation-union→final-pass modes on the same claims, reporting accuracy, FEVER score and evidence F1. OpenJev does not generate citations as text; this per-sentence decision formulation is an exploratory adaptation with an uncalibrated `0.5` relevance threshold. Its citation union comes entirely from Jev, not Qwen. After installing the optional `wev-ai` package in the SoC virtual environment:
+The [evidence-batch producer](agent/evaluation/results/evidence_batches/README.md) keeps the same title-plus-BM25 retrieval result, splits its sentences into batches of 10, and verifies **every** batch. It saves the full retrieval context, all batch outputs, and the union of valid citations under `agent/data/evidence_batches/`; it does not produce the final verifier result. The union can have **more than 10 sentences**. By default this run uses all 900 frozen dev claims, deterministic direct decoding and the direct 5,500-row SFT adapter. Check current SoC partition/resource limits before submitting:
 
 ```bash
-JEV_SOURCE_RUN=agent/evaluation/results/evidence_batches/runs/sft-direct-from-base-qwen3p5-2b-5500-samples/direct-cap160/full900-run1 \
-EVAL_METHOD=jev_decision RUN_NAME=full900-run1 \
-  sbatch --partition=gpu-long --time=12:00:00 --export=ALL agent/evaluation/eval.sbatch
+RUN_NAME=full900-batches1 sbatch --export=ALL agent/eval.sbatch
 ```
 
-Both methods write a new `runs/<model>/<condition>/<run>/` directory below their method folder. Use `RESULT_DIR` to choose another exact new directory. New agent evaluation jobs write `slurm-agent-eval-<job-id>.out` in the submission directory; historical sampling-retry logs retain their old name.
+Read `agent/data/evidence_batches/runs/<eval_model>/direct-cap160/full900-batches1/{manifest.json,metrics.json,predictions.jsonl}`. Plain `sbatch agent/eval.sbatch` also works and saves under `job-<Slurm job ID>`. For another checkpoint, set `CHECKPOINTS=<adapter-path>` and optionally `EVAL_MODEL=<name>`. `EVIDENCE_BATCH_SIZE` changes the chunk size. Batch calls, prompt tokens, empty citation unions and gold evidence missing from the union are reported. This intermediate data is Git-ignored and can be reused by multiple controller evaluations.
+
+The [Jev-style controller evaluator](agent/evaluation/results/jev_controller/README.md) reads the completed batch data. By default, [RSI-Jev v2.1 2B](https://huggingface.co/shgao/rsi-jev-v2.1-qwen3.5-2b) sees the claim and each batch verifier's verdict, format status, confidence and cited sentence IDs. The main comparison is **RSI-Jev controller versus a predeclared heuristic controller** making the same route choice from the same batch summaries. The heuristic uses empty-union, invalid-format, NEI, disagreement and verdict-token confidence below `0.5` to choose full context. Both controllers choose before Qwen runs a new final verification on each selected evidence set. Matching choices share one final Qwen call. Neither route decision sees gold labels or final Qwen outputs. Install the optional `rsi-jev` runtime in the SoC virtual environment before running; see the [controller instructions](agent/evaluation/results/jev_controller/README.md):
+
+```bash
+JEV_SOURCE_RUN=agent/data/evidence_batches/runs/sft-direct-from-base-qwen3p5-2b-5500-samples/direct-cap160/full900-batches1 \
+EVAL_METHOD=jev_controller RUN_NAME=full900-run1 \
+  sbatch --partition=gpu-long --time=12:00:00 --export=ALL agent/eval.sbatch
+```
+
+The batch producer writes under `agent/data/evidence_batches/runs/`; controller results go under `agent/evaluation/results/jev_controller/runs/`. Use `RESULT_DIR` to choose another exact new directory. New agent evaluation jobs write `slurm-agent-eval-<job-id>.out` in the submission directory; historical sampling-retry logs retain their old name.
 
 ### DPO pair curation (planned)
 
@@ -330,7 +330,7 @@ squeue -j "$job_id"
 
 #### B. Submit agent sampling and retry evaluation
 ```bash
-job=$(sbatch --parsable agent/evaluation/eval.sbatch)
+job=$(EVAL_METHOD=sampling_retry sbatch --parsable --export=ALL agent/eval.sbatch)
 echo "Agent evaluation job: $job"
 squeue -j "$job"
 ```

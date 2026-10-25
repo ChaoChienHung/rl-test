@@ -28,6 +28,7 @@ verifier/data/train/sft/fever-oracle-cot-soclaas/**/rejected.jsonl
 verifier/data/fever/
 verifier/data/scifact/
 verifier/data/averitec/
+agent/data/evidence_batches/
 
 # Model weights, trainer state and tokenizer copies: regenerate with the
 # scripts. Run metadata, training logs, training sets and eval outputs stay.
