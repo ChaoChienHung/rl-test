@@ -29,11 +29,20 @@ KEEP = "KEEP"
 DROP = "DROP"
 ARMS = {
     "heuristic": ("heuristic", "all", "heuristic"),
+    "heuristic_0p3": ("heuristic", "all", "heuristic"),
+    "heuristic_0p7": ("heuristic", "all", "heuristic"),
     "jev": ("jev", "jev", "jev"),
     "jev_chunk_stop": ("jev", "all", "heuristic"),
     "jev_keep": ("heuristic", "jev", "heuristic"),
     "jev_pooled_stop": ("heuristic", "all", "jev"),
 }
+HEURISTIC_THRESHOLD_OVERRIDES = {"heuristic_0p3": 0.3, "heuristic_0p7": 0.7}
+
+
+def threshold_for_arm(arm, default):
+    return HEURISTIC_THRESHOLD_OVERRIDES.get(arm, default)
+
+
 TERMINAL_LABELS = {"ACCEPT": "SUPPORTED", "REJECT": "REFUTED",
                    "NEI": "NOT_ENOUGH_INFO"}
 TERMINAL_QUESTION = {"verdict": {"type": "choice",
@@ -374,7 +383,9 @@ def run(args):
               "pooled_seed_offset": 100000,
               "heuristic_threshold": args.threshold,
               "arms": {name: {"chunk_stop": modes[0], "citation_keep": modes[1],
-                                "pooled_stop": modes[2]} for name, modes in ARMS.items()},
+                                "pooled_stop": modes[2],
+                                "heuristic_threshold": threshold_for_arm(name, args.threshold)}
+                       for name, modes in ARMS.items()},
               "method": "Each chunk draw yields STOP/RETRY. Keep-all arms discard RETRY citations; selection arms choose KEEP/DROP for current and previously saved citations after each draw and can remove past choices. Final chunk sets are pooled; three fresh final-verifier samples are generated from unchanged pooled input and a second STOP/RETRY policy selects one."}
     output.mkdir(parents=True)
     (output / "manifest.json").write_text(json.dumps(record, indent=2, ensure_ascii=False) + "\n")
@@ -387,7 +398,8 @@ def run(args):
                     decision[arm] = decision["heuristic"]
                 else:
                     decision[arm] = select(row, controller if "jev" in (stop_policy, keep_policy) else None,
-                                           threshold=args.threshold, stop_policy=stop_policy,
+                                           threshold=threshold_for_arm(arm, args.threshold),
+                                           stop_policy=stop_policy,
                                            keep_policy=keep_policy)
             decisions.append(decision)
             stream.write(json.dumps(decision, ensure_ascii=False) + "\n")
@@ -450,7 +462,7 @@ def run(args):
                     row["claim"], decision[policy]["selected_evidence"],
                     pooled["pools"][policy]["draws"],
                     model=pooled_controller if ARMS[policy][2] == "jev" else None,
-                    threshold=args.threshold)
+                    threshold=threshold_for_arm(policy, args.threshold))
                 final[policy] = pool_decisions[policy]["selected"]
             own_verdict = terminal_verdict(row, decision["jev"], pooled_controller,
                                            pooled_selected=final["jev"])

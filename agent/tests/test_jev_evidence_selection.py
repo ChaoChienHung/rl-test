@@ -10,7 +10,7 @@ from unittest.mock import patch
 from agent.evaluation.results.rsi_jev_evidence_selection_baseline import eval_rsi_jev_evidence_selection_baseline as evaluator
 from agent.evaluation.results.rsi_jev_evidence_selection_baseline.eval_rsi_jev_evidence_selection_baseline import (
     KEEP, RETRY, STOP, action_diagnostic, questions_for, select,
-    selection_state_for, terminal_verdict,
+    selection_state_for, terminal_verdict, threshold_for_arm,
 )
 
 
@@ -61,6 +61,18 @@ class EvidenceSelectionTest(unittest.TestCase):
         self.assertEqual(result["chunks"][0]["kept_ids"], ["A:1", "B:2"])
         self.assertEqual(len(controller.states[1]["verifier_output"]["cited_evidence"]), 1)
         self.assertNotIn("observed_verifier_outputs", controller.states[1])
+
+    def test_threshold_arms_can_create_different_evidence_pools(self):
+        row = self.row()
+        row["chunks"][0]["draws"][0]["token_conf"] = 0.5
+        row["chunks"][0]["draws"][1]["evidence"] = ["B:2"]
+        row["chunks"][0]["draws"][1]["token_conf"] = 0.8
+        low = select(row, threshold=threshold_for_arm("heuristic_0p3", 0.5))
+        high = select(row, threshold=threshold_for_arm("heuristic_0p7", 0.5))
+        self.assertEqual([item["id"] for item in low["selected_evidence"]], ["A:1"])
+        self.assertEqual([item["id"] for item in high["selected_evidence"]], ["B:2"])
+        self.assertEqual(low["chunk_verifier_calls"], 1)
+        self.assertEqual(high["chunk_verifier_calls"], 2)
 
     def test_keep_questions_only_for_verifier_citations(self):
         row = self.row()

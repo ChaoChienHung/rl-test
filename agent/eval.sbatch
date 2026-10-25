@@ -28,6 +28,7 @@ case "$method" in
   rsi_jev_controller_baseline|jev_controller) module=agent.evaluation.results.rsi_jev_controller_baseline.eval_rsi_jev_controller_baseline ;;
   rsi_jev_retry_baseline) module=agent.evaluation.results.rsi_jev_retry_baseline.eval_rsi_jev_retry_baseline ;;
   rsi_jev_evidence_selection_baseline) module=agent.evaluation.results.rsi_jev_evidence_selection_baseline.eval_rsi_jev_evidence_selection_baseline ;;
+  heuristic_threshold_sweep) module=agent.evaluation.results.heuristic_threshold_sweep.eval_heuristic_threshold_sweep ;;
   *) echo "Unsupported EVAL_METHOD: $method" >&2; exit 2 ;;
 esac
 test -f "${module//.//}.py" || { echo "Missing evaluator: $module" >&2; exit 2; }
@@ -36,7 +37,7 @@ if [[ "$method" != rsi_jev_controller_baseline && "$method" != jev_controller &&
   test -f verifier/data/fever/pages.sqlite || { echo 'Missing SQLite index' >&2; exit 2; }
   test -f verifier/data/fever/bm25_index/doc_ids.json || { echo 'Missing BM25 index' >&2; exit 2; }
 fi
-if [[ "$method" == rsi_jev_controller_baseline || "$method" == jev_controller || "$method" == rsi_jev_retry_baseline || "$method" == rsi_jev_evidence_selection_baseline ]]; then
+if [[ "$method" == rsi_jev_controller_baseline || "$method" == jev_controller || "$method" == rsi_jev_retry_baseline || "$method" == rsi_jev_evidence_selection_baseline || "$method" == heuristic_threshold_sweep ]]; then
   test -f verifier/data/fever/shared_task_dev.jsonl || { echo 'Missing FEVER dev data for final Qwen scoring' >&2; exit 2; }
 fi
 test -x .venv/bin/python || { echo 'Missing .venv; see README' >&2; exit 2; }
@@ -44,6 +45,22 @@ source .venv/bin/activate
 export TOKENIZERS_PARALLELISM=false
 export TMPDIR="${TMPDIR:-$HOME/.pip-tmp}"
 mkdir -p "$TMPDIR"
+
+if [[ "$method" == heuristic_threshold_sweep ]]; then
+  source_run="${JEV_SOURCE_RUN:?Set JEV_SOURCE_RUN to the completed three-draw evidence_batches run}"
+  test -f "$source_run/predictions.jsonl" || { echo "Missing source predictions: $source_run" >&2; exit 2; }
+  test -f "$source_run/metrics.json" || { echo "Incomplete source run: $source_run" >&2; exit 2; }
+  run_name="${RUN_NAME:-job-${SLURM_JOB_ID:?}}"
+  [[ "$run_name" =~ ^[A-Za-z0-9][A-Za-z0-9_-]*$ ]] || { echo 'Invalid RUN_NAME' >&2; exit 2; }
+  source_model="$(basename "$(dirname "$(dirname "$source_run")")")"
+  source_condition="$(basename "$(dirname "$source_run")")"
+  default_result_dir="agent/evaluation/results/heuristic-threshold-sweep/runs/$source_model/$source_condition/$run_name"
+  result_dir="${RESULT_DIR:-$default_result_dir}"
+  test ! -e "$result_dir" || { echo "Result directory exists: $result_dir" >&2; exit 2; }
+  echo "job=${SLURM_JOB_ID} code=$module source=$source_run result=$result_dir"
+  srun python -m "$module" --source-run "$source_run" --output-dir "$result_dir"
+  exit
+fi
 
 if [[ "$method" == rsi_jev_controller_baseline || "$method" == jev_controller || "$method" == rsi_jev_retry_baseline || "$method" == rsi_jev_evidence_selection_baseline ]]; then
   source_run="${JEV_SOURCE_RUN:?Set JEV_SOURCE_RUN to a completed evidence_batches run directory}"
