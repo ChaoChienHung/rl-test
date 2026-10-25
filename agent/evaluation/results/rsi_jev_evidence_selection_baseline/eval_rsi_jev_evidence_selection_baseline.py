@@ -272,6 +272,12 @@ def summarize(rows):
 def run(args):
     source = Path(args.source_run)
     manifest, source_rows, claims = validate_source(source)
+    source_n_claims = len(source_rows)
+    max_claims = getattr(args, "max_claims", None)
+    if max_claims is not None:
+        if not 1 <= max_claims <= source_n_claims:
+            raise ValueError(f"max_claims must be between 1 and {source_n_claims}")
+        source_rows = source_rows[:max_claims]
     output = Path(args.output_dir)
     if output.exists():
         raise FileExistsError(f"result directory exists: {output}")
@@ -287,6 +293,10 @@ def run(args):
                               text=True, check=False).stdout.strip() or None
     record = {"evaluation_code": __name__, "split": "FEVER shared_task_dev; frozen validation IDs",
               "purpose": "evaluation_only_no_controller_training", "source_run": str(source),
+              "source_n_claims": source_n_claims,
+              "evaluated_n_claims": len(source_rows),
+              "pilot_subset": len(source_rows) < source_n_claims,
+              "subset_rule": "first frozen source rows in source order",
               "source_commit": manifest.get("commit"), "commit": revision,
               "jev_backend": args.backend, "jev_model": args.model,
               "trained_head": trained_head,
@@ -403,6 +413,7 @@ def main():
     parser.add_argument("--output-dir", required=True)
     parser.add_argument("--threshold", type=float, default=THRESHOLD)
     parser.add_argument("--trained-head", default=None)
+    parser.add_argument("--max-claims", type=int, default=None)
     run(parser.parse_args())
 
 

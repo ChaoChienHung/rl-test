@@ -126,7 +126,12 @@ class EvidenceSelectionTest(unittest.TestCase):
                     patch.dict(sys.modules, {"torch": fake_torch}):
                 evaluator.run(SimpleNamespace(source_run=str(source), output_dir=str(output),
                                               trained_head=None, backend="rsi-jev",
-                                              model="fake-jev", threshold=0.5))
+                                              model="fake-jev", threshold=0.5,
+                                              max_claims=1))
+            run_manifest = json.loads((output / "manifest.json").read_text())
+            self.assertEqual(run_manifest["source_n_claims"], 1)
+            self.assertEqual(run_manifest["evaluated_n_claims"], 1)
+            self.assertFalse(run_manifest["pilot_subset"])
             pooled = json.loads((output / "pooled_samples.jsonl").read_text().splitlines()[0])
             result = json.loads((output / "predictions.jsonl").read_text().splitlines()[0])
             self.assertEqual(pooled["actual_qwen_calls"], 3)

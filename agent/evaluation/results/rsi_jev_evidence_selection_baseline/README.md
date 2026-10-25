@@ -14,4 +14,6 @@ EVAL_METHOD=rsi_jev_evidence_selection_baseline RUN_NAME=full900-run1 \
   sbatch --time=1-00:00:00 --export=ALL agent/eval.sbatch
 ```
 
+For an initial pipeline check, set `PILOT_CLAIMS=30` and a distinct `RUN_NAME`, for example `pilot30-run1`, in the same command. This uses the first 30 frozen source rows after validating the full source. The run's `manifest.json` records `source_n_claims`, `evaluated_n_claims`, and `pilot_subset`; a 30-claim metric is exploratory and must not be presented as the full 900-claim result.
+
 Results go to `agent/evaluation/results/rsi-jev-evidence-selection-baseline/runs/rsi-jev-v2p1-qwen3p5-2b/keep-drop-direct-cap160/<run>/`. Read `decisions.jsonl` for chunk actions and KEEP IDs; `pooled_samples.jsonl` for the new three-draw final-verifier candidates; `predictions.jsonl` for pooled STOP/RETRY, the chosen final verifier output, and Jev's record-only terminal verdict; `metrics.json` for accuracy, FEVER, evidence F1, actual and simulated call costs, controller hindsight errors, duplicate keeps removed, and gold-set coverage. Gold-set coverage is post-hoc and is not shown to the controller. The run does **not** train Jev. To evaluate a scorer head trained on FEVER train only, set `JEV_TRAINED_HEAD` to its `scorer.pt` path and use a new `RUN_NAME`.

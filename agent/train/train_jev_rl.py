@@ -1,8 +1,9 @@
 """Head-only policy-gradient pilot for Jev STOP/RETRY on FEVER train claims.
 
 Uses precomputed three-draw Qwen rollouts for the exact committed 5,500 SFT
-train IDs. A sampled policy trajectory yields one fresh final Qwen verdict and
-a terminal FEVER/evidence/call-cost reward. No STOP/RETRY labels are required.
+train IDs. A sampled policy trajectory includes final pooled-evidence retry
+decisions. Reward uses pooled-output quality and extra-call cost; chunk
+actions receive only downstream reward. No action labels are required.
 """
 
 import argparse
@@ -14,6 +15,7 @@ import subprocess
 from pathlib import Path
 
 from agent.data.build_evidence_batches import scored, training_claims
+from agent.evaluation.pooled_retry import FINAL_QUESTION, selected_draw_index, state_for_pool
 from agent.evaluation.results.rsi_jev_evidence_selection_baseline.eval_rsi_jev_evidence_selection_baseline import (
     ACTION, DROP, KEEP, cited_candidates, questions_for, selection_state_for,
 )
@@ -22,8 +24,9 @@ from agent.evaluation.results.rsi_jev_retry_baseline.eval_rsi_jev_retry_baseline
 )
 from agent.evaluation.results.sampling_retry.eval_sampling_retry import PROMPTS
 from agent.train.jev_head import JevHeadPolicy, choice_question
-from agent.train.replay_env import MAX_DRAWS, RETRY, STOP, RewardWeights, evidence_penalties
-from verifier.model import LocalModel, gold_sets, render
+from agent.train.replay_env import (MAX_DRAWS, RETRY, STOP, stop_retry_feedback,
+                                    verifier_result_good)
+from verifier.model import LocalModel, render
 
 
 def validate_train_source(source):
@@ -60,14 +63,22 @@ def validate_train_source(source):
     return manifest, rows, claims
 
 
-def episode_reward(final, saved_ids, retrieved_ids, claim, extra_draws,
-                   weights=RewardWeights()):
-    gold = [{f"{page}:{line}" for page, line in group} for group in gold_sets(claim)]
-    penalty = evidence_penalties(saved_ids, retrieved_ids, gold, weights)
-    reward = (weights.fever * float(final["fever_score"])
-              + weights.label * float(final["correct"])
-              - weights.extra_draw * extra_draws - penalty["penalty"])
-    return reward, penalty
+def pooled_decision_reward(pooled, chunk_extra_draws, extra_draw_cost=0.05):
+    """Reward missed/caught good pooled outputs; never shape on chunk gold."""
+    feedback = [stop_retry_feedback(decision["action"], pooled["draws"][decision["draw_index"]])
+                for decision in pooled["decisions"] if decision["draw_index"] < MAX_DRAWS - 1]
+    action_reward = sum(feedback) / len(feedback) if feedback else 0.0
+    final_good = verifier_result_good(pooled["selected"])
+    final_reward = 1.0 if final_good else -1.0
+    extra_draws = chunk_extra_draws + pooled["extra_draws"]
+    call_penalty = extra_draw_cost * extra_draws
+    return final_reward + action_reward - call_penalty, {
+        "final_good": final_good, "final_reward": final_reward,
+        "pooled_action_feedback": feedback, "pooled_action_reward": action_reward,
+        "chunk_extra_draws": chunk_extra_draws,
+        "pooled_extra_draws": pooled["extra_draws"], "call_penalty": call_penalty,
+        "evidence_f1_threshold": "strictly_greater_than_2_over_3",
+        "nei_rule": "correct_verdict_only"}
 
 
 def sample_question(policy, reference, state, key, specification, kl_coef):
@@ -136,6 +147,40 @@ def sample_episode(row, policy, reference, variant, kl_coef=0.0):
             "log_probs": log_probs, "entropies": entropies, "kls": kls}
 
 
+def sample_pooled_episode(row, claim, episode, verifier, policy, reference,
+                          kl_coef, seed):
+    """Train the same pooled STOP/RETRY decision used at validation time."""
+    evidence = evidence_for(episode["selected_evidence"])
+    prompt = render(row["claim"], evidence)
+    with policy.torch.no_grad():
+        generations = verifier.run([prompt] * MAX_DRAWS, seed=seed)
+        if len(generations) != MAX_DRAWS:
+            raise ValueError("pooled verifier did not return three draws")
+        draws = [scored(claim, evidence, generation) for generation in generations]
+    decisions = []
+    log_probs, entropies, kls = [], [], []
+    for di, draw in enumerate(draws):
+        if di < MAX_DRAWS - 1:
+            action, logp, entropy, kl = sample_question(
+                policy, reference,
+                state_for_pool(row["claim"], episode["selected_evidence"], draw, di),
+                "action", FINAL_QUESTION["action"], kl_coef)
+            log_probs.append(logp)
+            entropies.append(entropy)
+            kls.append(kl)
+        else:
+            action = STOP
+        decisions.append({"draw_index": di, "action": action})
+        if action == STOP:
+            break
+    selected = selected_draw_index(draws, len(decisions))
+    return {"selected": draws[selected], "selected_draw_index": selected,
+            "stopped_at_draw_index": len(decisions) - 1,
+            "decisions": decisions, "draws": draws,
+            "extra_draws": len(decisions) - 1,
+            "log_probs": log_probs, "entropies": entropies, "kls": kls}
+
+
 def run(args):
     import torch
     if not torch.cuda.is_available():
@@ -159,7 +204,9 @@ def run(args):
                           batch_size=source_manifest["model_batch_size"],
                           adapter=source_manifest["adapter"], system_prompt=system,
                           max_new_tokens=source_manifest["max_new_tokens"],
-                          enable_thinking=thinking, do_sample=False)
+                          enable_thinking=thinking, do_sample=True,
+                          temperature=source_manifest.get("temperature", 0.7),
+                          top_p=source_manifest.get("top_p", 0.9))
     revision = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True,
                               text=True, check=False).stdout.strip() or None
     record = {"training_code": __name__, "split": "FEVER train",
@@ -171,7 +218,15 @@ def run(args):
               "learning_rate": args.lr, "weight_decay": args.weight_decay,
               "kl_coef": args.kl_coef, "entropy_coef": args.entropy_coef,
               "baseline_ema": args.baseline_ema,
-              "reward_weights": RewardWeights().__dict__,
+              "reward_rule": "pooled actions: +1 for good STOP or bad RETRY, -1 for bad STOP or good RETRY; mean action feedback plus +/-1 for selected pooled output quality minus 0.05 per extra draw",
+              "good_output_rule": "correct verdict and evidence F1 > 2/3; NEI requires correct verdict only",
+              "chunk_gold_action_reward": False,
+              "pooled_draws": MAX_DRAWS,
+              "pooled_seed_offset": 100000,
+              "pooled_do_sample": True,
+              "pooled_temperature": source_manifest.get("temperature", 0.7),
+              "pooled_top_p": source_manifest.get("top_p", 0.9),
+              "pooled_policy": "early STOP uses current draw; forced third draw uses verdict majority then token confidence",
               "updated_parameters": "RSI-Jev option scorer only; tower frozen",
               "validation_claims_used": False}
     output.mkdir(parents=True)
@@ -185,24 +240,26 @@ def run(args):
                 index += 1
                 claim = claims[row["id"]]
                 episode = sample_episode(row, policy, reference, args.variant, args.kl_coef)
-                evidence = evidence_for(episode["selected_evidence"])
-                with torch.no_grad():
-                    generation = verifier.run([render(row["claim"], evidence)],
-                                              seed=source_manifest["generation_seed"] + int(row["id"]))[0]
-                    final = scored(claim, evidence, generation)
+                pooled = sample_pooled_episode(
+                    row, claim, episode, verifier, policy, reference, args.kl_coef,
+                    seed=source_manifest["generation_seed"] + 100000 + int(row["id"])
+                         + epoch * 1000000)
+                final = pooled["selected"]
                 saved = [item["id"] for item in episode["selected_evidence"]]
-                retrieved = [item["id"] for item in row["shown"]]
-                reward, penalties = episode_reward(
-                    final, saved, retrieved, claim, episode["extra_draws"])
+                extra_draws = episode["extra_draws"] + pooled["extra_draws"]
+                reward, reward_detail = pooled_decision_reward(pooled, episode["extra_draws"])
                 advantage = reward - baseline
                 baseline += args.baseline_ema * advantage
-                if episode["log_probs"]:
-                    loss = -advantage * torch.stack(episode["log_probs"]).sum()
-                    loss = loss / len(episode["log_probs"])
+                log_probs = episode["log_probs"] + pooled["log_probs"]
+                entropies = episode["entropies"] + pooled["entropies"]
+                kls = episode["kls"] + pooled["kls"]
+                if log_probs:
+                    loss = -advantage * torch.stack(log_probs).sum()
+                    loss = loss / len(log_probs)
                     if args.entropy_coef:
-                        loss = loss - args.entropy_coef * torch.stack(episode["entropies"]).mean()
+                        loss = loss - args.entropy_coef * torch.stack(entropies).mean()
                     if args.kl_coef:
-                        loss = loss + args.kl_coef * torch.stack(episode["kls"]).mean()
+                        loss = loss + args.kl_coef * torch.stack(kls).mean()
                     if not torch.isfinite(loss):
                         raise FloatingPointError("non-finite Jev policy loss")
                     optimizer.zero_grad(set_to_none=True)
@@ -215,9 +272,17 @@ def run(args):
                 event = {"epoch": epoch, "index": index, "claim_id": row["id"],
                          "reward": reward, "baseline": baseline, "loss": loss_value,
                          "final_correct": final["correct"], "final_fever": final["fever_score"],
-                         "extra_draws": episode["extra_draws"],
-                         "saved_evidence": saved, "evidence_penalties": penalties,
-                         "trace": episode["trace"]}
+                         "extra_draws": extra_draws,
+                         "chunk_extra_draws": episode["extra_draws"],
+                         "pooled_extra_draws": pooled["extra_draws"],
+                         "saved_evidence": saved, "reward_detail": reward_detail,
+                         "trace": episode["trace"],
+                         "pooled_trace": pooled["decisions"],
+                         "pooled_selected_draw_index": pooled["selected_draw_index"],
+                         "pooled_draw_summaries": [
+                             {key: draw.get(key) for key in ("pred", "token_conf", "format_ok",
+                                                               "evidence", "correct", "fever_score")}
+                             for draw in pooled["draws"]]}
                 stream.write(json.dumps(event, ensure_ascii=False) + "\n")
                 stream.flush()
                 if index % args.save_every == 0:

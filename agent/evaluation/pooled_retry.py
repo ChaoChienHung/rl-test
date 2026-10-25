@@ -36,6 +36,26 @@ def state_for_pool(claim, evidence, draw, draw_index):
                       ensure_ascii=False, separators=(",", ":"))
 
 
+def selected_draw_index(draws, observed_count):
+    """Early STOP uses the current draw; the third draw triggers voting."""
+    if observed_count not in (1, 2, MAX_DRAWS) or len(draws) < observed_count:
+        raise ValueError("invalid pooled draw count")
+    if observed_count < MAX_DRAWS:
+        return observed_count - 1
+    labels = [draw.get("pred") for draw in draws[:observed_count]]
+    votes = Counter(label for label in labels if label in
+                    ("SUPPORTED", "REFUTED", "NOT_ENOUGH_INFO"))
+    def confidence(index):
+        value = draws[index].get("token_conf")
+        return float(value) if isinstance(value, (int, float)) and math.isfinite(value) else float("-inf")
+    if votes:
+        winning = max(votes, key=lambda label: (votes[label],
+                                                 max(confidence(i) for i in range(observed_count)
+                                                     if labels[i] == label)))
+        return max((i for i in range(observed_count) if labels[i] == winning), key=confidence)
+    return max(range(observed_count), key=confidence)
+
+
 def choose_pooled(claim, evidence, draws, model=None, threshold=0.5):
     if len(draws) != MAX_DRAWS:
         raise ValueError("pooled evidence requires exactly three fresh draws")
@@ -63,23 +83,7 @@ def choose_pooled(claim, evidence, draws, model=None, threshold=0.5):
         if action == STOP:
             break
     observed_count = len(decisions)
-    if observed_count == MAX_DRAWS:
-        labels = [draw.get("pred") for draw in draws[:observed_count]]
-        votes = Counter(label for label in labels if label in
-                        ("SUPPORTED", "REFUTED", "NOT_ENOUGH_INFO"))
-        def confidence(index):
-            value = draws[index].get("token_conf")
-            return float(value) if isinstance(value, (int, float)) and math.isfinite(value) else float("-inf")
-        if votes:
-            winning = max(votes, key=lambda label: (votes[label],
-                                                     max(confidence(i) for i in range(observed_count)
-                                                         if labels[i] == label)))
-            selected = max((i for i in range(observed_count) if labels[i] == winning),
-                           key=confidence)
-        else:
-            selected = max(range(observed_count), key=confidence)
-    else:
-        selected = observed_count - 1
+    selected = selected_draw_index(draws, observed_count)
     return {"decisions": decisions, "selected_draw_index": selected,
             "stopped_at_draw_index": observed_count - 1,
             "selected": draws[selected], "simulated_qwen_calls": len(decisions),

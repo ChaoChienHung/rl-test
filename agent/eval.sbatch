@@ -87,8 +87,17 @@ PY
   if [[ -n "${JEV_TRAINED_HEAD:-}" ]]; then
     trained_head_args=(--trained-head "$JEV_TRAINED_HEAD")
   fi
+  pilot_args=()
+  if [[ -n "${PILOT_CLAIMS:-}" ]]; then
+    [[ "$method" == rsi_jev_evidence_selection_baseline ]] || {
+      echo 'PILOT_CLAIMS is only supported for evidence-selection evaluation' >&2; exit 2;
+    }
+    [[ "$PILOT_CLAIMS" =~ ^[1-9][0-9]*$ ]] || { echo 'PILOT_CLAIMS must be positive' >&2; exit 2; }
+    pilot_args=(--max-claims "$PILOT_CLAIMS")
+  fi
   srun python -m "$module" --backend "$backend" --model "$jev_model" \
-    --source-run "$source_run" --output-dir "$result_dir" "${trained_head_args[@]}"
+    --source-run "$source_run" --output-dir "$result_dir" \
+    "${trained_head_args[@]}" "${pilot_args[@]}"
   exit
 fi
 

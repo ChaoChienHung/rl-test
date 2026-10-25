@@ -33,6 +33,24 @@ class RewardWeights:
     evidence_slack: int = 3
 
 
+def verifier_result_good(draw, min_evidence_f1=2 / 3):
+    """Whether a verifier output warrants STOP under the current reward rule."""
+    if not draw.get("correct"):
+        return False
+    if draw.get("gold") == "NOT_ENOUGH_INFO":
+        return True
+    f1 = draw.get("evidence_f1")
+    return isinstance(f1, (int, float)) and f1 > min_evidence_f1
+
+
+def stop_retry_feedback(action, draw):
+    """Reward a good STOP or a retry of a bad output; penalize the reverse."""
+    if action not in (STOP, RETRY):
+        raise ValueError("action must be STOP or RETRY")
+    good = verifier_result_good(draw)
+    return 1.0 if (action == STOP) == good else -1.0
+
+
 def evidence_penalties(saved, retrieved, gold_sets, weights=RewardWeights()):
     """Score saved evidence against any fully retrievable FEVER gold set.
 
