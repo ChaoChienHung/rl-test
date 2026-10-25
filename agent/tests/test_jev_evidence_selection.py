@@ -47,18 +47,18 @@ class EvidenceSelectionTest(unittest.TestCase):
                                 {"draw_index": 2, "pred": "SUPPORTED", "format_ok": True,
                                  "token_conf": 0.8, "evidence": ["A:1"]}]}]}
 
-    def test_retry_discards_citations_and_stop_selects_current_draw(self):
+    def test_selection_keeps_explicit_retry_citations_once(self):
         controller = FakeController()
         row = self.row()
         row["chunks"][0]["draws"][1]["evidence"] = ["B:2"]
         result = select(row, controller)
-        self.assertEqual([item["id"] for item in result["selected_evidence"]], ["B:2"])
-        self.assertEqual(result["duplicate_keep_decisions_removed_by_set"], 0)
+        self.assertEqual([item["id"] for item in result["selected_evidence"]], ["A:1", "B:2"])
+        self.assertEqual(result["duplicate_keep_decisions_removed_by_set"], 1)
         self.assertEqual(result["chunk_verifier_calls"], 2)
         self.assertEqual(result["chunks"][0]["attempts"][0]["action"], RETRY)
-        self.assertEqual(result["chunks"][0]["attempts"][0]["kept_ids"], [])
+        self.assertEqual(result["chunks"][0]["attempts"][0]["kept_ids"], ["A:1"])
         self.assertEqual(result["chunks"][0]["attempts"][1]["action"], STOP)
-        self.assertEqual(result["chunks"][0]["kept_ids"], ["B:2"])
+        self.assertEqual(result["chunks"][0]["kept_ids"], ["A:1", "B:2"])
         self.assertEqual(len(controller.states[1]["verifier_output"]["cited_evidence"]), 1)
         self.assertNotIn("observed_verifier_outputs", controller.states[1])
 
@@ -97,6 +97,24 @@ class EvidenceSelectionTest(unittest.TestCase):
         self.assertEqual(result["chunks"][0]["attempts"][0]["action"], RETRY)
         self.assertEqual(result["chunks"][0]["attempts"][0]["kept_ids"], [])
         self.assertEqual([item["id"] for item in result["selected_evidence"]], ["B:2"])
+
+    def test_drop_can_remove_a_prior_keep(self):
+        row = self.row()
+        row["chunks"][0]["draws"][1]["evidence"] = ["B:2"]
+        class RevisingController(FakeController):
+            def predict(self, *, state, questions):
+                if "action" in questions:
+                    return super().predict(state=state, questions=questions)
+                state_data = json.loads(state)
+                self.states.append(state_data)
+                if state_data["current_draw_index"] == 0:
+                    return {"answers": {"keep_0": {"choice": KEEP}}}
+                return {"answers": {"keep_0": {"choice": "DROP"},
+                                    "keep_1": {"choice": KEEP}}}
+        result = select(row, RevisingController())
+        self.assertEqual([item["id"] for item in result["selected_evidence"]], ["B:2"])
+        self.assertEqual(result["chunks"][0]["attempts"][1]["removed_prior_ids"], ["A:1"])
+        self.assertEqual(result["prior_citation_removals"], 1)
 
     def test_terminal_verdict_is_record_only_and_uses_saved_evidence(self):
         controller = FakeController()

@@ -1,7 +1,9 @@
 """Evaluate STOP/RETRY plus per-sentence KEEP/DROP on fixed three-draw chunks.
 
-RETRY discards the current draw. On STOP, chosen citations are pooled across
-chunks and sent to fresh final Qwen verification. No gold reaches Jev.
+The keep-all control discards a RETRY draw. The selection policy can KEEP/DROP
+current citations and its own previously saved citations on RETRY and STOP.
+Saved citations are pooled across chunks for fresh final Qwen verification.
+No gold reaches Jev.
 """
 
 import argparse
@@ -46,14 +48,17 @@ TERMINAL_QUESTION = {"verdict": {"type": "choice",
                  "NEI": "Saved evidence does not justify either conclusion."}}}
 ACTION = {"type": "choice", "instructions": (
     "For this fixed evidence group, decide whether to STOP after this verifier draw or "
-    "RETRY the exact same input. RETRY discards this draw's verdict and citations. "
-    "If you STOP, you will then decide KEEP or DROP for sentences cited by this draw. "
-    "Uncited retrieved sentences are hidden. Every group will still be processed. "
+    "RETRY the exact same input. On either action, you can then KEEP or DROP "
+    "sentences cited by this draw and citations you previously saved from this group. "
+    "KEEP leaves an ID in the saved set; DROP removes it, even if it was saved "
+    "on an earlier draw. RETRY does not preserve this draw's verdict as final, "
+    "but can preserve explicitly selected citations. Uncited retrieved sentences "
+    "are hidden. Every group will still be processed. "
     "RETRY reveals no new retrieved sentences and costs one verifier call. "
     "Use RETRY when another sample may help. "
     "You have at most two retries per group. Do not decide the final claim verdict."),
     "criteria": {STOP: "Choose citations from this draw, then move to the next group.",
-                 RETRY: "Discard this draw and sample the same group again."}}
+                 RETRY: "Choose useful citations, then sample the same group again."}}
 ACTION_KEEP_ALL = {"type": "choice", "instructions": (
     "For this fixed evidence group, choose STOP after this verifier draw or RETRY "
     "the exact same input. STOP automatically saves all valid citations from this draw. "
@@ -70,35 +75,48 @@ def cited_candidates(chunk, draw):
             if item_id in by_id]
 
 
-def questions_for(chunk, draw, global_numbers):
+def selection_candidates(chunk, draw, saved_ids=()):
+    """Current valid citations plus previously kept IDs, in chunk order."""
+    current = set(draw.get("evidence", [])) if draw.get("format_ok") else set()
+    candidates = current | set(saved_ids)
+    return [item for item in chunk["evidence"] if item["id"] in candidates]
+
+
+def questions_for(chunk, draw, global_numbers, saved_ids=()):
     questions = {}
-    for index, item in enumerate(cited_candidates(chunk, draw)):
+    current = set(draw.get("evidence", [])) if draw.get("format_ok") else set()
+    for index, item in enumerate(selection_candidates(chunk, draw, saved_ids)):
         eid = global_numbers[item["id"]]
+        source = "this draw" if item["id"] in current else "your previously saved set"
         questions[f"keep_{index}"] = {
             "type": "choice",
-            "instructions": (f"Should the current verifier-cited sentence {eid} ({item['id']}) "
-                             "be saved for the final claim verifier? Its text is in the current "
-                             "verifier output. "
+            "instructions": (f"Should sentence {eid} ({item['id']}) from {source} "
+                             "remain in the final evidence set? Its text is in the state. "
                              "Select KEEP only if it is relevant, factually useful, and not redundant. "
                              "Avoid keeping every shown sentence merely for safety. "
-                             "The group has stopped; only citations kept from this draw reach the final verifier."),
+                             "DROP removes this ID even if it was kept on a prior draw. "
+                             "Each kept ID is counted once in the final evidence set."),
             "criteria": {KEEP: "Save this exact sentence in the final evidence set.",
-                         DROP: "Do not save this sentence from this draw."},
+                         DROP: "Remove this sentence from the saved set."},
         }
     return questions
 
 
-def selection_state_for(row, chunk_index, draw_index):
-    """Only the current verifier output; no full chunk or earlier draw text."""
+def selection_state_for(row, chunk_index, draw_index, saved_ids=()):
+    """Current verifier output and own saved citations; no uncited chunk text."""
     chunk = row["chunks"][chunk_index]
     draw = chunk["draws"][draw_index]
     numbers = {item["id"]: f"E{i + 1}" for i, item in enumerate(row["shown"])}
     cited = [{"id": item["id"], "retrieval_eid": numbers[item["id"]],
               "text": item["text"]} for item in cited_candidates(chunk, draw)]
+    previously_saved = [{"id": item["id"], "retrieval_eid": numbers[item["id"]],
+                         "text": item["text"]} for item in chunk["evidence"]
+                        if item["id"] in saved_ids]
     return json.dumps({"claim": row["claim"], "current_group_index": chunk_index + 1,
                        "total_groups": len(row["chunks"]),
                        "current_draw_index": draw_index,
                        "remaining_retries": MAX_DRAWS - draw_index - 1,
+                       "saved_evidence_in_group": previously_saved,
                        "verifier_output": {"verdict": draw.get("pred"),
                                            "format_ok": draw.get("format_ok"),
                                            "token_conf": draw.get("token_conf"),
@@ -123,7 +141,7 @@ def select(row, model=None, threshold=THRESHOLD, stop_policy=None, keep_policy=N
         chunk_kept = set()
         for di, draw in enumerate(chunk["draws"]):
             allow_retry = di < MAX_DRAWS - 1
-            state = selection_state_for(row, ci, di)
+            state = selection_state_for(row, ci, di, chunk_kept)
             action_answers = {}
             if stop_policy == "jev" and allow_retry:
                 question = {"action": ACTION if keep_policy == "jev" else ACTION_KEEP_ALL}
@@ -136,12 +154,14 @@ def select(row, model=None, threshold=THRESHOLD, stop_policy=None, keep_policy=N
             if action not in (STOP, RETRY):
                 raise ValueError(f"invalid controller action {action!r}")
             keep_answers = {}
-            if action == STOP and keep_policy == "jev" and draw.get("format_ok"):
-                questions = questions_for(chunk, draw, numbers)
+            prior_kept = set(chunk_kept)
+            if keep_policy == "jev":
+                candidates = selection_candidates(chunk, draw, prior_kept)
+                questions = questions_for(chunk, draw, numbers, prior_kept)
                 keep_answers = model.predict(state=state, questions=questions)["answers"] if questions else {}
                 controller_calls += int(bool(questions))
                 chosen = set()
-                for index, item in enumerate(cited_candidates(chunk, draw)):
+                for index, item in enumerate(candidates):
                     choice = keep_answers[f"keep_{index}"]["choice"]
                     if choice not in (KEEP, DROP):
                         raise ValueError(f"invalid evidence choice {choice!r}")
@@ -156,10 +176,12 @@ def select(row, model=None, threshold=THRESHOLD, stop_policy=None, keep_policy=N
             allowed = {item["id"] for item in chunk["evidence"]}
             if not chosen <= allowed:
                 raise ValueError(f"claim {row['id']}: selected evidence outside chunk")
-            chunk_kept.update(chosen)
+            if keep_policy == "jev" or action == STOP:
+                chunk_kept = chosen
             attempts.append({"draw_index": di, "action": action,
                              "kept_ids": sorted(chosen), "kept_retrieval_eids":
                              [numbers[item["id"]] for item in chunk["evidence"] if item["id"] in chosen],
+                             "removed_prior_ids": sorted(prior_kept - chunk_kept),
                              "probabilities": probabilities})
             if action == STOP:
                 break
@@ -168,13 +190,16 @@ def select(row, model=None, threshold=THRESHOLD, stop_policy=None, keep_policy=N
                        "kept_ids": sorted(chunk_kept)})
     selected = [item for item in row["shown"] if item["id"] in kept]
     calls = sum(len(chunk["attempts"]) for chunk in chunks)
+    kept_choices = [item_id for c in chunks for a in c["attempts"]
+                    for item_id in a["kept_ids"]]
     return {"chunks": chunks, "selected_evidence": selected,
             "chunk_verifier_calls": calls, "extra_draws": calls - len(chunks),
             "controller_calls": controller_calls,
-            "evidence_keep_decisions": sum(len(a["kept_ids"]) for c in chunks for a in c["attempts"]),
+            "evidence_keep_decisions": len(kept_choices),
             "unique_evidence_kept": len(selected),
-            "duplicate_keep_decisions_removed_by_set":
-                sum(len(a["kept_ids"]) for c in chunks for a in c["attempts"]) - len(selected)}
+            "duplicate_keep_decisions_removed_by_set": len(kept_choices) - len(set(kept_choices)),
+            "prior_citation_removals": sum(len(a["removed_prior_ids"])
+                                           for c in chunks for a in c["attempts"])}
 
 
 def terminal_verdict(row, policy, model, pooled_selected=None):
@@ -272,6 +297,7 @@ def summarize(rows):
                 "keep_decisions": sum(x["evidence_keep_decisions"] for x in traces),
                 "unique_evidence_kept": sum(x["unique_evidence_kept"] for x in traces),
                 "duplicate_keep_decisions_removed_by_set": sum(x["duplicate_keep_decisions_removed_by_set"] for x in traces),
+                "prior_citation_removals": sum(x["prior_citation_removals"] for x in traces),
                 "empty_evidence_claims": sum(not x["selected_evidence"] for x in traces),
                 "gold_reachable_claims": sum(x["gold_reachable"] is True for x in diagnostics),
                 "complete_gold_saved_claims": sum(x["complete_gold_saved"] is True for x in diagnostics),
@@ -304,7 +330,7 @@ def summarize(rows):
                 r["jev_terminal_verdict"]["fever_label"] != r["jev_final"]["pred"]
                 for r in rows),
             "actual_new_final_qwen_calls": sum(r["new_final_qwen_calls"] for r in rows),
-            "note": "RETRY discards the current chunk draw and its citations. Each chunk saves citations only from its STOP draw. Three new pooled-verifier draws use unchanged pooled evidence; STOP/RETRY selects one. Actual precomputation costs three calls per unique pool even when simulated stopping is earlier. Gold and future draws are used only in post-hoc diagnostics."}
+            "note": "Keep-all arms discard RETRY citations. Selection arms can revise their saved citation set after every observed draw, including RETRY; DROP can remove a prior KEEP. Three new pooled-verifier draws use unchanged final pooled evidence; STOP/RETRY selects one. Actual precomputation costs three calls per unique pool even when simulated stopping is earlier. Gold and future draws are used only in post-hoc diagnostics."}
 
 
 def run(args):
@@ -349,7 +375,7 @@ def run(args):
               "heuristic_threshold": args.threshold,
               "arms": {name: {"chunk_stop": modes[0], "citation_keep": modes[1],
                                 "pooled_stop": modes[2]} for name, modes in ARMS.items()},
-              "method": "Each chunk draw yields STOP/RETRY; RETRY discards that draw, while STOP saves its citations with optional KEEP/DROP. Chunk sets are pooled; three fresh final-verifier samples are generated from unchanged pooled input and a second STOP/RETRY policy selects one."}
+              "method": "Each chunk draw yields STOP/RETRY. Keep-all arms discard RETRY citations; selection arms choose KEEP/DROP for current and previously saved citations after each draw and can remove past choices. Final chunk sets are pooled; three fresh final-verifier samples are generated from unchanged pooled input and a second STOP/RETRY policy selects one."}
     output.mkdir(parents=True)
     (output / "manifest.json").write_text(json.dumps(record, indent=2, ensure_ascii=False) + "\n")
     decisions = []

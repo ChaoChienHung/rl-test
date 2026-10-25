@@ -17,14 +17,14 @@ from pathlib import Path
 from agent.data.build_evidence_batches import scored, training_claims
 from agent.evaluation.pooled_retry import FINAL_QUESTION, selected_draw_index, state_for_pool
 from agent.evaluation.results.rsi_jev_evidence_selection_baseline.eval_rsi_jev_evidence_selection_baseline import (
-    ACTION, ACTION_KEEP_ALL, DROP, KEEP, cited_candidates, questions_for, selection_state_for,
+    ACTION, ACTION_KEEP_ALL, DROP, KEEP, questions_for, selection_candidates,
+    selection_state_for,
 )
 from agent.evaluation.results.rsi_jev_retry_baseline.eval_rsi_jev_retry_baseline import evidence_for
 from agent.evaluation.results.sampling_retry.eval_sampling_retry import PROMPTS
 from agent.train.jev_head import JevHeadPolicy, choice_question
 from agent.train.replay_env import (MAX_DRAWS, RETRY, STOP,
                                     best_gold_set_evidence_credit,
-                                    citation_choice_feedback,
                                     verdict_retry_feedback)
 from verifier.model import LocalModel, gold_sets, render
 
@@ -63,10 +63,10 @@ def validate_train_source(source):
     return manifest, rows, claims
 
 
-def pooled_decision_reward(pooled, claim, chunk_extra_draws, citation_decisions=(),
+def pooled_decision_reward(pooled, claim, chunk_extra_draws, saved_evidence_ids=None,
                            extra_draw_cost=0.05, evidence_weight=0.5,
-                           citation_action_weight=0.25):
-    """Final outcome plus pooled retry and STOP-draw KEEP/DROP feedback."""
+                           saved_set_weight=0.25):
+    """Final outcome plus one reward for the unique saved evidence set."""
     final = pooled["selected"]
     feedback = [verdict_retry_feedback(decision["action"],
                                        pooled["draws"][decision["draw_index"]], final)
@@ -77,24 +77,22 @@ def pooled_decision_reward(pooled, claim, chunk_extra_draws, citation_decisions=
                    for group in gold_sets(claim)]
     evidence_credit, evidence_detail = best_gold_set_evidence_credit(
         final["gold"], final.get("evidence", []), gold_groups)
-    annotated = set().union(*gold_groups) if gold_groups else set()
-    citation_feedback = ([citation_choice_feedback(item["choice"], item["id"], annotated)
-                          for item in citation_decisions]
-                         if final["gold"] != "NOT_ENOUGH_INFO" and annotated else [])
-    citation_reward = (sum(citation_feedback) / len(citation_feedback)
-                       if citation_feedback else 0.0)
+    saved_set_credit = 0.0
+    saved_set_detail = {"scorable": False, "reason": "saved_set_not_provided"}
+    if saved_evidence_ids is not None:
+        saved_set_credit, saved_set_detail = best_gold_set_evidence_credit(
+            final["gold"], saved_evidence_ids, gold_groups)
     extra_draws = chunk_extra_draws + pooled["extra_draws"]
     call_penalty = extra_draw_cost * extra_draws
     return (verdict_reward + evidence_weight * evidence_credit + action_reward
-            + citation_action_weight * citation_reward - call_penalty), {
+            + saved_set_weight * saved_set_credit - call_penalty), {
         "final_verdict_correct": bool(final["correct"]), "verdict_reward": verdict_reward,
         "evidence_credit": evidence_credit, "evidence_weight": evidence_weight,
         "evidence_detail": evidence_detail,
         "pooled_action_feedback": feedback, "pooled_action_reward": action_reward,
-        "citation_action_feedback": citation_feedback,
-        "citation_action_reward": citation_reward,
-        "citation_action_weight": citation_action_weight,
-        "citation_action_scorable": bool(annotated) and final["gold"] != "NOT_ENOUGH_INFO",
+        "saved_set_credit": saved_set_credit,
+        "saved_set_weight": saved_set_weight,
+        "saved_set_detail": saved_set_detail,
         "chunk_extra_draws": chunk_extra_draws,
         "pooled_extra_draws": pooled["extra_draws"], "call_penalty": call_penalty,
         "action_rule": "STOP correct +1 / wrong -1; RETRY correct -1.5; RETRY wrong +0.25 only if final verdict correct, else -1"}
@@ -122,12 +120,11 @@ def sample_episode(row, policy, reference, variant, kl_coef=0.0):
     trace = []
     log_probs, entropies, kls = [], [], []
     extra_draws = 0
-    citation_decisions = []
     numbers = {item["id"]: f"E{i + 1}" for i, item in enumerate(row["shown"])}
     for ci, chunk in enumerate(row["chunks"]):
         chunk_saved = set()
         for di, draw in enumerate(chunk["draws"]):
-            state = selection_state_for(row, ci, di)
+            state = selection_state_for(row, ci, di, chunk_saved)
             if di < MAX_DRAWS - 1:
                 spec = ACTION_KEEP_ALL if variant == "citation" else ACTION
                 action, logp, entropy, kl = sample_question(
@@ -137,20 +134,21 @@ def sample_episode(row, policy, reference, variant, kl_coef=0.0):
                 kls.append(kl)
             else:
                 action = STOP
+            prior_saved = set(chunk_saved)
             kept = set()
-            if action == STOP and variant == "selection" and draw.get("format_ok"):
-                for key, spec in questions_for(chunk, draw, numbers).items():
+            if variant == "selection":
+                candidates = selection_candidates(chunk, draw, chunk_saved)
+                for key, spec in questions_for(chunk, draw, numbers, chunk_saved).items():
                     choice, logp, entropy, kl = sample_question(
                         policy, reference, state, key, spec, kl_coef)
                     log_probs.append(logp)
                     entropies.append(entropy)
                     kls.append(kl)
                     candidate_index = int(key.split("_")[1])
-                    candidate_id = cited_candidates(chunk, draw)[candidate_index]["id"]
-                    citation_decisions.append({"id": candidate_id, "choice": choice})
+                    candidate_id = candidates[candidate_index]["id"]
                     if choice == KEEP:
                         kept.add(candidate_id)
-                chunk_saved.update(kept)
+                chunk_saved = kept
             elif action == STOP and draw.get("format_ok"):
                 kept = set(draw.get("evidence", []))
                 allowed = {item["id"] for item in chunk["evidence"]}
@@ -158,14 +156,14 @@ def sample_episode(row, policy, reference, variant, kl_coef=0.0):
                     raise ValueError("verifier citation outside current train chunk")
                 chunk_saved.update(kept)
             trace.append({"chunk_index": ci, "draw_index": di, "action": action,
-                          "kept_ids": sorted(kept)})
+                          "kept_ids": sorted(kept),
+                          "removed_prior_ids": sorted(prior_saved - chunk_saved)})
             if action == STOP:
                 break
             extra_draws += 1
         saved.update(chunk_saved)
     selected = [item for item in row["shown"] if item["id"] in saved]
     return {"trace": trace, "selected_evidence": selected, "extra_draws": extra_draws,
-            "citation_decisions": citation_decisions,
             "log_probs": log_probs, "entropies": entropies, "kls": kls}
 
 
@@ -240,10 +238,10 @@ def run(args):
               "learning_rate": args.lr, "weight_decay": args.weight_decay,
               "kl_coef": args.kl_coef, "entropy_coef": args.entropy_coef,
               "baseline_ema": args.baseline_ema,
-              "reward_rule": "selected verdict +/-1 + 0.5 * best-gold-set partial evidence credit + mean asymmetric pooled STOP/RETRY feedback + 0.25 * mean STOP-draw KEEP/DROP feedback for selection variant - 0.05 per extra draw",
+              "reward_rule": "selected verdict +/-1 + 0.5 * pooled-verifier citation credit + 0.25 * unique saved-set credit once per claim + mean asymmetric pooled STOP/RETRY feedback - 0.05 per extra draw",
               "pooled_action_rule": "STOP correct +1 / wrong -1; RETRY correct -1.5; RETRY wrong +0.25 only if selected verdict becomes correct, otherwise -1",
               "gold_evidence_rule": "best alternative set: overlap/size + 0.25 complete-set bonus - 0.25 off-gold citation fraction; NEI empty +0.25 else -0.25",
-              "citation_action_rule": "selection only; KEEP annotated gold +1, DROP annotated gold -0.5, KEEP unannotated -0.25, DROP unannotated +0.1; mean over STOP-draw choices, skipped on NEI/no gold",
+              "saved_set_rule": "score the final unique saved citation set once against the best annotated FEVER gold set; no per-draw KEEP/DROP credit, including on RETRY",
               "chunk_gold_action_reward": False,
               "pooled_draws": MAX_DRAWS,
               "pooled_seed_offset": 100000,
@@ -273,7 +271,7 @@ def run(args):
                 extra_draws = episode["extra_draws"] + pooled["extra_draws"]
                 reward, reward_detail = pooled_decision_reward(
                     pooled, claim, episode["extra_draws"],
-                    citation_decisions=episode["citation_decisions"])
+                    saved_evidence_ids=saved)
                 advantage = reward - baseline
                 baseline += args.baseline_ema * advantage
                 log_probs = episode["log_probs"] + pooled["log_probs"]
