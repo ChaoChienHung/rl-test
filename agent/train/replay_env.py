@@ -51,6 +51,46 @@ def stop_retry_feedback(action, draw):
     return 1.0 if (action == STOP) == good else -1.0
 
 
+def best_gold_set_evidence_credit(gold, cited_ids, gold_groups,
+                                  off_gold_weight=0.25, complete_bonus=0.25):
+    """Partial evidence credit against one alternative FEVER gold set.
+
+    Off-gold IDs receive a small penalty because FEVER annotations are not
+    exhaustive; they are not asserted to be semantically false.
+    """
+    cited = set(cited_ids)
+    if gold == "NOT_ENOUGH_INFO":
+        return (complete_bonus if not cited else -off_gold_weight), {
+            "scorable": True, "nei": True, "cited_count": len(cited)}
+    groups = [set(group) for group in gold_groups if group]
+    if not groups:
+        return 0.0, {"scorable": False, "reason": "no_gold_evidence_set"}
+    candidates = []
+    for group in groups:
+        overlap = len(cited & group)
+        off_gold = len(cited - group)
+        complete = group <= cited
+        score = (overlap / len(group) + complete_bonus * complete
+                 - off_gold_weight * off_gold / max(1, len(cited)))
+        candidates.append((score, overlap, -off_gold, complete, len(group)))
+    score, overlap, negative_off_gold, complete, gold_size = max(candidates)
+    return score, {"scorable": True, "nei": False, "overlap": overlap,
+                   "gold_size": gold_size, "off_gold_count": -negative_off_gold,
+                   "complete_gold_set": complete, "cited_count": len(cited)}
+
+
+def verdict_retry_feedback(action, current_draw, selected_draw,
+                           useful_retry_credit=0.25, correct_retry_penalty=1.5):
+    """Asymmetric verdict-only feedback; a futile RETRY earns no credit."""
+    if action == STOP:
+        return 1.0 if current_draw.get("correct") else -1.0
+    if action != RETRY:
+        raise ValueError("action must be STOP or RETRY")
+    if current_draw.get("correct"):
+        return -correct_retry_penalty
+    return useful_retry_credit if selected_draw.get("correct") else -1.0
+
+
 def evidence_penalties(saved, retrieved, gold_sets, weights=RewardWeights()):
     """Score saved evidence against any fully retrievable FEVER gold set.
 

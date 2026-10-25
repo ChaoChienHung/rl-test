@@ -24,9 +24,10 @@ from agent.evaluation.results.rsi_jev_retry_baseline.eval_rsi_jev_retry_baseline
 )
 from agent.evaluation.results.sampling_retry.eval_sampling_retry import PROMPTS
 from agent.train.jev_head import JevHeadPolicy, choice_question
-from agent.train.replay_env import (MAX_DRAWS, RETRY, STOP, stop_retry_feedback,
-                                    verifier_result_good)
-from verifier.model import LocalModel, render
+from agent.train.replay_env import (MAX_DRAWS, RETRY, STOP,
+                                    best_gold_set_evidence_credit,
+                                    verdict_retry_feedback)
+from verifier.model import LocalModel, gold_sets, render
 
 
 def validate_train_source(source):
@@ -63,22 +64,29 @@ def validate_train_source(source):
     return manifest, rows, claims
 
 
-def pooled_decision_reward(pooled, chunk_extra_draws, extra_draw_cost=0.05):
-    """Reward missed/caught good pooled outputs; never shape on chunk gold."""
-    feedback = [stop_retry_feedback(decision["action"], pooled["draws"][decision["draw_index"]])
+def pooled_decision_reward(pooled, claim, chunk_extra_draws, extra_draw_cost=0.05,
+                           evidence_weight=0.5):
+    """Verdict-only retry feedback plus partial best-gold-set evidence credit."""
+    final = pooled["selected"]
+    feedback = [verdict_retry_feedback(decision["action"],
+                                       pooled["draws"][decision["draw_index"]], final)
                 for decision in pooled["decisions"] if decision["draw_index"] < MAX_DRAWS - 1]
     action_reward = sum(feedback) / len(feedback) if feedback else 0.0
-    final_good = verifier_result_good(pooled["selected"])
-    final_reward = 1.0 if final_good else -1.0
+    verdict_reward = 1.0 if final["correct"] else -1.0
+    gold_groups = [{f"{page}:{line}" for page, line in group}
+                   for group in gold_sets(claim)]
+    evidence_credit, evidence_detail = best_gold_set_evidence_credit(
+        final["gold"], final.get("evidence", []), gold_groups)
     extra_draws = chunk_extra_draws + pooled["extra_draws"]
     call_penalty = extra_draw_cost * extra_draws
-    return final_reward + action_reward - call_penalty, {
-        "final_good": final_good, "final_reward": final_reward,
+    return verdict_reward + evidence_weight * evidence_credit + action_reward - call_penalty, {
+        "final_verdict_correct": bool(final["correct"]), "verdict_reward": verdict_reward,
+        "evidence_credit": evidence_credit, "evidence_weight": evidence_weight,
+        "evidence_detail": evidence_detail,
         "pooled_action_feedback": feedback, "pooled_action_reward": action_reward,
         "chunk_extra_draws": chunk_extra_draws,
         "pooled_extra_draws": pooled["extra_draws"], "call_penalty": call_penalty,
-        "evidence_f1_threshold": "strictly_greater_than_2_over_3",
-        "nei_rule": "correct_verdict_only"}
+        "action_rule": "STOP correct +1 / wrong -1; RETRY correct -1.5; RETRY wrong +0.25 only if final verdict correct, else -1"}
 
 
 def sample_question(policy, reference, state, key, specification, kl_coef):
@@ -218,8 +226,9 @@ def run(args):
               "learning_rate": args.lr, "weight_decay": args.weight_decay,
               "kl_coef": args.kl_coef, "entropy_coef": args.entropy_coef,
               "baseline_ema": args.baseline_ema,
-              "reward_rule": "pooled actions: +1 for good STOP or bad RETRY, -1 for bad STOP or good RETRY; mean action feedback plus +/-1 for selected pooled output quality minus 0.05 per extra draw",
-              "good_output_rule": "correct verdict and evidence F1 > 2/3; NEI requires correct verdict only",
+              "reward_rule": "selected verdict +/-1 + 0.5 * best-gold-set partial evidence credit + mean asymmetric verdict-only pooled-action feedback - 0.05 per extra draw",
+              "pooled_action_rule": "STOP correct +1 / wrong -1; RETRY correct -1.5; RETRY wrong +0.25 only if selected verdict becomes correct, otherwise -1",
+              "gold_evidence_rule": "best alternative set: overlap/size + 0.25 complete-set bonus - 0.25 off-gold citation fraction; NEI empty +0.25 else -0.25",
               "chunk_gold_action_reward": False,
               "pooled_draws": MAX_DRAWS,
               "pooled_seed_offset": 100000,
@@ -247,7 +256,8 @@ def run(args):
                 final = pooled["selected"]
                 saved = [item["id"] for item in episode["selected_evidence"]]
                 extra_draws = episode["extra_draws"] + pooled["extra_draws"]
-                reward, reward_detail = pooled_decision_reward(pooled, episode["extra_draws"])
+                reward, reward_detail = pooled_decision_reward(
+                    pooled, claim, episode["extra_draws"])
                 advantage = reward - baseline
                 baseline += args.baseline_ema * advantage
                 log_probs = episode["log_probs"] + pooled["log_probs"]

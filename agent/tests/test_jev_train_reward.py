@@ -4,38 +4,56 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from agent.train.train_jev_rl import pooled_decision_reward, sample_pooled_episode
-from agent.train.replay_env import RETRY, STOP, stop_retry_feedback, verifier_result_good
+from agent.train.replay_env import (RETRY, STOP, best_gold_set_evidence_credit,
+                                    verdict_retry_feedback)
 
 
 class JevTrainRewardTest(unittest.TestCase):
     def test_pooled_action_reward_and_extra_draw_cost(self):
-        good = {"gold": "SUPPORTED", "correct": True, "evidence_f1": 0.8}
-        bad = {"gold": "SUPPORTED", "correct": False, "evidence_f1": 0.9}
+        claim = {"id": 1, "label": "SUPPORTS"}
+        good = {"gold": "SUPPORTED", "correct": True, "evidence": ["A:1"]}
+        bad = {"gold": "SUPPORTED", "correct": False, "evidence": []}
         pooled = {"draws": [bad, good, bad], "selected": good,
                   "decisions": [{"draw_index": 0, "action": RETRY},
                                 {"draw_index": 1, "action": STOP}],
                   "extra_draws": 1}
-        reward, detail = pooled_decision_reward(pooled, chunk_extra_draws=2)
-        self.assertEqual(detail["pooled_action_feedback"], [1.0, 1.0])
-        self.assertAlmostEqual(reward, 1.85)
+        with patch("agent.train.train_jev_rl.gold_sets", return_value=[[('A', 1)]]):
+            reward, detail = pooled_decision_reward(pooled, claim, chunk_extra_draws=2)
+        self.assertEqual(detail["pooled_action_feedback"], [0.25, 1.0])
+        self.assertEqual(detail["evidence_detail"]["complete_gold_set"], True)
+        self.assertAlmostEqual(reward, 2.1)
 
     def test_bad_stop_and_good_retry_are_penalized(self):
-        good = {"gold": "SUPPORTED", "correct": True, "evidence_f1": 0.8}
-        bad = {"gold": "SUPPORTED", "correct": False, "evidence_f1": 0.8}
-        self.assertEqual(stop_retry_feedback(STOP, bad), -1)
-        self.assertEqual(stop_retry_feedback(RETRY, good), -1)
+        claim = {"id": 1, "label": "SUPPORTS"}
+        good = {"gold": "SUPPORTED", "correct": True, "evidence": ["A:1"]}
+        bad = {"gold": "SUPPORTED", "correct": False, "evidence": []}
+        self.assertEqual(verdict_retry_feedback(STOP, bad, bad), -1)
+        self.assertEqual(verdict_retry_feedback(RETRY, good, bad), -1.5)
+        self.assertEqual(verdict_retry_feedback(RETRY, bad, bad), -1)
         pooled = {"draws": [bad, good, bad], "selected": bad,
                   "decisions": [{"draw_index": 0, "action": STOP}],
                   "extra_draws": 0}
-        reward, detail = pooled_decision_reward(pooled, chunk_extra_draws=0)
-        self.assertEqual(detail["final_good"], False)
+        with patch("agent.train.train_jev_rl.gold_sets", return_value=[[('A', 1)]]):
+            reward, detail = pooled_decision_reward(pooled, claim, chunk_extra_draws=0)
+        self.assertEqual(detail["final_verdict_correct"], False)
         self.assertEqual(reward, -2)
 
-    def test_f1_boundary_and_nei(self):
-        self.assertFalse(verifier_result_good(
-            {"gold": "SUPPORTED", "correct": True, "evidence_f1": 2 / 3}))
-        self.assertTrue(verifier_result_good(
-            {"gold": "NOT_ENOUGH_INFO", "correct": True, "evidence_f1": 0}))
+    def test_partial_best_gold_set_and_off_gold_penalty(self):
+        groups = [{"A:1", "A:2", "A:3"}, {"B:1"}]
+        exact, detail = best_gold_set_evidence_credit("SUPPORTED", ["B:1"], groups)
+        self.assertEqual(exact, 1.25)
+        self.assertTrue(detail["complete_gold_set"])
+        partial, detail = best_gold_set_evidence_credit(
+            "SUPPORTED", ["A:1", "A:2", "X:9"], groups)
+        self.assertAlmostEqual(partial, 2 / 3 - 0.25 / 3)
+        self.assertFalse(detail["complete_gold_set"])
+        self.assertEqual(detail["off_gold_count"], 1)
+
+    def test_nei_empty_evidence(self):
+        self.assertEqual(best_gold_set_evidence_credit(
+            "NOT_ENOUGH_INFO", [], [])[0], 0.25)
+        self.assertEqual(best_gold_set_evidence_credit(
+            "NOT_ENOUGH_INFO", ["A:1"], [])[0], -0.25)
 
     def test_training_pooled_stage_matches_forced_third_vote(self):
         row = {"claim": "claim"}

@@ -25,6 +25,13 @@ from verifier.model import LocalModel, gold_sets, render
 
 KEEP = "KEEP"
 DROP = "DROP"
+ARMS = {
+    "heuristic": ("heuristic", "all", "heuristic"),
+    "jev": ("jev", "jev", "jev"),
+    "jev_chunk_stop": ("jev", "all", "heuristic"),
+    "jev_keep": ("heuristic", "jev", "heuristic"),
+    "jev_pooled_stop": ("heuristic", "all", "jev"),
+}
 TERMINAL_LABELS = {"ACCEPT": "SUPPORTED", "REJECT": "REFUTED",
                    "NEI": "NOT_ENOUGH_INFO"}
 TERMINAL_QUESTION = {"verdict": {"type": "choice",
@@ -49,6 +56,14 @@ ACTION = {"type": "choice", "instructions": (
     "You have at most two retries per group. Do not decide the final claim verdict."),
     "criteria": {STOP: "Keep selected sentences from this draw and move to the next group.",
                  RETRY: "Keep selected sentences from this draw and sample the same group again."}}
+ACTION_KEEP_ALL = {"type": "choice", "instructions": (
+    "For this fixed evidence group, choose STOP after this verifier draw or RETRY "
+    "the exact same input. All valid sentences cited by each observed draw are saved "
+    "automatically, including on RETRY; you do not choose citations in this condition. "
+    "Every group will still be processed. RETRY reveals no new retrieved sentences "
+    "and costs one verifier call. You have at most two retries per group."),
+    "criteria": {STOP: "Move to the next group after saving this draw's valid citations.",
+                 RETRY: "Save this draw's valid citations and sample the same group again."}}
 
 
 def cited_candidates(chunk, draw):
@@ -94,7 +109,13 @@ def selection_state_for(row, chunk_index, draw_index):
                       ensure_ascii=False, separators=(",", ":"))
 
 
-def select(row, model=None, threshold=THRESHOLD):
+def select(row, model=None, threshold=THRESHOLD, stop_policy=None, keep_policy=None):
+    stop_policy = stop_policy or ("jev" if model is not None else "heuristic")
+    keep_policy = keep_policy or ("jev" if model is not None else "all")
+    if stop_policy not in ("jev", "heuristic") or keep_policy not in ("jev", "all"):
+        raise ValueError("invalid selection policy")
+    if model is None and (stop_policy == "jev" or keep_policy == "jev"):
+        raise ValueError("Jev selection requires a controller")
     numbers = {item["id"]: f"E{i + 1}" for i, item in enumerate(row["shown"])}
     kept = set()
     chunks = []
@@ -104,17 +125,20 @@ def select(row, model=None, threshold=THRESHOLD):
         chunk_kept = set()
         for di, draw in enumerate(chunk["draws"]):
             allow_retry = di < MAX_DRAWS - 1
-            if model is None:
-                chosen = set(draw.get("evidence", [])) if draw.get("format_ok") else set()
-                action = heuristic_action(draw, len(chunk["evidence"]), threshold) if allow_retry else STOP
-                probabilities = None
+            questions = {}
+            if stop_policy == "jev" and allow_retry:
+                questions["action"] = ACTION if keep_policy == "jev" else ACTION_KEEP_ALL
+            if keep_policy == "jev":
+                questions.update(questions_for(chunk, draw, numbers, allow_retry=False))
+            answers = model.predict(state=selection_state_for(row, ci, di), questions=questions)["answers"] if questions else {}
+            controller_calls += int(bool(questions))
+            if stop_policy == "jev" and allow_retry:
+                action = answers["action"]["choice"]
             else:
-                questions = questions_for(chunk, draw, numbers, allow_retry)
-                answers = model.predict(state=selection_state_for(row, ci, di), questions=questions)["answers"] if questions else {}
-                controller_calls += int(bool(questions))
-                action = answers["action"]["choice"] if allow_retry else STOP
-                if action not in (STOP, RETRY):
-                    raise ValueError(f"invalid controller action {action!r}")
+                action = heuristic_action(draw, len(chunk["evidence"]), threshold) if allow_retry else STOP
+            if action not in (STOP, RETRY):
+                raise ValueError(f"invalid controller action {action!r}")
+            if keep_policy == "jev":
                 chosen = set()
                 for index, item in enumerate(cited_candidates(chunk, draw)):
                     choice = answers[f"keep_{index}"]["choice"]
@@ -122,7 +146,9 @@ def select(row, model=None, threshold=THRESHOLD):
                         raise ValueError(f"invalid evidence choice {choice!r}")
                     if choice == KEEP:
                         chosen.add(item["id"])
-                probabilities = {key: answer.get("probabilities") for key, answer in answers.items()}
+            else:
+                chosen = set(draw.get("evidence", [])) if draw.get("format_ok") else set()
+            probabilities = {key: answer.get("probabilities") for key, answer in answers.items()} if answers else None
             allowed = {item["id"] for item in chunk["evidence"]}
             if not chosen <= allowed:
                 raise ValueError(f"claim {row['id']}: selected evidence outside chunk")
@@ -247,11 +273,19 @@ def summarize(rows):
                 "complete_gold_saved_claims": sum(x["complete_gold_saved"] is True for x in diagnostics),
                 "action_hindsight": {key: sum(x[key] for x in actions)
                                       for key in actions[0] if key != "chunks"} if actions else {}}
+    baseline = [r["heuristic_final"] for r in rows]
+    ablations = {name: {"quality": quality([r[f"{name}_final"] for r in rows]),
+                        "fever_gained_vs_heuristic": sum(not a["fever_score"] and r[f"{name}_final"]["fever_score"]
+                                                           for a, r in zip(baseline, rows)),
+                        "fever_lost_vs_heuristic": sum(a["fever_score"] and not r[f"{name}_final"]["fever_score"]
+                                                         for a, r in zip(baseline, rows))}
+                 for name in ARMS}
     return {"overall": group(rows),
             "gold_in_full_context": group([r for r in rows if r["gold_in_context"] is True]),
             "gold_not_in_full_context": group([r for r in rows if r["gold_in_context"] is False]),
             "gold_nei": group([r for r in rows if r["gold"] == "NOT_ENOUGH_INFO"]),
-            "policies": {"heuristic": policy("heuristic"), "jev": policy("jev")},
+            "policies": {name: policy(name) for name in ARMS},
+            "component_ablations": ablations,
             "jev_terminal_verdict": {
                 "n": len(rows),
                 "accuracy": (sum(r["jev_terminal_verdict"]["fever_label"] == r["gold"]
@@ -309,14 +343,22 @@ def run(args):
               "pooled_top_p": manifest.get("top_p", 0.9),
               "pooled_seed_offset": 100000,
               "heuristic_threshold": args.threshold,
+              "arms": {name: {"chunk_stop": modes[0], "citation_keep": modes[1],
+                                "pooled_stop": modes[2]} for name, modes in ARMS.items()},
               "method": "Each chunk draw yields STOP/RETRY plus cited-sentence KEEP/DROP; chunk sets are pooled; three fresh final-verifier samples are generated from the unchanged pooled input and a second STOP/RETRY policy selects one."}
     output.mkdir(parents=True)
     (output / "manifest.json").write_text(json.dumps(record, indent=2, ensure_ascii=False) + "\n")
     decisions = []
     with (output / "decisions.jsonl").open("w", encoding="utf-8") as stream:
         for index, row in enumerate(source_rows, 1):
-            decision = {"id": row["id"], "heuristic": select(row, threshold=args.threshold),
-                        "jev": select(row, controller)}
+            decision = {"id": row["id"]}
+            for arm, (stop_policy, keep_policy, _) in ARMS.items():
+                if arm == "jev_pooled_stop":
+                    decision[arm] = decision["heuristic"]
+                else:
+                    decision[arm] = select(row, controller if "jev" in (stop_policy, keep_policy) else None,
+                                           threshold=args.threshold, stop_policy=stop_policy,
+                                           keep_policy=keep_policy)
             decisions.append(decision)
             stream.write(json.dumps(decision, ensure_ascii=False) + "\n")
             stream.flush()
@@ -338,7 +380,7 @@ def run(args):
     with (output / "pooled_samples.jsonl").open("w", encoding="utf-8") as pooled_stream:
         for index, (row, decision) in enumerate(zip(source_rows, decisions), 1):
             cache = {}
-            for policy in ("heuristic", "jev"):
+            for policy in ARMS:
                 items = decision[policy]["selected_evidence"]
                 key = tuple(item["id"] for item in items)
                 if key not in cache:
@@ -352,7 +394,7 @@ def run(args):
             record_row = {"id": row["id"], "pools": {policy: {
                 "evidence_ids": [item["id"] for item in decision[policy]["selected_evidence"]],
                 "draws": cache[tuple(item["id"] for item in decision[policy]["selected_evidence"])]}
-                for policy in ("heuristic", "jev")},
+                for policy in ARMS},
                 "actual_qwen_calls": MAX_DRAWS * len(cache)}
             pooled_rows.append(record_row)
             pooled_stream.write(json.dumps(record_row, ensure_ascii=False) + "\n")
@@ -373,27 +415,26 @@ def run(args):
         for index, (row, decision, pooled) in enumerate(zip(source_rows, decisions, pooled_rows), 1):
             final = {}
             pool_decisions = {}
-            for policy in ("heuristic", "jev"):
+            for policy in ARMS:
                 pool_decisions[policy] = choose_pooled(
                     row["claim"], decision[policy]["selected_evidence"],
                     pooled["pools"][policy]["draws"],
-                    model=pooled_controller if policy == "jev" else None,
+                    model=pooled_controller if ARMS[policy][2] == "jev" else None,
                     threshold=args.threshold)
                 final[policy] = pool_decisions[policy]["selected"]
             own_verdict = terminal_verdict(row, decision["jev"], pooled_controller,
                                            pooled_selected=final["jev"])
             result = {"id": row["id"], "gold": row["gold"],
                       "gold_in_context": row["gold_in_context"],
-                      "heuristic": decision["heuristic"], "jev": decision["jev"],
                       "jev_terminal_verdict": own_verdict,
-                      "heuristic_pooled_retry": pool_decisions["heuristic"],
-                      "jev_pooled_retry": pool_decisions["jev"],
-                      "heuristic_final": final["heuristic"], "jev_final": final["jev"],
-                      "heuristic_evidence_diagnostic": evidence_diagnostic(row, decision["heuristic"], claims[row["id"]]),
-                      "jev_evidence_diagnostic": evidence_diagnostic(row, decision["jev"], claims[row["id"]]),
-                      "heuristic_action_diagnostic": action_diagnostic(row, decision["heuristic"]),
-                      "jev_action_diagnostic": action_diagnostic(row, decision["jev"]),
                       "new_final_qwen_calls": pooled["actual_qwen_calls"]}
+            for policy in ARMS:
+                result[policy] = decision[policy]
+                result[f"{policy}_pooled_retry"] = pool_decisions[policy]
+                result[f"{policy}_final"] = final[policy]
+                result[f"{policy}_evidence_diagnostic"] = evidence_diagnostic(
+                    row, decision[policy], claims[row["id"]])
+                result[f"{policy}_action_diagnostic"] = action_diagnostic(row, decision[policy])
             rows.append(result)
             stream.write(json.dumps(result, ensure_ascii=False) + "\n")
             stream.flush()

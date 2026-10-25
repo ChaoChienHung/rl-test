@@ -72,6 +72,21 @@ class EvidenceSelectionTest(unittest.TestCase):
         self.assertEqual(state["verifier_output"]["cited_evidence"][0]["text"], "first")
         self.assertNotIn("uncited", json.dumps(state))
 
+    def test_component_arms_only_ask_their_assigned_questions(self):
+        row = self.row()
+        for stop_policy, keep_policy, expected_keys in (
+            ("jev", "all", {"action"}),
+            ("heuristic", "jev", {"keep_0"}),
+            ("jev", "jev", {"action", "keep_0"}),
+        ):
+            class CapturingController(FakeController):
+                def predict(self, *, state, questions):
+                    self.question_keys = set(questions)
+                    return super().predict(state=state, questions=questions)
+            controller = CapturingController()
+            select(row, controller, stop_policy=stop_policy, keep_policy=keep_policy)
+            self.assertEqual(controller.question_keys, expected_keys)
+
     def test_terminal_verdict_is_record_only_and_uses_saved_evidence(self):
         controller = FakeController()
         row = self.row()
