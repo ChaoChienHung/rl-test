@@ -1,0 +1,26 @@
+{
+  "evaluation_code": "__main__",
+  "split": "FEVER shared_task_dev; frozen validation IDs",
+  "purpose": "evaluation_only_no_controller_training",
+  "source_run": "agent/data/evidence_batches/sft-direct-from-base-qwen3p5-2b-5500-samples/direct-cap160/stochastic-3-draws-per-chunk-900-claims",
+  "source_commit": "9d4b3c79b4e4f4030ad934add9afd2c1773d0964",
+  "commit": "5210c2d7494fd6f32af1ce9cdaba3c13311e119e",
+  "n_claims": 900,
+  "thresholds": {
+    "heuristic_0p3": 0.3,
+    "heuristic_0p7": 0.7
+  },
+  "threshold_applies_to": [
+    "chunk_stop_retry",
+    "pooled_stop_retry"
+  ],
+  "model": "Qwen/Qwen3.5-2B",
+  "adapter": "verifier/experiments/sft-direct-from-base-qwen3p5-2b-5500-samples/runs/run1/artifacts/checkpoints",
+  "prompt_style": "direct",
+  "max_new_tokens": 160,
+  "pooled_draws": 3,
+  "pooled_do_sample": true,
+  "pooled_seed_offset": 100000,
+  "pooled_temperature": 0.7,
+  "pooled_top_p": 0.9
+}

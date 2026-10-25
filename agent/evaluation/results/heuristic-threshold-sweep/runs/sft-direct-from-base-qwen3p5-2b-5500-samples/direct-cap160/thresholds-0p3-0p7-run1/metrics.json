@@ -1,0 +1,127 @@
+{
+  "n_claims": 900,
+  "policies": {
+    "heuristic_0p3": {
+      "threshold": 0.3,
+      "quality": {
+        "n": 900,
+        "accuracy": 0.7433333333333333,
+        "fever_score": 0.6433333333333333,
+        "evidence_f1_non_nei": 0.662217426025397,
+        "format_rate": 1.0,
+        "recall": {
+          "SUPPORTED": 0.8066666666666666,
+          "REFUTED": 0.8233333333333334,
+          "NOT_ENOUGH_INFO": 0.6
+        }
+      },
+      "gold_in_full_context": {
+        "n": 517,
+        "accuracy": 0.8626692456479691,
+        "fever_score": 0.7717601547388782,
+        "evidence_f1_non_nei": 0.7506714164060055,
+        "format_rate": 1.0,
+        "recall": {
+          "SUPPORTED": 0.8798449612403101,
+          "REFUTED": 0.8455598455598455,
+          "NOT_ENOUGH_INFO": null
+        }
+      },
+      "gold_not_in_full_context": {
+        "n": 83,
+        "accuracy": 0.5180722891566265,
+        "fever_score": 0.0,
+        "evidence_f1_non_nei": 0.1112449799196787,
+        "format_rate": 1.0,
+        "recall": {
+          "SUPPORTED": 0.35714285714285715,
+          "REFUTED": 0.6829268292682927,
+          "NOT_ENOUGH_INFO": null
+        }
+      },
+      "gold_nei": {
+        "n": 300,
+        "accuracy": 0.6,
+        "fever_score": 0.6,
+        "evidence_f1_non_nei": null,
+        "format_rate": 1.0,
+        "recall": {
+          "SUPPORTED": null,
+          "REFUTED": null,
+          "NOT_ENOUGH_INFO": 0.6
+        }
+      },
+      "simulated_chunk_qwen_calls": 7334,
+      "simulated_pooled_qwen_calls": 1471,
+      "simulated_total_qwen_calls": 8805,
+      "selected_evidence_total": 1370,
+      "empty_evidence_claims": 204,
+      "forced_chunk_stops": 2012,
+      "forced_pooled_stops": 262,
+      "pooled_early_stop_on_wrong": 149,
+      "pooled_forced_stop_on_wrong": 82
+    },
+    "heuristic_0p7": {
+      "threshold": 0.7,
+      "quality": {
+        "n": 900,
+        "accuracy": 0.7433333333333333,
+        "fever_score": 0.6488888888888888,
+        "evidence_f1_non_nei": 0.6189054602134312,
+        "format_rate": 1.0,
+        "recall": {
+          "SUPPORTED": 0.78,
+          "REFUTED": 0.7666666666666667,
+          "NOT_ENOUGH_INFO": 0.6833333333333333
+        }
+      },
+      "gold_in_full_context": {
+        "n": 517,
+        "accuracy": 0.8259187620889749,
+        "fever_score": 0.7330754352030948,
+        "evidence_f1_non_nei": 0.7042745508602039,
+        "format_rate": 1.0,
+        "recall": {
+          "SUPPORTED": 0.8604651162790697,
+          "REFUTED": 0.7915057915057915,
+          "NOT_ENOUGH_INFO": null
+        }
+      },
+      "gold_not_in_full_context": {
+        "n": 83,
+        "accuracy": 0.4457831325301205,
+        "fever_score": 0.0,
+        "evidence_f1_non_nei": 0.08714859437751005,
+        "format_rate": 1.0,
+        "recall": {
+          "SUPPORTED": 0.2857142857142857,
+          "REFUTED": 0.6097560975609756,
+          "NOT_ENOUGH_INFO": null
+        }
+      },
+      "gold_nei": {
+        "n": 300,
+        "accuracy": 0.6833333333333333,
+        "fever_score": 0.6833333333333333,
+        "evidence_f1_non_nei": null,
+        "format_rate": 1.0,
+        "recall": {
+          "SUPPORTED": null,
+          "REFUTED": null,
+          "NOT_ENOUGH_INFO": 0.6833333333333333
+        }
+      },
+      "simulated_chunk_qwen_calls": 8101,
+      "simulated_pooled_qwen_calls": 1651,
+      "simulated_total_qwen_calls": 9752,
+      "selected_evidence_total": 1135,
+      "empty_evidence_claims": 258,
+      "forced_chunk_stops": 2455,
+      "forced_pooled_stops": 370,
+      "pooled_early_stop_on_wrong": 91,
+      "pooled_forced_stop_on_wrong": 140
+    }
+  },
+  "actual_new_pooled_qwen_calls": 3321,
+  "note": "Both thresholds read identical precomputed chunk draws. Distinct evidence pools receive fresh pooled Qwen draws; identical pools within a claim reuse draws. Simulated early stopping does not reduce the actual precomputation count. Gold is used only for scoring and post-hoc diagnostics."
+}

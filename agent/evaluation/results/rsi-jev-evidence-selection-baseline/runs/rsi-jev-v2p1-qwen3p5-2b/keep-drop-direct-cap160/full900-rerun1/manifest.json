@@ -1,0 +1,80 @@
+{
+  "evaluation_code": "__main__",
+  "split": "FEVER shared_task_dev; frozen validation IDs",
+  "purpose": "evaluation_only_no_controller_training",
+  "source_run": "agent/data/evidence_batches/sft-direct-from-base-qwen3p5-2b-5500-samples/direct-cap160/stochastic-3-draws-per-chunk-900-claims",
+  "source_n_claims": 900,
+  "evaluated_n_claims": 900,
+  "pilot_subset": false,
+  "subset_rule": "first frozen source rows in source order",
+  "source_commit": "9d4b3c79b4e4f4030ad934add9afd2c1773d0964",
+  "commit": "7444cb1788b39ac91e19c0239bc89afcc678ddb1",
+  "jev_backend": "rsi-jev",
+  "jev_model": "shgao/rsi-jev-v2.1-qwen3.5-2b",
+  "trained_head": null,
+  "jev_package_version": "3.0.0",
+  "action_question": {
+    "type": "choice",
+    "instructions": "For this fixed evidence group, decide whether to STOP after this verifier draw or RETRY the exact same input. On either action, you can then KEEP or DROP sentences cited by this draw and citations you previously saved from this group. KEEP leaves an ID in the saved set; DROP removes it, even if it was saved on an earlier draw. RETRY does not preserve this draw's verdict as final, but can preserve explicitly selected citations. Uncited retrieved sentences are hidden. Every group will still be processed. RETRY reveals no new retrieved sentences and costs one verifier call. Use RETRY when another sample may help. You have at most two retries per group. Do not decide the final claim verdict.",
+    "criteria": {
+      "STOP": "Choose citations from this draw, then move to the next group.",
+      "RETRY": "Choose useful citations, then sample the same group again."
+    }
+  },
+  "keep_question_builder": "questions_for",
+  "terminal_question": {
+    "verdict": {
+      "type": "choice",
+      "instructions": "After all evidence groups and pooled verification have been processed, record your own final judgment of the claim using only the saved sentences and observed verifier outputs. ACCEPT means supported, REJECT means refuted, and NEI means the saved evidence is insufficient. Do not assume a chunk verdict alone proves the full claim. This is a diagnostic output; a separate Qwen verifier still makes the main final prediction.",
+      "criteria": {
+        "ACCEPT": "Saved evidence supports the claim.",
+        "REJECT": "Saved evidence refutes the claim.",
+        "NEI": "Saved evidence does not justify either conclusion."
+      }
+    }
+  },
+  "pooled_retry_question": {
+    "action": {
+      "type": "choice",
+      "instructions": "The current verifier output was generated from the final pooled evidence saved across all chunks. Decide whether to STOP and use this output, or RETRY the exact same claim and pooled evidence for another sample. RETRY does not retrieve or add evidence and costs another verifier call. Judge the current verdict and its citations, using only the current output and cited sentence text. At most two retries are available.",
+      "criteria": {
+        "STOP": "Use the current verifier output as the final prediction.",
+        "RETRY": "Sample the same pooled evidence again before deciding."
+      }
+    }
+  },
+  "pooled_draws": 3,
+  "pooled_do_sample": true,
+  "pooled_temperature": 0.7,
+  "pooled_top_p": 0.9,
+  "pooled_seed_offset": 100000,
+  "heuristic_threshold": 0.5,
+  "arms": {
+    "heuristic": {
+      "chunk_stop": "heuristic",
+      "citation_keep": "all",
+      "pooled_stop": "heuristic"
+    },
+    "jev": {
+      "chunk_stop": "jev",
+      "citation_keep": "jev",
+      "pooled_stop": "jev"
+    },
+    "jev_chunk_stop": {
+      "chunk_stop": "jev",
+      "citation_keep": "all",
+      "pooled_stop": "heuristic"
+    },
+    "jev_keep": {
+      "chunk_stop": "heuristic",
+      "citation_keep": "jev",
+      "pooled_stop": "heuristic"
+    },
+    "jev_pooled_stop": {
+      "chunk_stop": "heuristic",
+      "citation_keep": "all",
+      "pooled_stop": "jev"
+    }
+  },
+  "method": "Each chunk draw yields STOP/RETRY. Keep-all arms discard RETRY citations; selection arms choose KEEP/DROP for current and previously saved citations after each draw and can remove past choices. Final chunk sets are pooled; three fresh final-verifier samples are generated from unchanged pooled input and a second STOP/RETRY policy selects one."
+}
