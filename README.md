@@ -13,7 +13,7 @@ This repository studies evidence-grounded claim verification on FEVER. A verifie
 | Path | What it contains |
 |---|---|
 | [`verifier/train.sbatch`](verifier/train.sbatch) | Single training entry point; select a configuration with `TRAIN_SCRIPT` |
-| [`agent/evaluation/eval.sbatch`](agent/evaluation/eval.sbatch) | Three-draw verifier sampling and retry-policy evaluation |
+| [`agent/evaluation/eval.sbatch`](agent/evaluation/eval.sbatch) | Agent evaluation entry point; choose the method with `EVAL_METHOD` |
 | [`verifier/TODO.md`](verifier/TODO.md) | Current priorities and experiment checklist |
 | [`verifier/docs/`](verifier/docs/) | Data guide, experiment results, architecture and background |
 | [`verifier/data/train/`](verifier/data/train/) | Committed SFT and GRPO training examples |
@@ -25,6 +25,8 @@ This repository studies evidence-grounded claim verification on FEVER. A verifie
 | [`agent/`](agent/) | Runnable FEVER search/verify loop and agent-specific work |
 | [`agent/evaluation/`](agent/evaluation/) | Agent evaluation Slurm entry point and method-specific `results/` |
 | [`agent/evaluation/results/sampling_retry/`](agent/evaluation/results/sampling_retry/) | Three-draw retry evaluator and its `runs/` outputs |
+| [`agent/evaluation/results/evidence_batches/`](agent/evaluation/results/evidence_batches/) | Exhaustive 10-sentence batches and final citation-union verifier |
+| [`agent/evaluation/results/jev_decision/`](agent/evaluation/results/jev_decision/) | OpenJev verdict and per-sentence citation decisions on full and batched evidence |
 | [`agent/experiments/`](agent/experiments/) | Isolated controller experiments; currently a toy scaffold, not FEVER results |
 | [`agent/data/traces/`](agent/data/traces/) | Archived fixed-loop FEVER traces |
 | [`agent/docs/`](agent/docs/) | Agent trace schema and method notes |
@@ -51,9 +53,45 @@ sbatch agent/evaluation/eval.sbatch
 
 To use another checkpoint, set `CHECKPOINTS` when submitting, for example `CHECKPOINTS=<adapter-path> PROMPT_STYLE=direct sbatch --export=ALL agent/evaluation/eval.sbatch`. For a composed SFT+GRPO adapter, export `CHECKPOINTS="<sft-checkpoint>,<grpo-checkpoint>"` before `sbatch --export=ALL`; set `PROMPT_STYLE=cot_native` for the native-thinking GRPO model. Optional `RUN_NAME`, `N_CLAIMS`, `TEMPERATURE`, `TOP_P`, `THRESHOLD`, `MAX_NEW_TOKENS`, `SEED`, `EVAL_MODEL`, and `RESULT_DIR` override the defaults. The new run directory is `agent/evaluation/results/sampling_retry/runs/<eval_model>/<prompt>-cap<tokens>/<run>/` unless `RESULT_DIR` is set. Read `predictions.jsonl` for each claim's three draws and `metrics.json` for the comparison. The run refuses to overwrite an existing result directory.
 
-After `sbatch` returns a job ID, check `squeue -j <job-id>` for a pending or running job. Slurm creates `slurm-agent-sampling-retry-<job-id>.out` in the **directory where you ran `sbatch`** only when the job starts; read it there with `tail -f slurm-agent-sampling-retry-<job-id>.out`. After the job leaves the queue, check `sacct -j <job-id> --format=JobID,State,ExitCode,Elapsed` and the log for completion or errors. For example, if you submit with `sbatch eval.sbatch` from `agent/evaluation/`, its log is in `agent/evaluation/`. Cancel any pending job submitted with the old script before pulling and resubmitting this version.
+After `sbatch` returns a job ID, check `squeue -j <job-id>` for a pending or running job. New jobs create `slurm-agent-eval-<job-id>.out` in the **directory where you ran `sbatch`** only when the job starts; read it there with `tail -f slurm-agent-eval-<job-id>.out`. Historical sampling-retry jobs retain their old log name. After the job leaves the queue, check `sacct -j <job-id> --format=JobID,State,ExitCode,Elapsed` and the log for completion or errors. For example, if you submit with `sbatch eval.sbatch` from `agent/evaluation/`, its log is in `agent/evaluation/`.
 
 The 900 dev claims are for **evaluation only**. Training a learned `STOP/RETRY` controller requires separate FEVER train claims and rollout data. Copying the heuristic's actions as labels would be imitation learning; it would not establish an RL result.
+
+### Agent evidence batching and OpenJev evaluation
+
+The [evidence-batch evaluator](agent/evaluation/results/evidence_batches/README.md) keeps the same title-plus-BM25 retrieval result, splits its sentences into batches of 10, verifies **every** batch, and makes one final verifier pass over the union of cited sentences. The final union can have **more than 10 sentences**. A matched single-pass full-context verifier runs on the same claim and model in the same job. By default this run uses all 900 frozen dev claims, deterministic direct decoding and the direct 5,500-row SFT adapter. Check current SoC partition/resource limits before submitting; this multi-pass run uses a longer time limit:
+
+```bash
+EVAL_METHOD=evidence_batches RUN_NAME=full900-run1 \
+  sbatch --partition=gpu-long --time=12:00:00 --export=ALL agent/evaluation/eval.sbatch
+```
+
+Read `agent/evaluation/results/evidence_batches/runs/<eval_model>/direct-cap160/full900-run1/{manifest.json,metrics.json,predictions.jsonl}`. For another checkpoint, set `CHECKPOINTS=<adapter-path>` and optionally `EVAL_MODEL=<name>`. `EVIDENCE_BATCH_SIZE` changes the first-pass chunk size. The extra calls and prompt tokens are reported alongside paired accuracy and FEVER results. Empty citation unions and complete gold evidence missing from the union are reported separately.
+
+The [OpenJev decision evaluator](agent/evaluation/results/jev_decision/README.md) reads that completed run's exact claim and evidence text. [OpenJev-1.7B](https://huggingface.co/alanhuangya/OpenJev-1.7B) makes a three-way verdict choice plus one binary citation decision per sentence. It evaluates both full-context and exhaustive-batch→Jev-citation-union→final-pass modes on the same claims, reporting accuracy, FEVER score and evidence F1. OpenJev does not generate citations as text; this per-sentence decision formulation is an exploratory adaptation with an uncalibrated `0.5` relevance threshold. Its citation union comes entirely from Jev, not Qwen. After installing the optional `wev-ai` package in the SoC virtual environment:
+
+```bash
+JEV_SOURCE_RUN=agent/evaluation/results/evidence_batches/runs/sft-direct-from-base-qwen3p5-2b-5500-samples/direct-cap160/full900-run1 \
+EVAL_METHOD=jev_decision RUN_NAME=full900-run1 \
+  sbatch --partition=gpu-long --time=12:00:00 --export=ALL agent/evaluation/eval.sbatch
+```
+
+Both methods write a new `runs/<model>/<condition>/<run>/` directory below their method folder. Use `RESULT_DIR` to choose another exact new directory. New agent evaluation jobs write `slurm-agent-eval-<job-id>.out` in the submission directory; historical sampling-retry logs retain their old name.
+
+### DPO pair curation (planned)
+
+The earlier 395 teacher-rejection pairs were removed because their chosen answers copied the rejected reasoning. No valid DPO training pairs are available yet. The saved model evaluation predictions are dev examples and must not be used to create training pairs.
+
+After generating several CoT completions for the **same train-only claim and exact user/system prompt**, save each unedited candidate as JSONL with `id`, `prompt`, `system_prompt`, `completion` and `model` (optional `run`). Then run:
+
+```bash
+python -m utils.build_dpo_pairs \
+  --candidate path/to/train-rollouts-model-a.jsonl \
+  --candidate path/to/train-rollouts-model-b.jsonl \
+  --output verifier/data/train/dpo/<new-dataset-name>
+```
+
+The builder pairs a correct verdict with exact gold evidence against an incorrect completion, with the same output format and no frozen dev IDs. Inspect reasoning faithfulness before using the resulting pairs for DPO. The planned side-by-side reviewer and model comparison are tracked in [verifier/TODO.md](verifier/TODO.md).
 
 ---
 
@@ -88,7 +126,7 @@ As this project serves as a Reinforcement Learning research study, our engineeri
 │  • Rule-Based Verifiable Rewards (RLVR): verdict harm, evidence F1, format pen. │
 │  • On-Policy Reasoning Exploration: GRPO group rollouts vs static SFT CoT       │
 │  • Advanced RLVR Algorithmic Frontier: Dr. GRPO (σ-removal) & DAPO (sampling)   │
-│  • Contrastive Offline Preference Alignment: DPO on teacher error traces        │
+│  • Planned Offline Preference Alignment: DPO on genuine paired CoT rollouts     │
 │  • Exploration-Exploitation Search Loop: Dynamic multi-turn retrieval (agent/)  │
 └──────────────────────────────────────┬──────────────────────────────────────────┘
                                        │ Built on top of
@@ -113,7 +151,7 @@ To ensure transparent cross-team readability and consistent terminology, the key
 - **`grpo-cot`**: Group Relative Policy Optimization (RLVR) with native `<think>` tokens. Bootstrapped from an SFT checkpoint, the model actively explores reasoning paths via group rollouts ($G=8$) and optimizes against verifiable, rule-based reward functions (verdict harm penalty, evidence F1, and syntax compliance).
 - **`dr-grpo`**: A mathematically stabilized GRPO variant that removes the division by group reward standard deviation ($\sigma_R$), preventing gradient variance explosion on homogeneous rollouts and eliminating token-length bias.
 - **`dapo`**: Decoupled Clip and Dynamic Sampling Policy Optimization; an advanced RLVR method that discards uninformative unanimous rollout batches ($\sigma_R = 0$) and decouples the upper and lower PPO clipping thresholds.
-- **`dpo`**: Direct Preference Optimization; an offline alignment technique that trains policy weights directly on contrastive $(x, y_{\text{win}}, y_{\text{lose}})$ preference pairs extracted from teacher error audits, without requiring a separate reward model.
+- **`dpo`**: Direct Preference Optimization; a planned offline experiment using genuine chosen/rejected CoT rollouts for the same training claim and prompt. No valid DPO pair dataset is currently available; the previous teacher-rejection pairs were withdrawn.
 
 #### Retrieval Environments & Conditions
 - **`oracle`**: An evaluation setting where the ground-truth Wikipedia article is guaranteed to be present in the verifier's input context alongside title-matched distractor pages, isolating verification reasoning from retrieval quality.

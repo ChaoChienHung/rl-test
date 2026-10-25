@@ -25,10 +25,10 @@ Current work is verifier evaluation on the `rl` branch. These tasks replace the 
    - **Path 2 (Native Tag Format)**: Parallel datasets with `<evidence>...</evidence>\n<verdict>...</verdict>` (evidence-first causal attention) and `<think>...</think>` tags (`fever-oracle-tagged-4500`, `fever-oracle-tagged-cot-4500` & `fever-oracle-tagged-grpo-1000`).
    - Both splits generated via `utils/build_4500_1000_splits.py` with signed split manifests and 0 dev overlap.
 
-8. [x] **Universal Parsing, RLVR Rewards & Offline DPO Curation**:
+8. [x] **Universal Parsing, RLVR Rewards & DPO data audit**:
    - Upgraded `parse()` in `verifier/model.py` to seamlessly handle both JSON objects and native XML tags, with dual `VERDICT_PREFIX` support for token probabilities.
    - Formulated RLVR process rewards (index grounding $+0.1$, non-existent index penalty $-0.5$, parsimony penalties) and advanced RL algorithms (**Dr. GRPO** advantage without $\sigma_R$ division and **DAPO** dynamic sampling / decoupled clip-higher) in `INSIGHT.md` (Discussions 7 & 10).
-   - Generated 395 contrastive DPO preference pairs $(x, y_w, y_l)$ from teacher rejections in both JSON and Tag formats via `utils/build_dpo_pairs.py` with 0 dev overlap.
+   - The earlier 395 teacher-rejection DPO pairs were invalid: their chosen and rejected responses reused the same rejected reasoning while changing only the final answer. Removed those generated files and replaced `utils/build_dpo_pairs.py` with a builder that requires two real CoT rollouts for the same training claim and exact prompt. No valid DPO training set has been produced yet.
 
 9. [x] **Train Dual-Path 4,500 SFT Checkpoints & Base Model Tag Baselines**:
    - Evaluated Base Qwen3.5-2B under Native Tag formats: `direct_tag` (Acc 40.7%, Evidence F1 0.513), `cot_brief_tag` (Acc 55.3%, Evidence F1 0.581), `cot_chain_tag` (Acc 55.8%, Evidence F1 0.511). Establishes format rate surge (98.0%) alongside confirmation-bias analysis in `INSIGHT.md` (Discussion 14).
@@ -43,6 +43,11 @@ Current work is verifier evaluation on the `rl` branch. These tasks replace the 
     - **Tag SFT 4500 Brief CoT**: 74.2% Acc, 67.6% FEVER, 60.6% Ev F1, **78.0% NEI Recall**.
     - **JSON GRPO 1000 CoT** (`cot-native`): **74.7% Acc**, **67.3% FEVER**, **74.7% Non-NEI Ev F1** (All-time Repository Record!), 100% format rate, 67.7% NEI Recall.
     - **Tag GRPO 1000 CoT** (`cot-native-tag`): **90.1% Acc, 81.4% FEVER, 81.3% Ev F1** on Gold-in-Context ($n=517$); 67.6% Acc, 58.0% FEVER overall due to unmasked evidence confirmation bias on NEI (33.7% NEI Recall). Validates the Fast/Slow Thinking architecture in `INSIGHT.md` (Discussions 15 & 16).
+
+11. [ ] **Present comparable model results and collect preference feedback**:
+    - Show Base, direct SFT, CoT SFT, JSON CoT GRPO and Tag CoT GRPO on the same frozen claim IDs, retrieval context, prompt budget and evaluator. Report accuracy, FEVER, evidence F1, per-label recall, format rate, tokens and runtime; do not rank models using the gold-in-context subset as if it were the full evaluation.
+    - Build a claim-level side-by-side review with the claim and identical shown evidence, two anonymized model outputs, citations and reasoning. Add buttons for **A better**, **B better**, **tie**, and **both wrong**, plus an optional reason. Save the exact prompt/context, model/run IDs, raw outputs, choice, reviewer and timestamp. Keep evaluation feedback separate from training data until a training set is explicitly curated.
+    - For DPO, collect multiple CoT rollouts on **train-only** claims from different checkpoints or seeds with the same exact prompt. Pair a genuinely correct response with an incorrect one, audit reasoning faithfulness, and hold out review/evaluation claims. The existing 29 evaluation prediction files have zero ID overlap with the 5,895 training claims, so they cannot form training pairs.
 
 
 ## P0 — comparable verifier evaluation (RL-1, AG-3)
@@ -95,6 +100,7 @@ Current work is verifier evaluation on the `rl` branch. These tasks replace the 
 - [ ] After the SFT-started GRPO pilot, compare it against the same SFT checkpoint with matched prompts, IDs and evaluator. For CoT GRPO, measure reasoning/citation quality, reward spread, accuracy, evidence, calibration, variance and compute cost; expand only if the pilot is informative.
 
 - [ ] Connect the verifier to the agent loop's `verify()` interface. Compare one search, fixed NEI retry and confidence-guided retry before training a controller.
+- [ ] Evaluate the agent-side exhaustive evidence-batch pilot against a matched full-context single pass before considering a learned controller. Compare OpenJev-1.7B on the same retrieved sentences using its own verdict and per-sentence binary citation decisions; report accuracy, FEVER and evidence F1 with its uncalibrated citation-selection rule. See [`agent/evaluation/results/evidence_batches/`](../agent/evaluation/results/evidence_batches/) and [`agent/evaluation/results/jev_decision/`](../agent/evaluation/results/jev_decision/).
 
 Agent-specific evaluation and controller work is tracked in [`agent/TODO.md`](../agent/TODO.md).
 

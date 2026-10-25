@@ -1,137 +1,150 @@
-"""Build DPO contrastive preference pairs (x, y_w, y_l) from teacher rejections.
+"""Pair actual CoT rollouts for DPO on FEVER training claims.
 
-Constructs preference datasets for Direct Preference Optimization (DPO):
-- Chosen (y_w): Ground-truth evidence citations and aligned verdict.
-- Rejected (y_l): Teacher error traces (excessive citations, hallucinated justifications, wrong relations).
-Outputs both standard JSON and Native Tag formats.
+Each candidate JSONL row needs id, prompt, system_prompt, completion (the
+unedited model output), and model. Supply multiple files or generations per
+claim. Chosen and rejected must share both prompt messages and output format.
+This checks structure and gold labels, not semantic faithfulness of reasoning.
 """
+
+from __future__ import annotations
 
 import argparse
 import collections
 import hashlib
 import json
+import re
 from pathlib import Path
 
+from verifier.model import parse
+
 ROOT = Path(__file__).resolve().parents[1]
-
-REJECTED_PATH = ROOT / "verifier/data/train/sft/fever-oracle-cot-soclaas/rejected.jsonl"
-FULL_PATH = ROOT / "verifier/data/train/sft/fever-oracle-full/labeled_prompts.jsonl"
-DEV_IDS_PATH = ROOT / "verifier/data/eval/fever-dev-900-ids.json"
-
-OUT_JSON_DIR = ROOT / "verifier/data/train/dpo/fever-dpo-teacher-rejected-json"
-OUT_TAG_DIR = ROOT / "verifier/data/train/dpo/fever-dpo-teacher-rejected-tag"
+SOURCE = ROOT / "verifier/data/train/sft/fever-oracle-full/labeled_prompts.jsonl"
+DEV_IDS = ROOT / "verifier/data/eval/fever-dev-900-ids.json"
 
 
-def relation_to_verdict(relation: str) -> str:
-    mapping = {
-        "supports": "SUPPORTED",
-        "refutes": "REFUTED",
-        "insufficient": "NOT_ENOUGH_INFO",
-    }
-    return mapping.get(relation.lower(), "NOT_ENOUGH_INFO")
+def read_jsonl(path: Path):
+    with path.open(encoding="utf-8") as stream:
+        for number, line in enumerate(stream, 1):
+            if line.strip():
+                try:
+                    yield json.loads(line)
+                except json.JSONDecodeError as exc:
+                    raise ValueError(f"{path}:{number}: invalid JSON") from exc
 
 
-def build():
-    print("Loading rejected teacher traces and full oracle prompts...")
-    with open(REJECTED_PATH, encoding="utf-8") as f:
-        rejected_rows = [json.loads(line) for line in f if line.strip()]
+def output_format(text: str) -> str:
+    final = text.rsplit("</think>", 1)[-1]
+    return "tag" if "<verdict>" in final.lower() else "json"
 
-    with open(FULL_PATH, encoding="utf-8") as f:
-        full_rows = [json.loads(line) for line in f if line.strip()]
 
-    dev_ids = set(map(str, json.loads(DEV_IDS_PATH.read_text(encoding="utf-8"))["ids"]))
+def has_reasoning(text: str, parsed: dict) -> bool:
+    if "</think>" in text:
+        before = text.rsplit("</think>", 1)[0].replace("<think>", "").strip()
+        return bool(before)
+    return bool(str(parsed.get("reasoning") or "").strip())
 
-    full_by_id = {str(r["id"]): r for r in full_rows}
-    dpo_pairs_json = []
-    dpo_pairs_tag = []
 
-    reason_counts = collections.Counter()
+def grade(text: str, gold: str, gold_ids: list[str], shown: set[str]):
+    parsed, ok = parse(text)
+    fmt = output_format(text)
+    if not all(ok.get(key) for key in ("json", "verdict", "evidence")):
+        return "invalid_format", fmt
+    if not has_reasoning(text, parsed):
+        return "missing_reasoning", fmt
+    cited = parsed["evidence"]
+    if len(cited) > 5 or len(set(cited)) != len(cited) or not set(cited) <= shown:
+        return "invalid_citations", fmt
+    if parsed["verdict"] != gold:
+        return "wrong_verdict", fmt
+    if set(cited) != set(gold_ids):
+        return "wrong_evidence", fmt
+    return "correct", fmt
 
-    for r in rejected_rows:
-        cid = str(r["id"])
-        if cid in dev_ids:
-            continue  # Strict 0 dev overlap guarantee
 
-        if cid not in full_by_id:
-            continue
+def build(candidate_paths: list[Path], output: Path, source: Path = SOURCE):
+    if output.exists():
+        raise ValueError(f"output already exists: {output}; choose a new directory")
+    source_rows = {str(row["id"]): row for row in read_jsonl(source)}
+    dev_ids = set(map(str, json.loads(DEV_IDS.read_text(encoding="utf-8"))["ids"]))
+    if set(source_rows) & dev_ids:
+        raise ValueError("source train data overlaps frozen dev IDs")
 
-        full_row = full_by_id[cid]
-        gold_comp = json.loads(full_row["completion"])
-        gold_verdict = full_row["gold"]
-        gold_evidence = gold_comp.get("evidence", [])
+    grouped = collections.defaultdict(list)
+    for path in candidate_paths:
+        for number, row in enumerate(read_jsonl(path), 1):
+            if not isinstance(row, dict) or not all(row.get(k) for k in ("id", "prompt", "system_prompt", "completion", "model")):
+                raise ValueError(f"{path}:{number}: require id, prompt, system_prompt, completion and model")
+            cid = str(row["id"])
+            if cid in dev_ids or cid not in source_rows:
+                raise ValueError(f"{path}:{number}: ID {cid} is dev or outside the training set")
+            if row["prompt"] != source_rows[cid]["prompt"]:
+                raise ValueError(f"{path}:{number}: prompt mismatch for ID {cid}")
+            grouped[(cid, row["system_prompt"])].append({
+                "completion": row["completion"], "model": row["model"],
+                "run": row.get("run"), "file": str(path), "line": number,
+            })
 
-        # Construct rejected completion (y_l)
-        reasoning = (r.get("teacher_reasoning") or "").strip()
-        rej_relation = r.get("teacher_relation") or ""
-        rej_verdict = relation_to_verdict(rej_relation)
-        rej_evidence = r.get("teacher_cited") or []
+    pairs = []
+    counts = collections.Counter()
+    for (cid, system_prompt), candidates in grouped.items():
+        row = source_rows[cid]
+        gold_ids = json.loads(row["completion"])["evidence"]
+        shown = set(re.findall(r"(?m)^E\d+\b", row["prompt"]))
+        by_format = collections.defaultdict(lambda: collections.defaultdict(list))
+        for candidate in candidates:
+            category, fmt = grade(candidate["completion"], row["gold"], gold_ids, shown)
+            counts[category] += 1
+            by_format[fmt][category].append(candidate)
+        for fmt, outcomes in by_format.items():
+            winners = outcomes.get("correct", [])
+            losers = [
+                item
+                for reason in ("wrong_verdict", "wrong_evidence", "invalid_citations", "invalid_format")
+                for item in outcomes.get(reason, [])
+            ]
+            if not winners or not losers:
+                continue
+            winner = min(winners, key=lambda x: (len(x["completion"]), x["file"], x["line"]))
+            loser = next((x for x in losers if x["completion"] != winner["completion"]), None)
+            if loser is None:
+                continue
+            pairs.append({
+                "id": cid, "gold": row["gold"], "prompt": row["prompt"],
+                "system_prompt": system_prompt,
+                "chosen": winner["completion"], "rejected": loser["completion"],
+                "format": fmt, "chosen_model": winner["model"],
+                "rejected_model": loser["model"], "chosen_run": winner["run"],
+                "rejected_run": loser["run"], "chosen_source": winner["file"],
+                "rejected_source": loser["file"],
+            })
 
-        reason = r.get("reason", "teacher_rejection")
-        reason_counts[reason] += 1
-
-        # JSON formats
-        chosen_json = (
-            f"{reasoning}\n</think>\n" +
-            json.dumps({"verdict": gold_verdict, "evidence": gold_evidence}, ensure_ascii=False)
-        )
-        rejected_json = (
-            f"{reasoning}\n</think>\n" +
-            json.dumps({"verdict": rej_verdict, "evidence": rej_evidence}, ensure_ascii=False)
-        )
-
-        # Tag formats
-        gold_ev_str = ", ".join(gold_evidence) if gold_evidence else ""
-        rej_ev_str = ", ".join(rej_evidence) if rej_evidence else ""
-
-        chosen_tag = f"{reasoning}\n</think>\n<evidence>{gold_ev_str}</evidence>\n<verdict>{gold_verdict}</verdict>"
-        rejected_tag = f"{reasoning}\n</think>\n<evidence>{rej_ev_str}</evidence>\n<verdict>{rej_verdict}</verdict>"
-
-        dpo_pairs_json.append({
-            "id": int(cid) if cid.isdigit() else cid,
-            "gold": gold_verdict,
-            "prompt": full_row["prompt"],
-            "chosen": chosen_json,
-            "rejected": rejected_json,
-            "rejection_reason": reason,
-        })
-
-        dpo_pairs_tag.append({
-            "id": int(cid) if cid.isdigit() else cid,
-            "gold": gold_verdict,
-            "prompt": full_row["prompt"],
-            "chosen": chosen_tag,
-            "rejected": rejected_tag,
-            "rejection_reason": reason,
-        })
-
-    # Save outputs
-    OUT_JSON_DIR.mkdir(parents=True, exist_ok=True)
-    json_path = OUT_JSON_DIR / "pairs.jsonl"
-    with open(json_path, "w", encoding="utf-8") as f:
-        for p in dpo_pairs_json:
-            f.write(json.dumps(p, ensure_ascii=False) + "\n")
-
-    OUT_TAG_DIR.mkdir(parents=True, exist_ok=True)
-    tag_path = OUT_TAG_DIR / "pairs.jsonl"
-    with open(tag_path, "w", encoding="utf-8") as f:
-        for p in dpo_pairs_tag:
-            f.write(json.dumps(p, ensure_ascii=False) + "\n")
-
+    if not pairs:
+        raise ValueError("no genuine correct/incorrect CoT pairs on the same train prompt; no files written")
+    pairs.sort(key=lambda row: (int(row["id"]), row["format"]))
+    output.mkdir(parents=True)
+    pair_path = output / "pairs.jsonl"
+    with pair_path.open("w", encoding="utf-8") as stream:
+        for pair in pairs:
+            stream.write(json.dumps(pair, ensure_ascii=False) + "\n")
     manifest = {
-        "description": "DPO preference pairs constructed from teacher rejection traces",
-        "count": len(dpo_pairs_json),
-        "rejection_reasons": dict(reason_counts),
-        "dev_overlap": 0,
-        "json_path": str(json_path.relative_to(ROOT)),
-        "tag_path": str(tag_path.relative_to(ROOT)),
+        "count": len(pairs), "candidate_files": [str(p) for p in candidate_paths],
+        "candidate_grades": dict(counts), "source": str(source),
+        "dev_overlap": 0, "sha256": hashlib.sha256(pair_path.read_bytes()).hexdigest(),
+        "caveat": "Structural correctness only; audit reasoning faithfulness before DPO training.",
     }
-    (OUT_JSON_DIR / "manifest.json").write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n")
-    (OUT_TAG_DIR / "manifest.json").write_text(json.dumps(manifest, indent=2, ensure_ascii=False) + "\n")
+    (output / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+    return manifest
 
-    print(f"Constructed {len(dpo_pairs_json)} DPO preference pairs.")
-    print(f"Rejection reason breakdown: {dict(reason_counts)}")
-    print(f"Zero dev overlap confirmed.")
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--candidate", type=Path, action="append", required=True,
+                        help="repeat for each train-claim rollout JSONL")
+    parser.add_argument("--output", type=Path, required=True, help="new DPO dataset directory")
+    parser.add_argument("--source", type=Path, default=SOURCE)
+    args = parser.parse_args()
+    print(json.dumps(build(args.candidate, args.output, args.source), indent=2))
 
 
 if __name__ == "__main__":
-    build()
+    main()
