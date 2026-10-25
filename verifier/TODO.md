@@ -101,6 +101,7 @@ Current work is verifier evaluation on the `rl` branch. These tasks replace the 
 
 - [ ] Connect the verifier to the agent loop's `verify()` interface. Compare one search, fixed NEI retry and confidence-guided retry before training a controller.
 - [ ] Save the agent-side exhaustive 10-sentence Qwen batch outputs once under `agent/data/evidence_batches/`. Compare RSI-Jev v2.1 2B versus a fixed heuristic choosing cited-union or full-context evidence from the same batch summaries, then run fresh final Qwen verification for each chosen route; report paired accuracy, FEVER, evidence F1, route agreement and call cost. OpenJev-1.7B is an optional same-state controller comparison. See [`agent/data/evidence_batches/`](../agent/data/evidence_batches/) and [`agent/evaluation/results/rsi_jev_controller_baseline/`](../agent/evaluation/results/rsi_jev_controller_baseline/).
+- [ ] Evaluate fixed-chunk STOP/RETRY on the frozen 900 FEVER dev/validation claims using the already generated three draws per chunk. Compare confidence thresholds 0.3/0.5/0.7 with zero-shot RSI-Jev, keep controller action diagnostics separate from final verifier accuracy/FEVER, and save each policy under its own `agent/evaluation/results/` method directory. Do not train or tune Jev on these validation claims; see [`agent/evaluation/results/rsi_jev_retry_baseline/`](../agent/evaluation/results/rsi_jev_retry_baseline/).
 
 Agent-specific evaluation and controller work is tracked in [`agent/TODO.md`](../agent/TODO.md).
 

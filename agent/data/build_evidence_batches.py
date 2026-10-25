@@ -83,6 +83,10 @@ def summarize_multi_draw(rows, draws_per_chunk):
         "chunks_with_evidence_disagreement": sum(
             len({tuple(draw["evidence"]) for draw in chunk["draws"]}) > 1
             for chunk in chunks),
+        "chunks_with_any_disagreement": sum(
+            len({draw["pred"] for draw in chunk["draws"]}) > 1
+            or len({tuple(draw["evidence"]) for draw in chunk["draws"]}) > 1
+            for chunk in chunks),
         "batch_input_tokens": sum(draw["in_tokens"] for draw in draws),
         "batch_output_tokens": sum(draw["out_tokens"] for draw in draws),
     }
@@ -100,6 +104,22 @@ def quality(items):
             "format_rate": mean([int(s["format_ok"]) for s in items]),
             "recall": {label: mean([int(s["pred"] == label) for s in items
                                     if s["gold"] == label]) for label in LABELS}}
+
+
+def training_claims(ids_file):
+    """Use exactly the committed 5,500 direct-SFT train IDs, never dev IDs."""
+    path = Path(ids_file)
+    selected = [json.loads(line)["id"] for line in path.open(encoding="utf-8") if line.strip()]
+    if len(selected) != 5500 or len(set(selected)) != 5500:
+        raise ValueError("train claim-ID file must contain exactly 5,500 unique IDs")
+    from verifier.model import DATA
+    raw = Path(DATA) / "train.jsonl"
+    wanted = set(selected)
+    claims = {row["id"]: row for row in (json.loads(line) for line in raw.open(encoding="utf-8"))
+              if row["id"] in wanted}
+    if set(claims) != wanted:
+        raise ValueError("some committed SFT IDs are missing from FEVER train.jsonl")
+    return [claims[claim_id] for claim_id in selected]
 
 
 def summarize(rows):
@@ -152,8 +172,19 @@ def run(args):
     output_dir = Path(args.output_dir)
     if output_dir.exists():
         raise FileExistsError(f"result directory exists: {output_dir}; use a new run name")
-    claims = sample_claims(args.n, SEED)
-    if args.n == 900:
+    split = getattr(args, "split", "dev")
+    ids_file = getattr(args, "claim_ids_file", None)
+    if split == "train":
+        if not ids_file:
+            raise ValueError("train split requires --claim-ids-file")
+        claims = training_claims(ids_file)
+        if args.n != len(claims):
+            raise ValueError("--n must match the 5,500 training IDs")
+    elif split == "dev" and not ids_file:
+        claims = sample_claims(args.n, SEED)
+    else:
+        raise ValueError("dev split does not accept --claim-ids-file")
+    if split == "dev" and args.n == 900:
         frozen = json.loads(Path("verifier/data/eval/fever-dev-900-ids.json").read_text())
         if [claim["id"] for claim in claims] != frozen["ids"]:
             raise ValueError("sampled claims differ from the frozen 900-ID eval manifest")
@@ -168,6 +199,7 @@ def run(args):
     revision = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True,
                               text=True, check=False).stdout.strip() or None
     manifest = {"evaluation_code": "agent.data.build_evidence_batches",
+                "split": split, "claim_ids_file": str(ids_file) if ids_file else None,
                 "model": args.model, "adapter": args.adapter,
                 "prompt_style": args.prompt_style, "retrieval": "titles",
                 "n_claims": args.n, "claim_seed": SEED, "generation_seed": args.seed,
@@ -271,6 +303,8 @@ def main():
     parser.add_argument("--adapter", default=None)
     parser.add_argument("--prompt-style", choices=PROMPTS, default="direct")
     parser.add_argument("--n", type=int, default=900)
+    parser.add_argument("--split", choices=("dev", "train"), default="dev")
+    parser.add_argument("--claim-ids-file", default=None)
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--batch-size", type=int, default=10)
     parser.add_argument("--model-batch-size", type=int, default=4)

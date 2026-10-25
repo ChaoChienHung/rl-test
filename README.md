@@ -14,6 +14,7 @@ This repository studies evidence-grounded claim verification on FEVER. A verifie
 |---|---|
 | [`verifier/train.sbatch`](verifier/train.sbatch) | Single training entry point; select a configuration with `TRAIN_SCRIPT` |
 | [`agent/eval.sbatch`](agent/eval.sbatch) | Agent batch-data and controller evaluation entry point; choose the method with `EVAL_METHOD` |
+| [`agent/train.sbatch`](agent/train.sbatch) | Train-only controller rollout and RSI-Jev head pilot; choose `PHASE=rollouts` or `PHASE=rl` |
 | [`agent/train/`](agent/train/) | Train-only STOP/RETRY replay environment and reward design; no trained controller yet |
 | [`verifier/TODO.md`](verifier/TODO.md) | Current priorities and experiment checklist |
 | [`verifier/docs/`](verifier/docs/) | Data guide, experiment results, architecture and background |
@@ -28,6 +29,9 @@ This repository studies evidence-grounded claim verification on FEVER. A verifie
 | [`agent/evaluation/results/sampling_retry/`](agent/evaluation/results/sampling_retry/) | Three-draw retry evaluator and its `runs/` outputs |
 | [`agent/data/build_evidence_batches.py`](agent/data/build_evidence_batches.py) | Exhaustive 10-sentence batch-data producer |
 | [`agent/evaluation/results/rsi_jev_controller_baseline/`](agent/evaluation/results/rsi_jev_controller_baseline/) | RSI-Jev 2B or OpenJev controller baseline code; outputs use `rsi-jev-controller-baseline/` |
+| [`agent/evaluation/results/rsi_jev_retry_baseline/`](agent/evaluation/results/rsi_jev_retry_baseline/) | Matched 0.3/0.5/0.7 threshold heuristics versus zero-shot RSI-Jev STOP/RETRY on fixed three-draw evidence chunks; prompt and command in its README |
+| [`agent/evaluation/results/rsi_jev_evidence_selection_baseline/`](agent/evaluation/results/rsi_jev_evidence_selection_baseline/) | STOP/RETRY plus immediate cited-sentence KEEP/DROP, pooled verifier retry, and record-only controller verdict |
+| [`agent/train/`](agent/train/) | Train-only rollouts, reward and RSI-Jev scorer pilot; current training reward uses one final Qwen call |
 | [`agent/experiments/`](agent/experiments/) | Isolated controller experiments; currently a toy scaffold, not FEVER results |
 | [`agent/data/traces/`](agent/data/traces/) | Archived fixed-loop FEVER traces |
 | `agent/data/evidence_batches/` | Local, Git-ignored Qwen batch outputs shared by controller evaluations; transfer separately from SoC |
@@ -40,6 +44,12 @@ This repository studies evidence-grounded claim verification on FEVER. A verifie
 Detailed document map: [data and downloads](verifier/docs/data.md), [system plan](verifier/docs/plan.md), [prompted baseline](verifier/docs/prompted-baseline-results.md), [SFT](verifier/docs/sft-probe.md), [CoT teacher rejection audit](verifier/docs/cot-teacher-rejection-audit.md), [GRPO](verifier/docs/grpo-results.md), [agent traces](agent/docs/trace-format.md), [models](verifier/docs/models.md), and [related work](verifier/docs/related-work.md).
 
 The runnable FEVER loop stays at `agent/agent_loop.py`; its traces are under `agent/data/traces/`. The 12-claim synthetic controller scaffold lives under `agent/experiments/toy_scaffold/` and runs with `python -m agent.experiments.toy_scaffold.run`. It is separate from FEVER evaluation and does not establish a controller gain. Agent-specific next steps are in [`agent/TODO.md`](agent/TODO.md).
+
+### Agent controller comparison and train-only pilot
+
+After the frozen 900-claim three-draw chunk source is complete on SoC, submit `EVAL_METHOD=rsi_jev_evidence_selection_baseline JEV_SOURCE_RUN=<completed-three-draw-source> RUN_NAME=<new-run> sbatch --export=ALL agent/eval.sbatch`. The comparison runs heuristic and RSI-Jev on the **same** precomputed chunk outputs. Each controller sees a chunk verifier output, chooses STOP/RETRY, and immediately chooses KEEP/DROP for the sentences cited in that output. KEEP IDs accumulate in a set per chunk. After every chunk is read, a new final Qwen verifier receives the pooled saved evidence. The validation evaluator precomputes three new Qwen draws on this unchanged pooled evidence, stores them separately in `pooled_samples.jsonl`, and lets each controller choose when to stop. An early STOP uses that exact output. On reaching the forced third draw, both policies use majority verdict across all three, with confidence to break ties and select the winning draw. Jev's own ACCEPT/REJECT/NEI is recorded separately; the main FEVER score uses its chosen pooled Qwen output. See the [selection evaluator README](agent/evaluation/results/rsi_jev_evidence_selection_baseline/README.md) for inputs, metrics and result paths.
+
+The optional [`agent/train.sbatch`](agent/train.sbatch) pilot first creates three-draw rollouts for the fixed **5,500 FEVER train IDs** with `PHASE=rollouts`, then trains only an RSI-Jev scorer head with `PHASE=rl CONTROLLER_VARIANT=selection` or `citation`. Read [agent/train/README.md](agent/train/README.md) before running: the current train reward uses one pooled final Qwen call, while validation supports pooled retries. The 900 dev claims are never training input. This pilot has not yet been run on a SoC GPU.
 
 ### Agent sampling retry evaluation
 

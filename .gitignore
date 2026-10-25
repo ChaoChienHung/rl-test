@@ -29,7 +29,9 @@ verifier/data/fever/
 verifier/data/scifact/
 verifier/data/averitec/
 agent/data/evidence_batches/
+agent/data/train_rollouts/
 agent/train/runs/
+agent/experiments/**/artifacts/checkpoints/*.pt
 
 # Model weights, trainer state and tokenizer copies: regenerate with the
 # scripts. Run metadata, training logs, training sets and eval outputs stay.

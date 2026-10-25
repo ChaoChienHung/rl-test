@@ -12,6 +12,7 @@
 # Default: save exhaustive 10-sentence batch data for 900 frozen dev claims.
 # Set EVIDENCE_DRAWS=3 for three stochastic verifier draws on each fixed chunk.
 # Set EVAL_METHOD=rsi_jev_controller_baseline after the batch job completes.
+# Set EVAL_METHOD=rsi_jev_retry_baseline for matched STOP/RETRY policies.
 # Set EVAL_METHOD=sampling_retry for the older three-draw evaluator.
 # Slurm writes slurm-agent-eval-<job-id>.out in the submission directory.
 
@@ -25,15 +26,17 @@ case "$method" in
   sampling_retry) module=agent.evaluation.results.sampling_retry.eval_sampling_retry ;;
   evidence_batches) module=agent.data.build_evidence_batches ;;
   rsi_jev_controller_baseline|jev_controller) module=agent.evaluation.results.rsi_jev_controller_baseline.eval_rsi_jev_controller_baseline ;;
+  rsi_jev_retry_baseline) module=agent.evaluation.results.rsi_jev_retry_baseline.eval_rsi_jev_retry_baseline ;;
+  rsi_jev_evidence_selection_baseline) module=agent.evaluation.results.rsi_jev_evidence_selection_baseline.eval_rsi_jev_evidence_selection_baseline ;;
   *) echo "Unsupported EVAL_METHOD: $method" >&2; exit 2 ;;
 esac
 test -f "${module//.//}.py" || { echo "Missing evaluator: $module" >&2; exit 2; }
-if [[ "$method" != rsi_jev_controller_baseline && "$method" != jev_controller ]]; then
+if [[ "$method" != rsi_jev_controller_baseline && "$method" != jev_controller && "$method" != rsi_jev_retry_baseline && "$method" != rsi_jev_evidence_selection_baseline ]]; then
   test -f verifier/data/fever/shared_task_dev.jsonl || { echo 'Missing FEVER dev data' >&2; exit 2; }
   test -f verifier/data/fever/pages.sqlite || { echo 'Missing SQLite index' >&2; exit 2; }
   test -f verifier/data/fever/bm25_index/doc_ids.json || { echo 'Missing BM25 index' >&2; exit 2; }
 fi
-if [[ "$method" == rsi_jev_controller_baseline || "$method" == jev_controller ]]; then
+if [[ "$method" == rsi_jev_controller_baseline || "$method" == jev_controller || "$method" == rsi_jev_retry_baseline || "$method" == rsi_jev_evidence_selection_baseline ]]; then
   test -f verifier/data/fever/shared_task_dev.jsonl || { echo 'Missing FEVER dev data for final Qwen scoring' >&2; exit 2; }
 fi
 test -x .venv/bin/python || { echo 'Missing .venv; see README' >&2; exit 2; }
@@ -42,7 +45,7 @@ export TOKENIZERS_PARALLELISM=false
 export TMPDIR="${TMPDIR:-$HOME/.pip-tmp}"
 mkdir -p "$TMPDIR"
 
-if [[ "$method" == rsi_jev_controller_baseline || "$method" == jev_controller ]]; then
+if [[ "$method" == rsi_jev_controller_baseline || "$method" == jev_controller || "$method" == rsi_jev_retry_baseline || "$method" == rsi_jev_evidence_selection_baseline ]]; then
   source_run="${JEV_SOURCE_RUN:?Set JEV_SOURCE_RUN to a completed evidence_batches run directory}"
   test -f "$source_run/predictions.jsonl" || { echo "Missing source predictions: $source_run" >&2; exit 2; }
   test -f "$source_run/metrics.json" || { echo "Source batch job is incomplete: $source_run/metrics.json is missing" >&2; exit 2; }
@@ -60,11 +63,32 @@ if [[ "$method" == rsi_jev_controller_baseline || "$method" == jev_controller ]]
   esac
   run_name="${RUN_NAME:-job-${SLURM_JOB_ID:?}}"
   [[ "$run_name" =~ ^[A-Za-z0-9][A-Za-z0-9_-]*$ ]] || { echo 'Invalid RUN_NAME' >&2; exit 2; }
-  result_dir="${RESULT_DIR:-agent/evaluation/results/rsi-jev-controller-baseline/runs/$model_dir/route-full-vs-union/$run_name}"
+  if [[ -n "${JEV_TRAINED_HEAD:-}" ]]; then
+    test -f "$JEV_TRAINED_HEAD" || { echo "Missing trained head: $JEV_TRAINED_HEAD" >&2; exit 2; }
+    model_dir="$(python - "$JEV_TRAINED_HEAD" <<'PY'
+import sys
+from pathlib import Path
+parts = Path(sys.argv[1]).resolve().parts
+print(parts[parts.index('experiments') + 1] if 'experiments' in parts else Path(sys.argv[1]).stem)
+PY
+)"
+  fi
+  if [[ "$method" == rsi_jev_retry_baseline ]]; then
+    default_result_dir="agent/evaluation/results/rsi-jev-retry-baseline/runs/$model_dir/stop-retry-direct-cap160/$run_name"
+  elif [[ "$method" == rsi_jev_evidence_selection_baseline ]]; then
+    default_result_dir="agent/evaluation/results/rsi-jev-evidence-selection-baseline/runs/$model_dir/keep-drop-direct-cap160/$run_name"
+  else
+    default_result_dir="agent/evaluation/results/rsi-jev-controller-baseline/runs/$model_dir/route-full-vs-union/$run_name"
+  fi
+  result_dir="${RESULT_DIR:-$default_result_dir}"
   test ! -e "$result_dir" || { echo "Result directory exists: $result_dir" >&2; exit 2; }
   echo "job=${SLURM_JOB_ID} code=$module backend=$backend model=$jev_model source=$source_run result=$result_dir"
+  trained_head_args=()
+  if [[ -n "${JEV_TRAINED_HEAD:-}" ]]; then
+    trained_head_args=(--trained-head "$JEV_TRAINED_HEAD")
+  fi
   srun python -m "$module" --backend "$backend" --model "$jev_model" \
-    --source-run "$source_run" --output-dir "$result_dir"
+    --source-run "$source_run" --output-dir "$result_dir" "${trained_head_args[@]}"
   exit
 fi
 
