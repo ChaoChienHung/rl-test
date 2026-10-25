@@ -1,0 +1,44 @@
+{
+  "source_run": "agent/evaluation/results/sampling_retry/runs/sft-direct-from-base-qwen3p5-2b-5500-samples/direct-cap160/job-1011395",
+  "n_claims": 900,
+  "overall": {
+    "selected_correct": 664,
+    "budget_exhausted_all_wrong": 81,
+    "budget_exhausted_correct_available": 61,
+    "early_wrong_later_correct": 16,
+    "early_wrong_no_later_correct": 78,
+    "n": 900,
+    "controller_decision_accuracy_hindsight": 0.8277777777777777,
+    "definition": "selected answer correct OR budget exhausted with all three verifier draws wrong; post-hoc attribution only, not an online policy accuracy or training target"
+  },
+  "gold_in_context": {
+    "selected_correct": 440,
+    "budget_exhausted_all_wrong": 45,
+    "budget_exhausted_correct_available": 16,
+    "early_wrong_later_correct": 1,
+    "early_wrong_no_later_correct": 15,
+    "n": 517,
+    "controller_decision_accuracy_hindsight": 0.9381044487427466,
+    "definition": "selected answer correct OR budget exhausted with all three verifier draws wrong; post-hoc attribution only, not an online policy accuracy or training target"
+  },
+  "gold_not_in_context": {
+    "selected_correct": 47,
+    "budget_exhausted_all_wrong": 29,
+    "budget_exhausted_correct_available": 7,
+    "early_wrong_later_correct": 0,
+    "early_wrong_no_later_correct": 0,
+    "n": 83,
+    "controller_decision_accuracy_hindsight": 0.9156626506024096,
+    "definition": "selected answer correct OR budget exhausted with all three verifier draws wrong; post-hoc attribution only, not an online policy accuracy or training target"
+  },
+  "gold_nei": {
+    "selected_correct": 177,
+    "budget_exhausted_all_wrong": 7,
+    "budget_exhausted_correct_available": 38,
+    "early_wrong_later_correct": 15,
+    "early_wrong_no_later_correct": 63,
+    "n": 300,
+    "controller_decision_accuracy_hindsight": 0.6133333333333333,
+    "definition": "selected answer correct OR budget exhausted with all three verifier draws wrong; post-hoc attribution only, not an online policy accuracy or training target"
+  }
+}

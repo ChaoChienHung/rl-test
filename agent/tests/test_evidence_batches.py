@@ -1,10 +1,18 @@
+import json
+import sys
+import tempfile
+import types
 import unittest
+from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
-from agent.evaluation.results.evidence_batches.eval_evidence_batches import (
-    batches, citation_union, context_for, summarize,
+from agent.data import build_evidence_batches as producer
+from agent.data.build_evidence_batches import (
+    batches, citation_union, context_for, sample_chunk, summarize,
+    summarize_multi_draw,
 )
-from agent.evaluation.results.jev_controller.eval_jev_controller import (
+from agent.evaluation.results.rsi_jev_controller_baseline.eval_rsi_jev_controller_baseline import (
     FULL, UNION, RSIAdapter, choose_route, controller_state, heuristic_route,
     route_evidence, verify_routes,
     summarize as summarize_controller,
@@ -19,6 +27,69 @@ def result(gold, pred, cited=(), fever=False):
 
 
 class EvidenceBatchesTest(unittest.TestCase):
+    def test_multi_draw_run_writes_every_chunk_without_a_selected_union(self):
+        class FakeModel:
+            def __init__(self, *args, **kwargs):
+                self.settings = kwargs
+
+            def run(self, prompts, seed):
+                return [{"draw": i} for i in range(len(prompts))]
+
+        shown = [(f"E{i + 1}", "Page", i, f"sentence {i}") for i in range(12)]
+        context = {"shown": shown, "gold_in_context": True, "gold_page_retrieved": True}
+        claim = {"id": 7, "claim": "A claim", "label": "SUPPORTS"}
+        fake_retrieval = types.ModuleType("retrieval.fever_retrieval")
+        fake_retrieval.FeverRetriever = object
+        with tempfile.TemporaryDirectory() as tempdir, \
+                patch.dict(sys.modules, {"retrieval.fever_retrieval": fake_retrieval}), \
+                patch.object(producer, "sample_claims", return_value=[claim]), \
+                patch.object(producer, "build_context", return_value=[context]), \
+                patch.object(producer, "LocalModel", FakeModel), \
+                patch.object(producer, "scored", side_effect=lambda c, p, g: {
+                    "pred": "SUPPORTED", "evidence": ["Page:0"],
+                    "in_tokens": 10, "out_tokens": 2,
+                }):
+            out = Path(tempdir) / "three-draws"
+            producer.run(SimpleNamespace(
+                n=1, batch_size=10, max_new_tokens=160, draws_per_chunk=3,
+                temperature=0.7, top_p=0.9, output_dir=str(out),
+                prompt_style="direct", model="fake", model_batch_size=4,
+                adapter=None, seed=0, batches_only=True,
+            ))
+            row = json.loads((out / "predictions.jsonl").read_text().strip())
+            metrics = json.loads((out / "metrics.json").read_text())
+            self.assertEqual([len(chunk["evidence"]) for chunk in row["chunks"]], [10, 2])
+            self.assertEqual([len(chunk["draws"]) for chunk in row["chunks"]], [3, 3])
+            self.assertNotIn("union", row)
+            self.assertNotIn("final", row)
+            self.assertEqual(metrics["batch_verifier_calls"], 6)
+
+    def test_three_draws_use_identical_chunk_prompt_and_remain_separate(self):
+        class FakeModel:
+            def run(self, prompts, seed):
+                self.prompts, self.seed = prompts, seed
+                return [{"draw": i} for i in range(len(prompts))]
+
+        model = FakeModel()
+        claim = {"claim": "A claim"}
+        chunk = [("E1", "Page", 4, "first"), ("E2", "Page", 7, "second")]
+        with patch("agent.data.build_evidence_batches.scored", side_effect=lambda c, p, g: {
+            "pred": "SUPPORTED" if g["draw"] < 2 else "REFUTED",
+            "evidence": ["Page:4"] if g["draw"] == 0 else [],
+            "in_tokens": 10, "out_tokens": 2,
+        }):
+            record = sample_chunk(model, claim, chunk, 2, 3, 123)
+        self.assertEqual(len(model.prompts), 3)
+        self.assertEqual(len(set(model.prompts)), 1)
+        self.assertEqual(model.seed, 123)
+        self.assertEqual(record["evidence"][0]["id"], "Page:4")
+        self.assertEqual(len(record["draws"]), 3)
+        self.assertNotIn("union", record)
+        metrics = summarize_multi_draw([{"chunks": [record]}], 3)
+        self.assertEqual(metrics["batch_verifier_calls"], 3)
+        self.assertEqual(metrics["chunks_with_verdict_disagreement"], 1)
+        self.assertEqual(metrics["chunks_with_evidence_disagreement"], 1)
+
     def test_batch_ids_are_local_and_final_union_can_exceed_batch_size(self):
         shown = [(f"E{i + 1}", "Page", i, f"sentence {i}") for i in range(25)]
         parts = list(batches(shown, 10))
@@ -108,7 +179,7 @@ class EvidenceBatchesTest(unittest.TestCase):
                "union": [{"id": "Page:2", "text": "cited"}]}
         self.assertEqual(route_evidence(row, UNION), [("E1", "Page", 2, "cited")])
         verifier = FakeVerifier()
-        with patch("agent.evaluation.results.jev_controller.eval_jev_controller.scored",
+        with patch("agent.evaluation.results.rsi_jev_controller_baseline.eval_rsi_jev_controller_baseline.scored",
                    side_effect=lambda claim, evidence, gen: {"used": evidence}) as scorer:
             outputs, calls = verify_routes(verifier, {}, row,
                                            {"controller": UNION, "heuristic": UNION}, 17)
@@ -116,7 +187,7 @@ class EvidenceBatchesTest(unittest.TestCase):
         self.assertEqual(scorer.call_count, 1)
         self.assertEqual(outputs["controller"], outputs["heuristic"])
         verifier = FakeVerifier()
-        with patch("agent.evaluation.results.jev_controller.eval_jev_controller.scored",
+        with patch("agent.evaluation.results.rsi_jev_controller_baseline.eval_rsi_jev_controller_baseline.scored",
                    side_effect=lambda claim, evidence, gen: {"used": evidence}):
             outputs, calls = verify_routes(verifier, {}, row,
                                            {"controller": UNION, "heuristic": FULL}, 17)

@@ -45,6 +45,40 @@ def stopping_index(samples, threshold):
     return N_DRAWS - 1
 
 
+def controller_diagnostics(rows):
+    """Hindsight attribution over recorded draws, separate from output accuracy.
+
+    A wrong final output is excused only if the policy exhausted its budget and
+    none of the three sampled verifier outputs was correct. This is an
+    opportunity diagnostic, not an online action label or a training reward.
+    """
+    counts = {"selected_correct": 0, "budget_exhausted_all_wrong": 0,
+              "budget_exhausted_correct_available": 0,
+              "early_wrong_later_correct": 0,
+              "early_wrong_no_later_correct": 0}
+    for row in rows:
+        samples = row["samples"]
+        index = row["heuristic"]["selected_index"]
+        if samples[index]["correct"]:
+            counts["selected_correct"] += 1
+        elif index == N_DRAWS - 1:
+            key = ("budget_exhausted_correct_available" if any(s["correct"] for s in samples)
+                   else "budget_exhausted_all_wrong")
+            counts[key] += 1
+        elif any(s["correct"] for s in samples[index + 1:]):
+            counts["early_wrong_later_correct"] += 1
+        else:
+            counts["early_wrong_no_later_correct"] += 1
+    n = len(rows)
+    counts["n"] = n
+    counts["controller_decision_accuracy_hindsight"] = (
+        (counts["selected_correct"] + counts["budget_exhausted_all_wrong"]) / n if n else None)
+    counts["definition"] = (
+        "selected answer correct OR budget exhausted with all three verifier draws wrong; "
+        "post-hoc attribution only, not an online policy accuracy or training target")
+    return counts
+
+
 def summarize(rows):
     def mean(values):
         return sum(values) / len(values) if values else None
@@ -68,6 +102,7 @@ def summarize(rows):
             "heuristic": quality([row["samples"][row["heuristic"]["selected_index"]]
                                   for row in part]),
             "third_draw": quality([row["samples"][2] for row in part]),
+            "controller_diagnostics": controller_diagnostics(part),
         }
 
     return {

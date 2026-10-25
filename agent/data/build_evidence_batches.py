@@ -1,7 +1,7 @@
-"""Verify every evidence batch; optionally run the historical fixed-union evaluation.
+"""Verify every evidence chunk, with optional repeated sampling per fixed chunk.
 
-The matched single-pass baseline and the batched method use the same claim,
-retrieval context, model, adapter, prompt style and deterministic decoding.
+The one-draw mode preserves the historical fixed-union evaluation. Multi-draw
+mode saves all draws for each chunk without making controller decisions.
 """
 
 import argparse
@@ -47,6 +47,45 @@ def scored(claim, shown, generation):
     item["format_ok"] = all(fmt.get(key) for key in ("json", "verdict", "evidence"))
     item["evidence"] = [f"{page}:{line}" for page, line in item["cited"]]
     return item
+
+
+def sample_chunk(model, claim, chunk, chunk_index, draws_per_chunk, seed):
+    """Sample the exact same claim and ten-sentence prompt for one chunk."""
+    prompt = render(claim["claim"], chunk)
+    generations = model.run([prompt] * draws_per_chunk, seed=seed)
+    if len(generations) != draws_per_chunk:
+        raise ValueError("verifier returned a different number of draws than requested")
+    draws = []
+    for draw_index, generation in enumerate(generations):
+        item = scored(claim, chunk, generation)
+        item["draw_index"] = draw_index
+        draws.append(item)
+    return {
+        "chunk_index": chunk_index,
+        "sampling_seed": seed,
+        "evidence": [{"id": f"{page}:{line}", "text": text}
+                     for _, page, line, text in chunk],
+        "draws": draws,
+    }
+
+
+def summarize_multi_draw(rows, draws_per_chunk):
+    chunks = [chunk for row in rows for chunk in row["chunks"]]
+    draws = [draw for chunk in chunks for draw in chunk["draws"]]
+    return {
+        "n_claims": len(rows),
+        "n_chunks": len(chunks),
+        "draws_per_chunk": draws_per_chunk,
+        "batch_verifier_calls": len(draws),
+        "mean_chunks_per_claim": len(chunks) / len(rows) if rows else None,
+        "chunks_with_verdict_disagreement": sum(
+            len({draw["pred"] for draw in chunk["draws"]}) > 1 for chunk in chunks),
+        "chunks_with_evidence_disagreement": sum(
+            len({tuple(draw["evidence"]) for draw in chunk["draws"]}) > 1
+            for chunk in chunks),
+        "batch_input_tokens": sum(draw["in_tokens"] for draw in draws),
+        "batch_output_tokens": sum(draw["out_tokens"] for draw in draws),
+    }
 
 
 def quality(items):
@@ -104,8 +143,12 @@ def summarize(rows):
 def run(args):
     from retrieval.fever_retrieval import FeverRetriever
 
-    if args.n <= 0 or args.batch_size <= 0 or args.max_new_tokens <= 0:
-        raise ValueError("n, batch-size and max-new-tokens must be positive")
+    if args.n <= 0 or args.batch_size <= 0 or args.max_new_tokens <= 0 or args.draws_per_chunk <= 0:
+        raise ValueError("n, batch-size, max-new-tokens and draws-per-chunk must be positive")
+    if args.draws_per_chunk > 1 and not args.batches_only:
+        raise ValueError("multi-draw mode requires --batches-only; no final route is selected")
+    if args.draws_per_chunk > 1 and (args.temperature <= 0 or not 0 < args.top_p <= 1):
+        raise ValueError("temperature must be positive and top-p must be in (0, 1]")
     output_dir = Path(args.output_dir)
     if output_dir.exists():
         raise FileExistsError(f"result directory exists: {output_dir}; use a new run name")
@@ -116,21 +159,31 @@ def run(args):
             raise ValueError("sampled claims differ from the frozen 900-ID eval manifest")
     retriever = FeverRetriever()
     system, thinking, _ = PROMPTS[args.prompt_style]
-    model = LocalModel(args.model, batch_size=args.model_batch_size,
+    effective_model_batch_size = max(args.model_batch_size, args.draws_per_chunk)
+    model = LocalModel(args.model, batch_size=effective_model_batch_size,
                        adapter=args.adapter, system_prompt=system,
                        max_new_tokens=args.max_new_tokens,
-                       enable_thinking=thinking)
+                       enable_thinking=thinking, do_sample=args.draws_per_chunk > 1,
+                       temperature=args.temperature, top_p=args.top_p)
     revision = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True,
                               text=True, check=False).stdout.strip() or None
-    manifest = {"evaluation_code": "agent.evaluation.results.evidence_batches.eval_evidence_batches",
+    manifest = {"evaluation_code": "agent.data.build_evidence_batches",
                 "model": args.model, "adapter": args.adapter,
                 "prompt_style": args.prompt_style, "retrieval": "titles",
                 "n_claims": args.n, "claim_seed": SEED, "generation_seed": args.seed,
                 "batch_size": args.batch_size, "model_batch_size": args.model_batch_size,
-                "max_new_tokens": args.max_new_tokens, "do_sample": False,
+                "effective_model_batch_size": effective_model_batch_size,
+                "max_new_tokens": args.max_new_tokens,
+                "do_sample": args.draws_per_chunk > 1,
+                "draws_per_chunk": args.draws_per_chunk,
+                "temperature": args.temperature if args.draws_per_chunk > 1 else None,
+                "top_p": args.top_p if args.draws_per_chunk > 1 else None,
+                "multi_draw_seed_rule": "generation_seed + claim_id*1009 + chunk_index" if args.draws_per_chunk > 1 else None,
                 "batches_only": args.batches_only,
                 "commit": revision,
-                "method": ("Run every nonempty evidence batch and save the citation union for later controller decisions. No final verification in this run."
+                "method": ("Run every nonempty evidence chunk; sample the identical prompt repeatedly and save every draw. No controller selection or final verification."
+                           if args.draws_per_chunk > 1 else
+                           "Run every nonempty evidence batch and save the citation union for later controller decisions. No final verification in this run."
                            if args.batches_only else
                            "Run every nonempty evidence batch; union valid citations in original retrieval order; reverify once. No gold labels or confidence in aggregation.")}
     output_dir.mkdir(parents=True)
@@ -147,11 +200,19 @@ def run(args):
                                          seed=args.seed + int(claim["id"]))[0]
                 baseline = scored(claim, shown, baseline_gen)
             chunks = list(batches(shown, args.batch_size))
-            chunk_gens = model.run([render(claim["claim"], part) for part in chunks],
-                                   seed=args.seed + int(claim["id"])) if chunks else []
-            outputs = [scored(claim, part, generation)
-                       for part, generation in zip(chunks, chunk_gens)]
-            union = citation_union(shown, outputs)
+            if args.draws_per_chunk > 1:
+                chunk_records = [sample_chunk(
+                    model, claim, part, chunk_index, args.draws_per_chunk,
+                    args.seed + int(claim["id"]) * 1009 + chunk_index)
+                    for chunk_index, part in enumerate(chunks)]
+                outputs = []
+                union = []
+            else:
+                chunk_gens = model.run([render(claim["claim"], part) for part in chunks],
+                                       seed=args.seed + int(claim["id"])) if chunks else []
+                outputs = [scored(claim, part, generation)
+                           for part, generation in zip(chunks, chunk_gens)]
+                union = citation_union(shown, outputs)
             final = None
             if not args.batches_only:
                 final_gen = model.run([render(claim["claim"], union)],
@@ -160,15 +221,21 @@ def run(args):
             row = {"id": claim["id"], "claim": claim["claim"],
                    "gold": (baseline["gold"] if baseline else FEVER_LABEL[claim["label"]]),
                    "retrieval": "titles",
-                   "n_shown": len(shown), "n_union": len(union),
+                   "n_shown": len(shown),
                    "gold_in_context": ctx["gold_in_context"],
                    "gold_page_retrieved": ctx["gold_page_retrieved"],
-                   "gold_in_union": context_for(claim, union)["gold_in_context"],
                    "shown": [{"id": f"{page}:{line}", "text": text}
-                             for _, page, line, text in shown],
-                   "union": [{"id": f"{page}:{line}", "text": text}
-                             for _, page, line, text in union],
-                   "batches": outputs}
+                             for _, page, line, text in shown]}
+            if args.draws_per_chunk > 1:
+                row["chunks"] = chunk_records
+            else:
+                row.update({
+                    "n_union": len(union),
+                    "gold_in_union": context_for(claim, union)["gold_in_context"],
+                    "union": [{"id": f"{page}:{line}", "text": text}
+                              for _, page, line, text in union],
+                    "batches": outputs,
+                })
             if not args.batches_only:
                 row["baseline"] = baseline
                 row["final"] = final
@@ -177,7 +244,9 @@ def run(args):
             stream.flush()
             if index % 10 == 0 or index == len(claims):
                 print(f"{index}/{len(claims)} claims in {time.monotonic() - started:.0f}s", flush=True)
-    if args.batches_only:
+    if args.draws_per_chunk > 1:
+        metrics = summarize_multi_draw(rows, args.draws_per_chunk)
+    elif args.batches_only:
         def mean(values):
             return sum(values) / len(values) if values else None
 
@@ -205,6 +274,9 @@ def main():
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--batch-size", type=int, default=10)
     parser.add_argument("--model-batch-size", type=int, default=4)
+    parser.add_argument("--draws-per-chunk", type=int, default=1)
+    parser.add_argument("--temperature", type=float, default=0.7)
+    parser.add_argument("--top-p", type=float, default=0.9)
     parser.add_argument("--max-new-tokens", type=int)
     parser.add_argument("--batches-only", action="store_true")
     parser.add_argument("--output-dir", required=True)

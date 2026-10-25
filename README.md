@@ -14,6 +14,7 @@ This repository studies evidence-grounded claim verification on FEVER. A verifie
 |---|---|
 | [`verifier/train.sbatch`](verifier/train.sbatch) | Single training entry point; select a configuration with `TRAIN_SCRIPT` |
 | [`agent/eval.sbatch`](agent/eval.sbatch) | Agent batch-data and controller evaluation entry point; choose the method with `EVAL_METHOD` |
+| [`agent/train/`](agent/train/) | Train-only STOP/RETRY replay environment and reward design; no trained controller yet |
 | [`verifier/TODO.md`](verifier/TODO.md) | Current priorities and experiment checklist |
 | [`verifier/docs/`](verifier/docs/) | Data guide, experiment results, architecture and background |
 | [`verifier/data/train/`](verifier/data/train/) | Committed SFT and GRPO training examples |
@@ -25,11 +26,11 @@ This repository studies evidence-grounded claim verification on FEVER. A verifie
 | [`agent/`](agent/) | Runnable FEVER search/verify loop and agent-specific work |
 | [`agent/evaluation/`](agent/evaluation/) | Agent evaluators and method-specific `results/`; submit jobs with `agent/eval.sbatch` |
 | [`agent/evaluation/results/sampling_retry/`](agent/evaluation/results/sampling_retry/) | Three-draw retry evaluator and its `runs/` outputs |
-| [`agent/evaluation/results/evidence_batches/`](agent/evaluation/results/evidence_batches/) | Exhaustive 10-sentence batch-data producer; historical full evaluation is preserved |
-| [`agent/evaluation/results/jev_controller/`](agent/evaluation/results/jev_controller/) | RSI-Jev 2B or OpenJev controller chooses the final Qwen evidence route from batch summaries |
+| [`agent/data/build_evidence_batches.py`](agent/data/build_evidence_batches.py) | Exhaustive 10-sentence batch-data producer |
+| [`agent/evaluation/results/rsi_jev_controller_baseline/`](agent/evaluation/results/rsi_jev_controller_baseline/) | RSI-Jev 2B or OpenJev controller baseline code; outputs use `rsi-jev-controller-baseline/` |
 | [`agent/experiments/`](agent/experiments/) | Isolated controller experiments; currently a toy scaffold, not FEVER results |
 | [`agent/data/traces/`](agent/data/traces/) | Archived fixed-loop FEVER traces |
-| `agent/data/evidence_batches/` | Local, Git-ignored Qwen batch outputs shared by controller evaluations |
+| `agent/data/evidence_batches/` | Local, Git-ignored Qwen batch outputs shared by controller evaluations; transfer separately from SoC |
 | [`agent/docs/`](agent/docs/) | Agent trace schema and method notes |
 | [`agent/tests/`](agent/tests/) | Agent evaluation and policy tests |
 | [`agent/TODO.md`](agent/TODO.md) | Agent-only experiment checklist |
@@ -46,6 +47,8 @@ The existing `agent/agent_loop.py` is the one-search, one-verification fixed bas
 
 The offline heuristic selects the first valid `SUPPORTED` or `REFUTED` output with verdict-token confidence at least `0.5`; `NOT_ENOUGH_INFO`, invalid output, and missing or lower confidence trigger another draw, up to three. All three draws are generated for every claim even if the simulated policy would stop early. Therefore `metrics.json` reports both **actual three-call cost** and **simulated stopping cost**, along with first-draw versus heuristic accuracy/FEVER, verdict/evidence disagreement, and separate `gold_in_context`, `gold_not_in_context`, and gold-NEI results. The threshold is an exploratory rule, not a calibrated probability guarantee. FEVER gold labels describe the claim against Wikipedia, so a retrieval miss can make the original label impossible to justify from the shown context.
 
+`heuristic.accuracy` remains the actual selected-output accuracy. A separate **hindsight controller diagnostic** credits a claim when the selected output is correct, or when the policy reaches its three-draw limit and all three verifier outputs are wrong. It reports early wrong stops and third-draw errors when a correct answer appeared among the three draws separately. This diagnostic uses gold and future draws after the run, so it is **not** an online controller accuracy, an action label, or an RL reward. The archived 900-claim run has 664 selected-correct, 81 exhausted/all-wrong, and `controller_decision_accuracy_hindsight = 745/900 = 0.828`; its actual selected-output accuracy remains `664/900 = 0.738`. See its `controller_diagnostics.json`; original predictions and metrics were left intact. For another completed run, use `python -m agent.evaluation.results.sampling_retry.reanalyse <run-dir>`.
+
 On SoC, submit from the repository root. The job changes to the repository root before checking data and running the evaluator. The default adapter is the direct 5,500-row SFT checkpoint, with 900 claims and the direct prompt:
 
 ```bash
@@ -60,23 +63,66 @@ The 900 dev claims are for **evaluation only**. Training a learned `STOP/RETRY` 
 
 ### Agent evidence batching and Jev-style controller evaluation
 
-The [evidence-batch producer](agent/evaluation/results/evidence_batches/README.md) keeps the same title-plus-BM25 retrieval result, splits its sentences into batches of 10, and verifies **every** batch. It saves the full retrieval context, all batch outputs, and the union of valid citations under `agent/data/evidence_batches/`; it does not produce the final verifier result. The union can have **more than 10 sentences**. By default this run uses all 900 frozen dev claims, deterministic direct decoding and the direct 5,500-row SFT adapter. Check current SoC partition/resource limits before submitting:
+The [evidence-batch producer](agent/docs/evidence-batches.md) keeps the same title-plus-BM25 retrieval result, splits its sentences into batches of 10, and verifies **every** batch. It saves the full retrieval context, all batch outputs, and the union of valid citations under `agent/data/evidence_batches/`; it does not produce the final verifier result. The union can have **more than 10 sentences**. By default this run uses all 900 frozen dev claims, deterministic direct decoding and the direct 5,500-row SFT adapter. Check current SoC partition/resource limits before submitting:
 
 ```bash
-RUN_NAME=full900-batches1 sbatch --export=ALL agent/eval.sbatch
+RUN_NAME=deterministic-1-draw-per-chunk-900-claims-run2 sbatch --export=ALL agent/eval.sbatch
 ```
 
-Read `agent/data/evidence_batches/runs/<eval_model>/direct-cap160/full900-batches1/{manifest.json,metrics.json,predictions.jsonl}`. Plain `sbatch agent/eval.sbatch` also works and saves under `job-<Slurm job ID>`. For another checkpoint, set `CHECKPOINTS=<adapter-path>` and optionally `EVAL_MODEL=<name>`. `EVIDENCE_BATCH_SIZE` changes the chunk size. Batch calls, prompt tokens, empty citation unions and gold evidence missing from the union are reported. This intermediate data is Git-ignored and can be reused by multiple controller evaluations.
+Read `agent/data/evidence_batches/<eval_model>/direct-cap160/<run>/{manifest.json,metrics.json,predictions.jsonl}`. Plain `sbatch agent/eval.sbatch` also works and saves under `job-<Slurm job ID>`. For another checkpoint, set `CHECKPOINTS=<adapter-path>` and optionally `EVAL_MODEL=<name>`. `EVIDENCE_BATCH_SIZE` changes the chunk size. Batch calls, prompt tokens, empty citation unions and gold evidence missing from the union are reported. This intermediate data is Git-ignored and can be reused by multiple controller evaluations.
 
-The [Jev-style controller evaluator](agent/evaluation/results/jev_controller/README.md) reads the completed batch data. By default, [RSI-Jev v2.1 2B](https://huggingface.co/shgao/rsi-jev-v2.1-qwen3.5-2b) sees the claim and each batch verifier's verdict, format status, confidence and cited sentence IDs. The main comparison is **RSI-Jev controller versus a predeclared heuristic controller** making the same route choice from the same batch summaries. The heuristic uses empty-union, invalid-format, NEI, disagreement and verdict-token confidence below `0.5` to choose full context. Both controllers choose before Qwen runs a new final verification on each selected evidence set. Matching choices share one final Qwen call. Neither route decision sees gold labels or final Qwen outputs. Install the optional `rsi-jev` runtime in the SoC virtual environment before running; see the [controller instructions](agent/evaluation/results/jev_controller/README.md):
+The completed `full900-batches1` job used commit `176c90a` and originally wrote under the older `agent/data/evidence_batches/runs/` layout. Its organized location is `agent/data/evidence_batches/sft-direct-from-base-qwen3p5-2b-5500-samples/direct-cap160/deterministic-1-draw-per-chunk-900-claims/`; move the SoC output there once with the checked command below. The original manifest remains unchanged as provenance. It processed 900 claims and 3,169 ten-sentence chunks with **one deterministic verifier draw per chunk** (`do_sample=false`), and did not run final verification. Because the generated data directory is Git-ignored, `git pull` will not copy this completed run from SoC; copy it separately if claim-level analysis is needed locally. The three-draw `sampling_retry` experiment instead resamples the *full* retrieval context, so it is not a three-draw-per-chunk dataset.
+
+On SoC, from `~/rl-test`, the following moves this completed run once without overwriting another run. It also removes only empty directories from the old layout:
 
 ```bash
-JEV_SOURCE_RUN=agent/data/evidence_batches/runs/sft-direct-from-base-qwen3p5-2b-5500-samples/direct-cap160/full900-batches1 \
-EVAL_METHOD=jev_controller RUN_NAME=full900-run1 \
+(
+  set -e
+  src=agent/data/evidence_batches/runs/sft-direct-from-base-qwen3p5-2b-5500-samples/direct-cap160/full900-batches1
+  dst=agent/data/evidence_batches/sft-direct-from-base-qwen3p5-2b-5500-samples/direct-cap160/deterministic-1-draw-per-chunk-900-claims
+  test -f "$src/manifest.json" && test -f "$src/metrics.json" && test -f "$src/predictions.jsonl"
+  test ! -e "$dst"
+  python3 - "$src" <<'PY'
+import json, sys
+from pathlib import Path
+run = Path(sys.argv[1])
+manifest = json.loads((run / "manifest.json").read_text())
+metrics = json.loads((run / "metrics.json").read_text())
+assert manifest["n_claims"] == metrics["n_claims"] == 900
+assert manifest["do_sample"] is False and manifest["batches_only"] is True
+assert sum(1 for _ in (run / "predictions.jsonl").open()) == 900
+PY
+  mkdir -p "$(dirname "$dst")"
+  mv -- "$src" "$dst"
+  rmdir -- "$(dirname "$src")" "$(dirname "$(dirname "$src")")" agent/data/evidence_batches/runs 2>/dev/null || true
+  echo "Moved to $dst"
+  wc -l "$dst/predictions.jsonl"
+)
+```
+
+Its aggregate result is 3.52 chunks per claim, 1.17 selected citation sentences per claim, 280/900 empty citation unions, and 431 claims with a complete gold evidence set in the union. The matched full-context sampling-retry run had 517 non-NEI claims with complete gold evidence in the retrieved context; because each union is a subset of that context, the batching/citation step lost complete gold coverage for 86 of those claims. These are **coverage and cost diagnostics**, not controller accuracy or final FEVER score. Claim-level failure analysis requires the Git-ignored `predictions.jsonl` from SoC.
+
+The [Jev-style controller evaluator](agent/evaluation/results/rsi_jev_controller_baseline/README.md) reads the completed batch data. By default, [RSI-Jev v2.1 2B](https://huggingface.co/shgao/rsi-jev-v2.1-qwen3.5-2b) sees the claim and each batch verifier's verdict, format status, confidence and cited sentence IDs. The main comparison is **RSI-Jev controller versus a predeclared heuristic controller** making the same route choice from the same batch summaries. The heuristic uses empty-union, invalid-format, NEI, disagreement and verdict-token confidence below `0.5` to choose full context. Both controllers choose before Qwen runs a new final verification on each selected evidence set. Matching choices share one final Qwen call. Neither route decision sees gold labels or final Qwen outputs. Install the optional `rsi-jev` runtime in the SoC virtual environment before running; see the [controller instructions](agent/evaluation/results/rsi_jev_controller_baseline/README.md):
+
+```bash
+JEV_SOURCE_RUN=agent/data/evidence_batches/sft-direct-from-base-qwen3p5-2b-5500-samples/direct-cap160/deterministic-1-draw-per-chunk-900-claims \
+EVAL_METHOD=rsi_jev_controller_baseline RUN_NAME=full900-run1 \
   sbatch --partition=gpu-long --time=12:00:00 --export=ALL agent/eval.sbatch
 ```
 
-The batch producer writes under `agent/data/evidence_batches/runs/`; controller results go under `agent/evaluation/results/jev_controller/runs/`. Use `RESULT_DIR` to choose another exact new directory. New agent evaluation jobs write `slurm-agent-eval-<job-id>.out` in the submission directory; historical sampling-retry logs retain their old name.
+The batch producer writes under `agent/data/evidence_batches/`; controller results go under `agent/evaluation/results/rsi-jev-controller-baseline/runs/`. The Python module folder uses underscores because it is imported with `python -m`. Use `RESULT_DIR` to choose another exact new directory. New agent evaluation jobs write `slurm-agent-eval-<job-id>.out` in the submission directory; historical sampling-retry logs retain their old name.
+
+The proposed RL pilot in [`agent/train/`](agent/train/) addresses a different decision: for each **fixed 10-sentence input**, decide whether its current verifier result is sufficient or the **same input** needs another sample, up to three draws. Every evidence chunk is still processed. The pilot currently contains a replay environment and reward specification; it has no train-only rollouts, Jev optimizer integration or trained checkpoint yet. Do not use the frozen 900 dev results for training.
+
+To produce the shared **three stochastic draws per fixed ten-sentence chunk** on the frozen 900 dev claims, first inspect current SoC GPU limits with `sinfo -o "%P %l %a"`, then submit from the repository root:
+
+```bash
+EVAL_METHOD=evidence_batches EVIDENCE_BATCHES_ONLY=1 EVIDENCE_DRAWS=3 \
+EVIDENCE_BATCH_SIZE=10 RUN_NAME=stochastic-3-draws-per-chunk-900-claims \
+  sbatch --time=1-00:00:00 --export=ALL agent/eval.sbatch
+```
+
+The job uses `temperature=0.7`, `top_p=0.9` and seed 0 unless overridden. It saves under `agent/data/evidence_batches/<eval-model>/direct-cap160/stochastic-3-draws-per-chunk-900-claims/`. Each claim row contains `shown` plus `chunks[]`; each chunk contains its fixed `evidence`, `sampling_seed`, and three scored `draws`. No union, controller action or final verdict is selected in this dataset. If retrieval returns the same 3,169 chunks as the earlier run, expect 9,507 generated verifier outputs. `EVIDENCE_DRAWS=5` is supported for a later, separately named run; the current STOP/RETRY budget is three. This dev set is evaluation data only.
 
 ### DPO pair curation (planned)
 

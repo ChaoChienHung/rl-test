@@ -15,7 +15,7 @@ import subprocess
 import time
 from pathlib import Path
 
-from agent.evaluation.results.evidence_batches.eval_evidence_batches import quality, scored
+from agent.data.build_evidence_batches import quality, scored
 from agent.evaluation.results.sampling_retry.eval_sampling_retry import PROMPTS
 from verifier.model import LocalModel, render, sample_claims
 
@@ -178,7 +178,10 @@ def run(args):
     if not all(path.is_file() for path in (manifest_path, predictions_path, metrics_path)):
         raise FileNotFoundError(f"source batch run is incomplete in {source}")
     source_manifest = json.loads(manifest_path.read_text())
-    if source_manifest.get("evaluation_code") != "agent.evaluation.results.evidence_batches.eval_evidence_batches":
+    if source_manifest.get("evaluation_code") not in {
+        "agent.data.build_evidence_batches",
+        "agent.evaluation.results.evidence_batches.eval_evidence_batches",
+    }:
         raise ValueError("source-run must be an evidence_batches result")
     if source_manifest.get("batches_only") is not True:
         raise ValueError("source-run must use --batches-only; historical final outputs are not reused")
@@ -199,7 +202,7 @@ def run(args):
     controller_model = load_controller(args.backend, args.model)
     revision = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True,
                               text=True, check=False).stdout.strip() or None
-    manifest = {"evaluation_code": "agent.evaluation.results.jev_controller.eval_jev_controller",
+    manifest = {"evaluation_code": "agent.evaluation.results.rsi_jev_controller_baseline.eval_rsi_jev_controller_baseline",
                 "model": args.model, "backend": args.backend, "source_run": str(source),
                 "source_commit": source_manifest.get("commit"), "commit": revision,
                 "verifier": {key: source_manifest[key] for key in

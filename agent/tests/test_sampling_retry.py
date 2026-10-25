@@ -1,6 +1,8 @@
 import unittest
 
-from agent.evaluation.results.sampling_retry.eval_sampling_retry import stopping_index, summarize
+from agent.evaluation.results.sampling_retry.eval_sampling_retry import (
+    controller_diagnostics, stopping_index, summarize,
+)
 
 
 def sample(pred, gold="REFUTED", confidence=0.8, evidence=(), format_ok=True):
@@ -37,6 +39,18 @@ class SamplingRetryTest(unittest.TestCase):
         self.assertEqual(result["mean_simulated_verifier_calls"], 1.0)
         self.assertEqual(result["gold_in_context"]["n"], 1)
         self.assertEqual(result["gold_not_in_context"]["n"], 0)
+        self.assertEqual(result["overall"]["controller_diagnostics"]
+                         ["controller_decision_accuracy_hindsight"], 0.0)
+
+    def test_budget_exhausted_when_all_draws_wrong_is_not_controller_error(self):
+        wrong = [sample("SUPPORTED", confidence=0.1) for _ in range(3)]
+        rows = [{"samples": wrong, "heuristic": {"selected_index": 2}},
+                {"samples": [sample("REFUTED"), sample("SUPPORTED"), sample("SUPPORTED")],
+                 "heuristic": {"selected_index": 2}}]
+        result = controller_diagnostics(rows)
+        self.assertEqual(result["budget_exhausted_all_wrong"], 1)
+        self.assertEqual(result["budget_exhausted_correct_available"], 1)
+        self.assertEqual(result["controller_decision_accuracy_hindsight"], 0.5)
 
 
 if __name__ == "__main__":
