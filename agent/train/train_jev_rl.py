@@ -17,11 +17,9 @@ from pathlib import Path
 from agent.data.build_evidence_batches import scored, training_claims
 from agent.evaluation.pooled_retry import FINAL_QUESTION, selected_draw_index, state_for_pool
 from agent.evaluation.results.rsi_jev_evidence_selection_baseline.eval_rsi_jev_evidence_selection_baseline import (
-    ACTION, DROP, KEEP, cited_candidates, questions_for, selection_state_for,
+    ACTION, ACTION_KEEP_ALL, DROP, KEEP, cited_candidates, questions_for, selection_state_for,
 )
-from agent.evaluation.results.rsi_jev_retry_baseline.eval_rsi_jev_retry_baseline import (
-    QUESTION, evidence_for, state_for,
-)
+from agent.evaluation.results.rsi_jev_retry_baseline.eval_rsi_jev_retry_baseline import evidence_for
 from agent.evaluation.results.sampling_retry.eval_sampling_retry import PROMPTS
 from agent.train.jev_head import JevHeadPolicy, choice_question
 from agent.train.replay_env import (MAX_DRAWS, RETRY, STOP,
@@ -115,10 +113,9 @@ def sample_episode(row, policy, reference, variant, kl_coef=0.0):
     for ci, chunk in enumerate(row["chunks"]):
         chunk_saved = set()
         for di, draw in enumerate(chunk["draws"]):
-            state = (selection_state_for(row, ci, di) if variant == "selection"
-                     else state_for(row, ci, di))
+            state = selection_state_for(row, ci, di)
             if di < MAX_DRAWS - 1:
-                spec = QUESTION["action"] if variant == "citation" else ACTION
+                spec = ACTION_KEEP_ALL if variant == "citation" else ACTION
                 action, logp, entropy, kl = sample_question(
                     policy, reference, state, "action", spec, kl_coef)
                 log_probs.append(logp)
@@ -138,7 +135,7 @@ def sample_episode(row, policy, reference, variant, kl_coef=0.0):
                         candidate_index = int(key.split("_")[1])
                         kept.add(cited_candidates(chunk, draw)[candidate_index]["id"])
                 chunk_saved.update(kept)
-            elif action == STOP and draw.get("format_ok"):
+            elif draw.get("format_ok"):
                 kept = set(draw.get("evidence", []))
                 allowed = {item["id"] for item in chunk["evidence"]}
                 if not kept <= allowed:

@@ -3,12 +3,30 @@ from contextlib import nullcontext
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from agent.train.train_jev_rl import pooled_decision_reward, sample_pooled_episode
+from agent.train.train_jev_rl import pooled_decision_reward, sample_episode, sample_pooled_episode
 from agent.train.replay_env import (RETRY, STOP, best_gold_set_evidence_credit,
                                     verdict_retry_feedback)
 
 
 class JevTrainRewardTest(unittest.TestCase):
+    def test_citation_variant_keeps_valid_citations_from_retried_draws(self):
+        row = {"claim": "claim", "shown": [{"id": "A:1", "text": "first"},
+                                           {"id": "B:2", "text": "second"}],
+               "chunks": [{"evidence": [{"id": "A:1", "text": "first"},
+                                       {"id": "B:2", "text": "second"}],
+                           "draws": [{"format_ok": True, "evidence": ["A:1"]},
+                                     {"format_ok": True, "evidence": ["B:2"]},
+                                     {"format_ok": True, "evidence": []}]}]}
+        policy = SimpleNamespace()
+        with patch("agent.train.train_jev_rl.sample_question",
+                   side_effect=[(RETRY, 0.0, 0.0, 0.0),
+                                (STOP, 0.0, 0.0, 0.0)]) as question:
+            episode = sample_episode(row, policy, None, "citation")
+        self.assertEqual([item["id"] for item in episode["selected_evidence"]],
+                         ["A:1", "B:2"])
+        self.assertEqual(episode["extra_draws"], 1)
+        self.assertIn("saved automatically", question.call_args_list[0].args[4]["instructions"])
+
     def test_pooled_action_reward_and_extra_draw_cost(self):
         claim = {"id": 1, "label": "SUPPORTS"}
         good = {"gold": "SUPPORTED", "correct": True, "evidence": ["A:1"]}
