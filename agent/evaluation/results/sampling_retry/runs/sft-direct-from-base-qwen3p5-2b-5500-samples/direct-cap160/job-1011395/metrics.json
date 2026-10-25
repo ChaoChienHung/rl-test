@@ -1,0 +1,207 @@
+{
+  "n_claims": 900,
+  "draws_per_claim": 3,
+  "overall": {
+    "n": 900,
+    "first_draw": {
+      "accuracy": 0.7411111111111112,
+      "fever_score": 0.65,
+      "evidence_f1_non_nei": 0.635717426025397,
+      "format_rate": 1.0,
+      "recall": {
+        "SUPPORTED": 0.7966666666666666,
+        "REFUTED": 0.76,
+        "NOT_ENOUGH_INFO": 0.6666666666666666
+      }
+    },
+    "all_draws": {
+      "accuracy": 0.7333333333333333,
+      "fever_score": 0.6418518518518519,
+      "evidence_f1_non_nei": 0.6269355330212818,
+      "format_rate": 1.0,
+      "recall": {
+        "SUPPORTED": 0.8,
+        "REFUTED": 0.7533333333333333,
+        "NOT_ENOUGH_INFO": 0.6466666666666666
+      }
+    },
+    "heuristic": {
+      "accuracy": 0.7377777777777778,
+      "fever_score": 0.6355555555555555,
+      "evidence_f1_non_nei": 0.6506618704698415,
+      "format_rate": 1.0,
+      "recall": {
+        "SUPPORTED": 0.84,
+        "REFUTED": 0.7833333333333333,
+        "NOT_ENOUGH_INFO": 0.59
+      }
+    },
+    "third_draw": {
+      "accuracy": 0.7255555555555555,
+      "fever_score": 0.6311111111111111,
+      "evidence_f1_non_nei": 0.6192729815809526,
+      "format_rate": 1.0,
+      "recall": {
+        "SUPPORTED": 0.8133333333333334,
+        "REFUTED": 0.74,
+        "NOT_ENOUGH_INFO": 0.6233333333333333
+      }
+    }
+  },
+  "gold_in_context": {
+    "n": 517,
+    "first_draw": {
+      "accuracy": 0.8201160541586073,
+      "fever_score": 0.7446808510638298,
+      "evidence_f1_non_nei": 0.7189499463866633,
+      "format_rate": 1.0,
+      "recall": {
+        "SUPPORTED": 0.8604651162790697,
+        "REFUTED": 0.7799227799227799,
+        "NOT_ENOUGH_INFO": null
+      }
+    },
+    "all_draws": {
+      "accuracy": 0.8214055448098001,
+      "fever_score": 0.7421018697614442,
+      "evidence_f1_non_nei": 0.7103055831323709,
+      "format_rate": 1.0,
+      "recall": {
+        "SUPPORTED": 0.8682170542635659,
+        "REFUTED": 0.7747747747747747,
+        "NOT_ENOUGH_INFO": null
+      }
+    },
+    "heuristic": {
+      "accuracy": 0.851063829787234,
+      "fever_score": 0.7640232108317214,
+      "evidence_f1_non_nei": 0.7343593596684169,
+      "format_rate": 1.0,
+      "recall": {
+        "SUPPORTED": 0.8953488372093024,
+        "REFUTED": 0.806949806949807,
+        "NOT_ENOUGH_INFO": null
+      }
+    },
+    "third_draw": {
+      "accuracy": 0.8181818181818182,
+      "fever_score": 0.7369439071566731,
+      "evidence_f1_non_nei": 0.6996720611513312,
+      "format_rate": 1.0,
+      "recall": {
+        "SUPPORTED": 0.8682170542635659,
+        "REFUTED": 0.7683397683397684,
+        "NOT_ENOUGH_INFO": null
+      }
+    }
+  },
+  "gold_not_in_context": {
+    "n": 83,
+    "first_draw": {
+      "accuracy": 0.5180722891566265,
+      "fever_score": 0.0,
+      "evidence_f1_non_nei": 0.11726907630522088,
+      "format_rate": 1.0,
+      "recall": {
+        "SUPPORTED": 0.40476190476190477,
+        "REFUTED": 0.6341463414634146,
+        "NOT_ENOUGH_INFO": null
+      }
+    },
+    "all_draws": {
+      "accuracy": 0.4979919678714859,
+      "fever_score": 0.0,
+      "evidence_f1_non_nei": 0.1076305220883534,
+      "format_rate": 1.0,
+      "recall": {
+        "SUPPORTED": 0.38095238095238093,
+        "REFUTED": 0.6178861788617886,
+        "NOT_ENOUGH_INFO": null
+      }
+    },
+    "heuristic": {
+      "accuracy": 0.5662650602409639,
+      "fever_score": 0.0,
+      "evidence_f1_non_nei": 0.12931726907630522,
+      "format_rate": 1.0,
+      "recall": {
+        "SUPPORTED": 0.5,
+        "REFUTED": 0.6341463414634146,
+        "NOT_ENOUGH_INFO": null
+      }
+    },
+    "third_draw": {
+      "accuracy": 0.5180722891566265,
+      "fever_score": 0.0,
+      "evidence_f1_non_nei": 0.1184738955823293,
+      "format_rate": 1.0,
+      "recall": {
+        "SUPPORTED": 0.47619047619047616,
+        "REFUTED": 0.5609756097560976,
+        "NOT_ENOUGH_INFO": null
+      }
+    }
+  },
+  "gold_nei": {
+    "n": 300,
+    "first_draw": {
+      "accuracy": 0.6666666666666666,
+      "fever_score": 0.6666666666666666,
+      "evidence_f1_non_nei": null,
+      "format_rate": 1.0,
+      "recall": {
+        "SUPPORTED": null,
+        "REFUTED": null,
+        "NOT_ENOUGH_INFO": 0.6666666666666666
+      }
+    },
+    "all_draws": {
+      "accuracy": 0.6466666666666666,
+      "fever_score": 0.6466666666666666,
+      "evidence_f1_non_nei": null,
+      "format_rate": 1.0,
+      "recall": {
+        "SUPPORTED": null,
+        "REFUTED": null,
+        "NOT_ENOUGH_INFO": 0.6466666666666666
+      }
+    },
+    "heuristic": {
+      "accuracy": 0.59,
+      "fever_score": 0.59,
+      "evidence_f1_non_nei": null,
+      "format_rate": 1.0,
+      "recall": {
+        "SUPPORTED": null,
+        "REFUTED": null,
+        "NOT_ENOUGH_INFO": 0.59
+      }
+    },
+    "third_draw": {
+      "accuracy": 0.6233333333333333,
+      "fever_score": 0.6233333333333333,
+      "evidence_f1_non_nei": null,
+      "format_rate": 1.0,
+      "recall": {
+        "SUPPORTED": null,
+        "REFUTED": null,
+        "NOT_ENOUGH_INFO": 0.6233333333333333
+      }
+    }
+  },
+  "stop_at": {
+    "1": 528,
+    "2": 25,
+    "3": 347
+  },
+  "mean_simulated_verifier_calls": 1.798888888888889,
+  "actual_verifier_calls": 2700,
+  "verdict_disagreement_rate": 0.2222222222222222,
+  "evidence_disagreement_rate": 0.29,
+  "mean_token_conf_std": 0.029634682140468816,
+  "early_wrong_with_later_correct": 16,
+  "actual_tokens_in": 3685008,
+  "actual_tokens_out": 65581,
+  "simulated_tokens_in": 2191430,
+  "simulated_tokens_out": 38819
+}

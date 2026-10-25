@@ -1,0 +1,18 @@
+{
+  "evaluation_code": "agent.evaluation.results.sampling_retry.eval_sampling_retry",
+  "model": "Qwen/Qwen3.5-2B",
+  "adapter": "verifier/experiments/sft-direct-from-base-qwen3p5-2b-5500-samples/runs/run1/artifacts/checkpoints",
+  "prompt_style": "direct",
+  "retrieval": "titles",
+  "n_claims": 900,
+  "claim_seed": 0,
+  "sampling_seed": 0,
+  "draws_per_claim": 3,
+  "temperature": 0.7,
+  "top_p": 0.9,
+  "max_new_tokens": 160,
+  "threshold": 0.5,
+  "confidence_for_gate": "token_conf",
+  "commit": "44155c846a482283edbfcb069eeb042010a8c3cd",
+  "note": "All three draws use identical evidence; stopping is simulated after generation."
+}
