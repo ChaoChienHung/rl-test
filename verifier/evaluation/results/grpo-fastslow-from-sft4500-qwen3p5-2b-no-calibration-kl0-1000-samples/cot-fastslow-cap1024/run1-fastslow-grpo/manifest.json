@@ -1,0 +1,19 @@
+{
+  "job_id": "962073",
+  "run_name": "run1-fastslow-grpo",
+  "commit": "5e098993f7d8d5309e9bfb063009379fc8623457",
+  "model": "Qwen/Qwen3.5-2B",
+  "eval_model": "grpo-fastslow-from-sft4500-qwen3p5-2b-no-calibration-kl0-1000-samples",
+  "checkpoints": "verifier/experiments/grpo-fastslow-from-sft4500-qwen3p5-2b-no-calibration-kl0-1000-samples/runs/run1-fastslow-grpo/artifacts/checkpoints",
+  "thinking": "off",
+  "native_thinking": false,
+  "prompt_style": "cot_fastslow",
+  "retrieval": "titles",
+  "max_new_tokens": 1024,
+  "condition": "cot-fastslow-cap1024",
+  "result_dir": "verifier/evaluation/results/grpo-fastslow-from-sft4500-qwen3p5-2b-no-calibration-kl0-1000-samples/cot-fastslow-cap1024/run1-fastslow-grpo",
+  "n_claims": 900,
+  "predictions": "verifier/evaluation/results/grpo-fastslow-from-sft4500-qwen3p5-2b-no-calibration-kl0-1000-samples/cot-fastslow-cap1024/run1-fastslow-grpo/predictions.jsonl",
+  "metrics": "verifier/evaluation/results/grpo-fastslow-from-sft4500-qwen3p5-2b-no-calibration-kl0-1000-samples/cot-fastslow-cap1024/run1-fastslow-grpo/metrics.json",
+  "log": "verifier/evaluation/results/grpo-fastslow-from-sft4500-qwen3p5-2b-no-calibration-kl0-1000-samples/cot-fastslow-cap1024/run1-fastslow-grpo/logs/run.log"
+}

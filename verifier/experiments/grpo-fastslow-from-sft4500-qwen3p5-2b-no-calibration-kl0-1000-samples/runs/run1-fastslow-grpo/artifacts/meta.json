@@ -1,0 +1,23 @@
+{
+  "experiment": "grpo-fastslow-from-sft4500-qwen3p5-2b-no-calibration-kl0-1000-samples",
+  "model": "Qwen/Qwen3.5-2B",
+  "sft": "verifier/experiments/sft-fastslow-from-base-qwen3p5-2b-4500-samples/runs/run1-fastslow-sft/artifacts/checkpoints",
+  "data": "verifier/data/train/grpo/fever-oracle-fastslow-grpo-1000",
+  "n_train": 1000,
+  "seed": 0,
+  "reward": "fastslow_metacognitive_self_correction_reward",
+  "thinking_mode": true,
+  "diagnostics": [
+    "self_correction_rate",
+    "delusion_rate",
+    "correctness",
+    "evidence"
+  ],
+  "num_generations": 8,
+  "max_completion_length": 1024,
+  "beta": 0.0,
+  "max_steps": 0,
+  "steps": 500,
+  "train_seconds": 16012,
+  "peak_gpu_gb": 22.33
+}

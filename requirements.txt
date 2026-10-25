@@ -14,3 +14,4 @@ PyStemmer
 openai
 python-dotenv
 pytest
+wev-ai
