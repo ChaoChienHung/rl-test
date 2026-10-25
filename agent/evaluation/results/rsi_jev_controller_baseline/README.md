@@ -8,7 +8,10 @@ Install the optional RSI-Jev runtime in the SoC `.venv` once, from the repositor
 
 ```bash
 source .venv/bin/activate
-python -m pip install "rsi-jev @ git+https://github.com/Shanghua-Gao/RSI-Jev"
+mkdir -p "$HOME/.pip-tmp"
+export TMPDIR="$HOME/.pip-tmp"
+python -m pip install --no-cache-dir -r agent/requirements.txt
+python -c 'import rsijev; print("RSI-Jev: OK")'
 ```
 
 After the 900-claim Qwen batch run completes, submit from the repository root:

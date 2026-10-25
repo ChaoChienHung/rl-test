@@ -1,0 +1,2 @@
+# Optional RSI-Jev controller runtime; install after the root requirements.
+rsi-jev @ git+https://github.com/Shanghua-Gao/RSI-Jev

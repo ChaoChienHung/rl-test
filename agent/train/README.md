@@ -9,7 +9,7 @@ This pilot uses exactly 5,500 FEVER train IDs from `verifier/data/train/sft/feve
 
 Only the RSI-Jev option scorer is updated; the language tower is frozen. The selected pooled verdict contributes +1 when correct and -1 when wrong. Pooled-verifier citations receive half of the best FEVER gold-set overlap score, including a 0.25 complete-set bonus and a modest off-gold penalty. The **final unique saved set** receives the same type of gold-set score, weighted by 0.25, exactly once per claim. A KEEP during RETRY gives no immediate reward; if the ID is dropped later, it contributes nothing to the final set score. Missing annotated gold evidence lowers coverage; saving off-gold citations incurs a smaller penalty. The first two pooled STOP/RETRY actions receive mean feedback: correct-verdict STOP +1, wrong-verdict STOP -1, correct-verdict RETRY -1.5, and wrong-verdict RETRY +0.25 only if the selected final verdict becomes correct (otherwise -1). Each extra chunk or pooled draw costs 0.05. The forced third draw has no STOP/RETRY action feedback. FEVER annotations may omit valid evidence, so an off-gold citation is not declared false. The objective has an EMA baseline, optional KL to the frozen initial scorer, and entropy regularization. `replay_env.py` defines reward helpers; `train_jev_rl.py` runs train-only episodes.
 
-From the repository root on SoC, after checking `sinfo` and installing RSI-Jev in `.venv`:
+From the repository root on SoC, after checking `sinfo` and installing RSI-Jev in `.venv` with `python -m pip install --no-cache-dir -r agent/requirements.txt` (set `TMPDIR="$HOME/.pip-tmp"` first; see the root README):
 
 ```bash
 PHASE=rollouts sbatch --export=ALL agent/train.sbatch

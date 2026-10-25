@@ -10,7 +10,10 @@ Install RSI-Jev in the SoC virtual environment if needed, then submit from the r
 
 ```bash
 source .venv/bin/activate
-python -m pip install "rsi-jev @ git+https://github.com/Shanghua-Gao/RSI-Jev"
+mkdir -p "$HOME/.pip-tmp"
+export TMPDIR="$HOME/.pip-tmp"
+python -m pip install --no-cache-dir -r agent/requirements.txt
+python -c 'import rsijev; print("RSI-Jev: OK")'
 JEV_SOURCE_RUN=agent/data/evidence_batches/sft-direct-from-base-qwen3p5-2b-5500-samples/direct-cap160/stochastic-3-draws-per-chunk-900-claims \
 EVAL_METHOD=rsi_jev_retry_baseline RUN_NAME=full900-run1 \
   sbatch --time=1-00:00:00 --export=ALL agent/eval.sbatch

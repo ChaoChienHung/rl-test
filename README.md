@@ -15,6 +15,7 @@ This repository studies evidence-grounded claim verification on FEVER. A verifie
 | [`verifier/train.sbatch`](verifier/train.sbatch) | Single training entry point; select a configuration with `TRAIN_SCRIPT` |
 | [`agent/eval.sbatch`](agent/eval.sbatch) | Agent batch-data and controller evaluation entry point; choose the method with `EVAL_METHOD` |
 | [`agent/train.sbatch`](agent/train.sbatch) | Train-only controller rollout and RSI-Jev head pilot; choose `PHASE=rollouts` or `PHASE=rl` |
+| [`agent/requirements.txt`](agent/requirements.txt) | Optional RSI-Jev controller dependency |
 | [`agent/train/`](agent/train/) | Train-only STOP/RETRY replay environment and reward design; no trained controller yet |
 | [`verifier/TODO.md`](verifier/TODO.md) | Current priorities and experiment checklist |
 | [`verifier/docs/`](verifier/docs/) | Data guide, experiment results, architecture and background |
@@ -372,10 +373,19 @@ Standard development and experiment cycle:
 
 - **Single GPU**: Evaluation and training scripts each run **one Python process on one GPU** (`--gpus=1`). Requesting multiple cards will not speed up execution.
 - **GPU types**: Use `a100-40:1` (default), `a100-80:1`, `h100-47:1`, or `h100-96:1` which support `bfloat16`. Avoid `nv` (which may allocate older cards like Titan RTX on `xgpe2`).
-- **Disk quota**: `/tmp` on SoC login nodes has a strict write quota. Always export `TMPDIR="$HOME/.pip-tmp"` before installing packages or submitting jobs:
+- **Disk quota and package installs**: SoC may report `Disk quota exceeded` while `df -h /tmp` still shows free space; the login node's per-user `/tmp` quota can be smaller. Set `TMPDIR` to a writable directory under home **before** any large `pip install` or Git-based package install, and before submitting jobs. `pip --no-cache-dir` disables the download cache but does not move pip's temporary Git checkout. Use this as the first remedy for `/tmp` quota errors; if home itself lacks quota, choose another permitted filesystem with enough space.
   ```bash
   mkdir -p "$HOME/.pip-tmp"
   export TMPDIR="$HOME/.pip-tmp"
+  ```
+- **Optional Jev controller runtime**: Install it into the same `.venv` used by `agent/eval.sbatch` and `agent/train.sbatch`, after the root requirements. The model weights download separately on first use.
+  ```bash
+  cd "$HOME/rl-test"
+  source .venv/bin/activate
+  mkdir -p "$HOME/.pip-tmp"
+  export TMPDIR="$HOME/.pip-tmp"
+  python -m pip install --no-cache-dir -r agent/requirements.txt
+  python -c 'import rsijev; print("RSI-Jev: OK")'
   ```
 
 ### 4. Cluster Job Submission
