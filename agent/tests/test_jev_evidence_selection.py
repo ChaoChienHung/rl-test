@@ -47,16 +47,18 @@ class EvidenceSelectionTest(unittest.TestCase):
                                 {"draw_index": 2, "pred": "SUPPORTED", "format_ok": True,
                                  "token_conf": 0.8, "evidence": ["A:1"]}]}]}
 
-    def test_keep_persists_across_retry_as_set(self):
+    def test_retry_discards_citations_and_stop_selects_current_draw(self):
         controller = FakeController()
-        result = select(self.row(), controller)
-        self.assertEqual([item["id"] for item in result["selected_evidence"]], ["A:1"])
-        self.assertEqual(result["duplicate_keep_decisions_removed_by_set"], 1)
+        row = self.row()
+        row["chunks"][0]["draws"][1]["evidence"] = ["B:2"]
+        result = select(row, controller)
+        self.assertEqual([item["id"] for item in result["selected_evidence"]], ["B:2"])
+        self.assertEqual(result["duplicate_keep_decisions_removed_by_set"], 0)
         self.assertEqual(result["chunk_verifier_calls"], 2)
         self.assertEqual(result["chunks"][0]["attempts"][0]["action"], RETRY)
+        self.assertEqual(result["chunks"][0]["attempts"][0]["kept_ids"], [])
         self.assertEqual(result["chunks"][0]["attempts"][1]["action"], STOP)
-        self.assertEqual(result["chunks"][0]["kept_ids"], ["A:1"])
-        self.assertNotIn("uncited", json.dumps(controller.states))
+        self.assertEqual(result["chunks"][0]["kept_ids"], ["B:2"])
         self.assertEqual(len(controller.states[1]["verifier_output"]["cited_evidence"]), 1)
         self.assertNotIn("observed_verifier_outputs", controller.states[1])
 
@@ -77,7 +79,7 @@ class EvidenceSelectionTest(unittest.TestCase):
         for stop_policy, keep_policy, expected_keys in (
             ("jev", "all", {"action"}),
             ("heuristic", "jev", {"keep_0"}),
-            ("jev", "jev", {"action", "keep_0"}),
+            ("jev", "jev", {"keep_0"}),
         ):
             class CapturingController(FakeController):
                 def predict(self, *, state, questions):
@@ -86,6 +88,15 @@ class EvidenceSelectionTest(unittest.TestCase):
             controller = CapturingController()
             select(row, controller, stop_policy=stop_policy, keep_policy=keep_policy)
             self.assertEqual(controller.question_keys, expected_keys)
+
+    def test_heuristic_retry_does_not_accumulate_citations(self):
+        row = self.row()
+        row["chunks"][0]["draws"][0]["token_conf"] = 0.1
+        row["chunks"][0]["draws"][1]["evidence"] = ["B:2"]
+        result = select(row)
+        self.assertEqual(result["chunks"][0]["attempts"][0]["action"], RETRY)
+        self.assertEqual(result["chunks"][0]["attempts"][0]["kept_ids"], [])
+        self.assertEqual([item["id"] for item in result["selected_evidence"]], ["B:2"])
 
     def test_terminal_verdict_is_record_only_and_uses_saved_evidence(self):
         controller = FakeController()

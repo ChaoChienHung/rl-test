@@ -91,6 +91,22 @@ def verdict_retry_feedback(action, current_draw, selected_draw,
     return useful_retry_credit if selected_draw.get("correct") else -1.0
 
 
+def citation_choice_feedback(choice, cited_id, annotated_gold_ids,
+                             keep_gold=1.0, drop_gold=-0.5,
+                             keep_unannotated=-0.25, drop_unannotated=0.1):
+    """Grade KEEP/DROP on STOP-draw citations using annotated FEVER IDs.
+
+    An off-gold citation is unannotated, not proven false; its feedback is
+    deliberately weaker. NEI/no-gold examples should be skipped by the caller.
+    """
+    if choice not in ("KEEP", "DROP"):
+        raise ValueError("citation choice must be KEEP or DROP")
+    is_gold = cited_id in annotated_gold_ids
+    if is_gold:
+        return keep_gold if choice == "KEEP" else drop_gold
+    return keep_unannotated if choice == "KEEP" else drop_unannotated
+
+
 def evidence_penalties(saved, retrieved, gold_sets, weights=RewardWeights()):
     """Score saved evidence against any fully retrievable FEVER gold set.
 

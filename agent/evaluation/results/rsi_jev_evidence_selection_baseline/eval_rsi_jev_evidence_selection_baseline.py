@@ -1,7 +1,7 @@
 """Evaluate STOP/RETRY plus per-sentence KEEP/DROP on fixed three-draw chunks.
 
-KEEP decisions accumulate across RETRY and STOP. All chunks are visited, and
-the selected set is sent to one fresh final Qwen verifier. No gold reaches Jev.
+RETRY discards the current draw. On STOP, chosen citations are pooled across
+chunks and sent to fresh final Qwen verification. No gold reaches Jev.
 """
 
 import argparse
@@ -46,24 +46,22 @@ TERMINAL_QUESTION = {"verdict": {"type": "choice",
                  "NEI": "Saved evidence does not justify either conclusion."}}}
 ACTION = {"type": "choice", "instructions": (
     "For this fixed evidence group, decide whether to STOP after this verifier draw or "
-    "RETRY the exact same input. Independently decide which individual sentences to KEEP. "
-    "You can KEEP or DROP only sentences actually cited by this verifier draw; uncited "
-    "retrieved sentences are hidden. KEEP decisions from this draw are saved even if "
-    "you RETRY; they accumulate as a SET "
-    "with saved sentences from all previous draws and groups. Every group will still be "
-    "processed. RETRY reveals no new retrieved sentences and costs one verifier call. "
-    "Use RETRY when another sample may help; avoid accumulating irrelevant evidence. "
+    "RETRY the exact same input. RETRY discards this draw's verdict and citations. "
+    "If you STOP, you will then decide KEEP or DROP for sentences cited by this draw. "
+    "Uncited retrieved sentences are hidden. Every group will still be processed. "
+    "RETRY reveals no new retrieved sentences and costs one verifier call. "
+    "Use RETRY when another sample may help. "
     "You have at most two retries per group. Do not decide the final claim verdict."),
-    "criteria": {STOP: "Keep selected sentences from this draw and move to the next group.",
-                 RETRY: "Keep selected sentences from this draw and sample the same group again."}}
+    "criteria": {STOP: "Choose citations from this draw, then move to the next group.",
+                 RETRY: "Discard this draw and sample the same group again."}}
 ACTION_KEEP_ALL = {"type": "choice", "instructions": (
     "For this fixed evidence group, choose STOP after this verifier draw or RETRY "
-    "the exact same input. All valid sentences cited by each observed draw are saved "
-    "automatically, including on RETRY; you do not choose citations in this condition. "
+    "the exact same input. STOP automatically saves all valid citations from this draw. "
+    "RETRY discards this draw and its citations; you do not choose citations in this condition. "
     "Every group will still be processed. RETRY reveals no new retrieved sentences "
     "and costs one verifier call. You have at most two retries per group."),
     "criteria": {STOP: "Move to the next group after saving this draw's valid citations.",
-                 RETRY: "Save this draw's valid citations and sample the same group again."}}
+                 RETRY: "Discard this draw and sample the same group again."}}
 
 
 def cited_candidates(chunk, draw):
@@ -72,8 +70,8 @@ def cited_candidates(chunk, draw):
             if item_id in by_id]
 
 
-def questions_for(chunk, draw, global_numbers, allow_retry=True):
-    questions = {"action": ACTION} if allow_retry else {}
+def questions_for(chunk, draw, global_numbers):
+    questions = {}
     for index, item in enumerate(cited_candidates(chunk, draw)):
         eid = global_numbers[item["id"]]
         questions[f"keep_{index}"] = {
@@ -83,7 +81,7 @@ def questions_for(chunk, draw, global_numbers, allow_retry=True):
                              "verifier output. "
                              "Select KEEP only if it is relevant, factually useful, and not redundant. "
                              "Avoid keeping every shown sentence merely for safety. "
-                             "This KEEP decision persists even when the group is retried."),
+                             "The group has stopped; only citations kept from this draw reach the final verifier."),
             "criteria": {KEEP: "Save this exact sentence in the final evidence set.",
                          DROP: "Do not save this sentence from this draw."},
         }
@@ -125,29 +123,35 @@ def select(row, model=None, threshold=THRESHOLD, stop_policy=None, keep_policy=N
         chunk_kept = set()
         for di, draw in enumerate(chunk["draws"]):
             allow_retry = di < MAX_DRAWS - 1
-            questions = {}
+            state = selection_state_for(row, ci, di)
+            action_answers = {}
             if stop_policy == "jev" and allow_retry:
-                questions["action"] = ACTION if keep_policy == "jev" else ACTION_KEEP_ALL
-            if keep_policy == "jev":
-                questions.update(questions_for(chunk, draw, numbers, allow_retry=False))
-            answers = model.predict(state=selection_state_for(row, ci, di), questions=questions)["answers"] if questions else {}
-            controller_calls += int(bool(questions))
+                question = {"action": ACTION if keep_policy == "jev" else ACTION_KEEP_ALL}
+                action_answers = model.predict(state=state, questions=question)["answers"]
+                controller_calls += 1
             if stop_policy == "jev" and allow_retry:
-                action = answers["action"]["choice"]
+                action = action_answers["action"]["choice"]
             else:
                 action = heuristic_action(draw, len(chunk["evidence"]), threshold) if allow_retry else STOP
             if action not in (STOP, RETRY):
                 raise ValueError(f"invalid controller action {action!r}")
-            if keep_policy == "jev":
+            keep_answers = {}
+            if action == STOP and keep_policy == "jev" and draw.get("format_ok"):
+                questions = questions_for(chunk, draw, numbers)
+                keep_answers = model.predict(state=state, questions=questions)["answers"] if questions else {}
+                controller_calls += int(bool(questions))
                 chosen = set()
                 for index, item in enumerate(cited_candidates(chunk, draw)):
-                    choice = answers[f"keep_{index}"]["choice"]
+                    choice = keep_answers[f"keep_{index}"]["choice"]
                     if choice not in (KEEP, DROP):
                         raise ValueError(f"invalid evidence choice {choice!r}")
                     if choice == KEEP:
                         chosen.add(item["id"])
-            else:
+            elif action == STOP:
                 chosen = set(draw.get("evidence", [])) if draw.get("format_ok") else set()
+            else:
+                chosen = set()
+            answers = {**action_answers, **keep_answers}
             probabilities = {key: answer.get("probabilities") for key, answer in answers.items()} if answers else None
             allowed = {item["id"] for item in chunk["evidence"]}
             if not chosen <= allowed:
@@ -300,7 +304,7 @@ def summarize(rows):
                 r["jev_terminal_verdict"]["fever_label"] != r["jev_final"]["pred"]
                 for r in rows),
             "actual_new_final_qwen_calls": sum(r["new_final_qwen_calls"] for r in rows),
-            "note": "Each chunk has its own KEEP set. Three new pooled-verifier draws use unchanged pooled evidence; STOP/RETRY selects one. Actual precomputation costs three calls per unique pool even when simulated stopping is earlier. Gold and future draws are used only in post-hoc diagnostics."}
+            "note": "RETRY discards the current chunk draw and its citations. Each chunk saves citations only from its STOP draw. Three new pooled-verifier draws use unchanged pooled evidence; STOP/RETRY selects one. Actual precomputation costs three calls per unique pool even when simulated stopping is earlier. Gold and future draws are used only in post-hoc diagnostics."}
 
 
 def run(args):
@@ -345,7 +349,7 @@ def run(args):
               "heuristic_threshold": args.threshold,
               "arms": {name: {"chunk_stop": modes[0], "citation_keep": modes[1],
                                 "pooled_stop": modes[2]} for name, modes in ARMS.items()},
-              "method": "Each chunk draw yields STOP/RETRY plus cited-sentence KEEP/DROP; chunk sets are pooled; three fresh final-verifier samples are generated from the unchanged pooled input and a second STOP/RETRY policy selects one."}
+              "method": "Each chunk draw yields STOP/RETRY; RETRY discards that draw, while STOP saves its citations with optional KEEP/DROP. Chunk sets are pooled; three fresh final-verifier samples are generated from unchanged pooled input and a second STOP/RETRY policy selects one."}
     output.mkdir(parents=True)
     (output / "manifest.json").write_text(json.dumps(record, indent=2, ensure_ascii=False) + "\n")
     decisions = []

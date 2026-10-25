@@ -5,11 +5,12 @@ from unittest.mock import patch
 
 from agent.train.train_jev_rl import pooled_decision_reward, sample_episode, sample_pooled_episode
 from agent.train.replay_env import (RETRY, STOP, best_gold_set_evidence_credit,
+                                    citation_choice_feedback,
                                     verdict_retry_feedback)
 
 
 class JevTrainRewardTest(unittest.TestCase):
-    def test_citation_variant_keeps_valid_citations_from_retried_draws(self):
+    def test_citation_variant_discards_retried_draw_citations(self):
         row = {"claim": "claim", "shown": [{"id": "A:1", "text": "first"},
                                            {"id": "B:2", "text": "second"}],
                "chunks": [{"evidence": [{"id": "A:1", "text": "first"},
@@ -23,9 +24,51 @@ class JevTrainRewardTest(unittest.TestCase):
                                 (STOP, 0.0, 0.0, 0.0)]) as question:
             episode = sample_episode(row, policy, None, "citation")
         self.assertEqual([item["id"] for item in episode["selected_evidence"]],
-                         ["A:1", "B:2"])
+                         ["B:2"])
+        self.assertEqual(episode["trace"][0]["kept_ids"], [])
         self.assertEqual(episode["extra_draws"], 1)
-        self.assertIn("saved automatically", question.call_args_list[0].args[4]["instructions"])
+        self.assertIn("RETRY discards", question.call_args_list[0].args[4]["instructions"])
+
+    def test_keep_drop_feedback_is_asymmetric(self):
+        gold = {"A:1"}
+        self.assertEqual(citation_choice_feedback("KEEP", "A:1", gold), 1.0)
+        self.assertEqual(citation_choice_feedback("DROP", "A:1", gold), -0.5)
+        self.assertEqual(citation_choice_feedback("KEEP", "B:2", gold), -0.25)
+        self.assertEqual(citation_choice_feedback("DROP", "B:2", gold), 0.1)
+
+    def test_selection_does_not_ask_keep_on_retry(self):
+        row = {"claim": "claim", "shown": [{"id": "A:1", "text": "first"},
+                                           {"id": "B:2", "text": "second"}],
+               "chunks": [{"evidence": [{"id": "A:1", "text": "first"},
+                                       {"id": "B:2", "text": "second"}],
+                           "draws": [{"format_ok": True, "evidence": ["A:1"]},
+                                     {"format_ok": True, "evidence": ["B:2"]},
+                                     {"format_ok": True, "evidence": []}]}]}
+        with patch("agent.train.train_jev_rl.sample_question",
+                   side_effect=[(RETRY, 0.0, 0.0, 0.0),
+                                (STOP, 0.0, 0.0, 0.0),
+                                ("KEEP", 0.0, 0.0, 0.0)]) as question:
+            episode = sample_episode(row, SimpleNamespace(), None, "selection")
+        self.assertEqual(question.call_count, 3)
+        self.assertEqual(episode["trace"][0]["kept_ids"], [])
+        self.assertEqual(episode["citation_decisions"],
+                         [{"id": "B:2", "choice": "KEEP"}])
+        self.assertEqual([item["id"] for item in episode["selected_evidence"]], ["B:2"])
+
+    def test_citation_action_reward_uses_stop_draw_choices(self):
+        claim = {"id": 1, "label": "SUPPORTS"}
+        good = {"gold": "SUPPORTED", "correct": True, "evidence": ["A:1"]}
+        pooled = {"draws": [good] * 3, "selected": good,
+                  "decisions": [{"draw_index": 0, "action": STOP}],
+                  "extra_draws": 0}
+        with patch("agent.train.train_jev_rl.gold_sets", return_value=[[('A', 1)]]):
+            base, _ = pooled_decision_reward(pooled, claim, 0)
+            improved, detail = pooled_decision_reward(
+                pooled, claim, 0,
+                citation_decisions=[{"id": "A:1", "choice": "KEEP"},
+                                    {"id": "B:2", "choice": "DROP"}])
+        self.assertEqual(detail["citation_action_feedback"], [1.0, 0.1])
+        self.assertAlmostEqual(improved - base, 0.25 * 0.55)
 
     def test_pooled_action_reward_and_extra_draw_cost(self):
         claim = {"id": 1, "label": "SUPPORTS"}
