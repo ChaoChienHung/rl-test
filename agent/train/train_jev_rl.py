@@ -29,7 +29,7 @@ from agent.train.replay_env import (MAX_DRAWS, RETRY, STOP,
 from verifier.model import LocalModel, gold_sets, render
 
 
-def validate_train_source(source):
+def validate_train_source(source, allowed_ids=None):
     manifest_path = source / "manifest.json"
     metrics_path = source / "metrics.json"
     rows_path = source / "predictions.jsonl"
@@ -60,16 +60,24 @@ def validate_train_source(source):
             raise ValueError("train chunk order mismatch")
         if any(len(chunk["draws"]) != MAX_DRAWS for chunk in row["chunks"]):
             raise ValueError("train chunk lacks three draws")
+    if allowed_ids is not None:
+        if not set(allowed_ids) <= set(claims):
+            raise ValueError("controller subset has IDs outside the 5,500 train source")
+        rows = [row for row in rows if row["id"] in allowed_ids]
+        claims = {claim_id: claims[claim_id] for claim_id in allowed_ids}
     return manifest, rows, claims
 
 
 def pooled_decision_reward(pooled, claim, chunk_extra_draws, saved_evidence_ids=None,
                            extra_draw_cost=0.05, evidence_weight=0.5,
-                           saved_set_weight=0.25):
+                           saved_set_weight=0.25, useful_retry_credit=0.25,
+                           correct_retry_penalty=1.5):
     """Final outcome plus one reward for the unique saved evidence set."""
     final = pooled["selected"]
     feedback = [verdict_retry_feedback(decision["action"],
-                                       pooled["draws"][decision["draw_index"]], final)
+                                       pooled["draws"][decision["draw_index"]], final,
+                                       useful_retry_credit=useful_retry_credit,
+                                       correct_retry_penalty=correct_retry_penalty)
                 for decision in pooled["decisions"] if decision["draw_index"] < MAX_DRAWS - 1]
     action_reward = sum(feedback) / len(feedback) if feedback else 0.0
     verdict_reward = 1.0 if final["correct"] else -1.0
@@ -95,7 +103,7 @@ def pooled_decision_reward(pooled, claim, chunk_extra_draws, saved_evidence_ids=
         "saved_set_detail": saved_set_detail,
         "chunk_extra_draws": chunk_extra_draws,
         "pooled_extra_draws": pooled["extra_draws"], "call_penalty": call_penalty,
-        "action_rule": "STOP correct +1 / wrong -1; RETRY correct -1.5; RETRY wrong +0.25 only if final verdict correct, else -1"}
+        "action_rule": f"STOP correct +1 / wrong -1; RETRY correct -{correct_retry_penalty}; RETRY wrong +{useful_retry_credit} only if final verdict correct, else -1"}
 
 
 def sample_question(policy, reference, state, key, specification, kl_coef):
@@ -206,13 +214,24 @@ def run(args):
     if not torch.cuda.is_available():
         raise RuntimeError("Jev RL pilot requires a CUDA GPU allocation")
     source = Path(args.source_run)
-    source_manifest, rows, claims = validate_train_source(source)
+    split_path = getattr(args, "split_manifest", None)
+    subset = getattr(args, "subset", None)
+    split = json.loads(Path(split_path).read_text()) if split_path else None
+    if bool(split) != bool(subset):
+        raise ValueError("--split-manifest and --subset must be set together")
+    allowed_ids = set(split[f"{subset}_ids"]) if split else None
+    source_manifest, rows, claims = validate_train_source(source, allowed_ids)
     output = Path(args.output_dir)
     if output.exists():
         raise FileExistsError(f"training output already exists: {output}")
     random.seed(args.seed)
     torch.manual_seed(args.seed)
-    policy = JevHeadPolicy(args.jev_model, device="cuda")
+    initial_head = getattr(args, "init_head", None)
+    if initial_head:
+        head_metadata = Path(initial_head).with_suffix(".json")
+        if not head_metadata.is_file() or json.loads(head_metadata.read_text()).get("variant") != args.variant:
+            raise ValueError("initial Jev head metadata is missing or has another controller variant")
+    policy = JevHeadPolicy(args.jev_model, head_path=initial_head, device="cuda")
     reference = copy.deepcopy(policy.model.scorer).eval() if args.kl_coef else None
     if reference is not None:
         for parameter in reference.parameters():
@@ -231,15 +250,18 @@ def run(args):
                               text=True, check=False).stdout.strip() or None
     record = {"training_code": __name__, "split": "FEVER train",
               "train_ids_file": source_manifest["claim_ids_file"], "n_claims": len(rows),
+              "split_manifest": split_path, "subset": subset, "init_head": initial_head,
               "source_run": str(source), "source_commit": source_manifest.get("commit"),
               "commit": revision, "jev_model": args.jev_model,
               "jev_package_version": importlib.metadata.version("rsi-jev"),
               "variant": args.variant, "seed": args.seed, "epochs": args.epochs,
               "learning_rate": args.lr, "weight_decay": args.weight_decay,
               "kl_coef": args.kl_coef, "entropy_coef": args.entropy_coef,
+              "useful_retry_credit": args.useful_retry_credit,
+              "correct_retry_penalty": args.correct_retry_penalty,
               "baseline_ema": args.baseline_ema,
               "reward_rule": "selected verdict +/-1 + 0.5 * pooled-verifier citation credit + 0.25 * unique saved-set credit once per claim + mean asymmetric pooled STOP/RETRY feedback - 0.05 per extra draw",
-              "pooled_action_rule": "STOP correct +1 / wrong -1; RETRY correct -1.5; RETRY wrong +0.25 only if selected verdict becomes correct, otherwise -1",
+              "pooled_action_rule": f"STOP correct +1 / wrong -1; RETRY correct -{args.correct_retry_penalty}; RETRY wrong +{args.useful_retry_credit} only if selected verdict becomes correct, otherwise -1",
               "gold_evidence_rule": "best alternative set: overlap/size + 0.25 complete-set bonus - 0.25 off-gold citation fraction; NEI empty +0.25 else -0.25",
               "saved_set_rule": "score the final unique saved citation set once against the best annotated FEVER gold set; no per-draw KEEP/DROP credit, including on RETRY",
               "chunk_gold_action_reward": False,
@@ -271,7 +293,9 @@ def run(args):
                 extra_draws = episode["extra_draws"] + pooled["extra_draws"]
                 reward, reward_detail = pooled_decision_reward(
                     pooled, claim, episode["extra_draws"],
-                    saved_evidence_ids=saved)
+                    saved_evidence_ids=saved,
+                    useful_retry_credit=args.useful_retry_credit,
+                    correct_retry_penalty=args.correct_retry_penalty)
                 advantage = reward - baseline
                 baseline += args.baseline_ema * advantage
                 log_probs = episode["log_probs"] + pooled["log_probs"]
@@ -324,6 +348,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--source-run", required=True)
     parser.add_argument("--output-dir", required=True)
+    parser.add_argument("--split-manifest")
+    parser.add_argument("--subset", choices=("sft", "rl"))
+    parser.add_argument("--init-head")
     parser.add_argument("--jev-model", default="shgao/rsi-jev-v2.1-qwen3.5-2b")
     parser.add_argument("--variant", choices=("citation", "selection"), required=True)
     parser.add_argument("--epochs", type=int, default=1)
@@ -333,9 +360,11 @@ def main():
     parser.add_argument("--kl-coef", type=float, default=0.01)
     parser.add_argument("--entropy-coef", type=float, default=0.001)
     parser.add_argument("--baseline-ema", type=float, default=0.02)
+    parser.add_argument("--useful-retry-credit", type=float, default=0.25)
+    parser.add_argument("--correct-retry-penalty", type=float, default=1.5)
     parser.add_argument("--save-every", type=int, default=100)
     args = parser.parse_args()
-    if args.epochs < 1 or args.save_every < 1 or args.lr <= 0 or not 0 < args.baseline_ema <= 1:
+    if args.epochs < 1 or args.save_every < 1 or args.lr <= 0 or not 0 < args.baseline_ema <= 1 or args.useful_retry_credit < 0 or args.correct_retry_penalty < 0:
         parser.error("epochs/save-every/lr must be positive and baseline-ema in (0, 1]")
     run(args)
 

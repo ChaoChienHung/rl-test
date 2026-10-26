@@ -94,6 +94,26 @@ class JevTrainRewardTest(unittest.TestCase):
         self.assertEqual(detail["final_verdict_correct"], False)
         self.assertEqual(reward, -2)
 
+    def test_new_split_reward_credits_only_a_successful_retry(self):
+        claim = {"id": 1, "label": "SUPPORTS"}
+        wrong = {"gold": "SUPPORTED", "correct": False, "evidence": []}
+        right = {"gold": "SUPPORTED", "correct": True, "evidence": ["A:1"]}
+        recovered = {"draws": [wrong, right, wrong], "selected": right,
+                     "decisions": [{"draw_index": 0, "action": RETRY},
+                                   {"draw_index": 1, "action": STOP}],
+                     "extra_draws": 1}
+        futile = {**recovered, "selected": wrong}
+        with patch("agent.train.train_jev_rl.gold_sets", return_value=[[('A', 1)]]):
+            good_reward, good_detail = pooled_decision_reward(
+                recovered, claim, 0, useful_retry_credit=1.5,
+                correct_retry_penalty=1.0)
+            bad_reward, bad_detail = pooled_decision_reward(
+                futile, claim, 0, useful_retry_credit=1.5,
+                correct_retry_penalty=1.0)
+        self.assertEqual(good_detail["pooled_action_feedback"][0], 1.5)
+        self.assertEqual(bad_detail["pooled_action_feedback"][0], -1.0)
+        self.assertGreater(good_reward, bad_reward)
+
     def test_partial_best_gold_set_and_off_gold_penalty(self):
         groups = [{"A:1", "A:2", "A:3"}, {"B:1"}]
         exact, detail = best_gold_set_evidence_credit("SUPPORTED", ["B:1"], groups)
