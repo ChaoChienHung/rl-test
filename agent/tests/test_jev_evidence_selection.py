@@ -9,8 +9,8 @@ from unittest.mock import patch
 
 from agent.evaluation.results.rsi_jev_evidence_selection_baseline import eval_rsi_jev_evidence_selection_baseline as evaluator
 from agent.evaluation.results.rsi_jev_evidence_selection_baseline.eval_rsi_jev_evidence_selection_baseline import (
-    KEEP, RETRY, STOP, action_diagnostic, questions_for, select,
-    selection_state_for, terminal_verdict, threshold_for_arm,
+    ARMS, KEEP, RETRY, STOP, action_diagnostic, questions_for, select,
+    primary_policy_for_variant, selection_state_for, terminal_verdict, threshold_for_arm,
 )
 
 
@@ -100,6 +100,11 @@ class EvidenceSelectionTest(unittest.TestCase):
             controller = CapturingController()
             select(row, controller, stop_policy=stop_policy, keep_policy=keep_policy)
             self.assertEqual(controller.question_keys, expected_keys)
+
+    def test_citation_arm_matches_train_variant(self):
+        self.assertEqual(ARMS["jev_citation"], ("jev", "all", "jev"))
+        self.assertEqual(primary_policy_for_variant("citation"), "jev_citation")
+        self.assertEqual(primary_policy_for_variant("selection"), "jev")
 
     def test_heuristic_retry_does_not_accumulate_citations(self):
         row = self.row()

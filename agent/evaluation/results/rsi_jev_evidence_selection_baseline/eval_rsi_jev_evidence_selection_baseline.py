@@ -32,6 +32,7 @@ ARMS = {
     "heuristic_0p3": ("heuristic", "all", "heuristic"),
     "heuristic_0p7": ("heuristic", "all", "heuristic"),
     "jev": ("jev", "jev", "jev"),
+    "jev_citation": ("jev", "all", "jev"),
     "jev_chunk_stop": ("jev", "all", "heuristic"),
     "jev_keep": ("heuristic", "jev", "heuristic"),
     "jev_pooled_stop": ("heuristic", "all", "jev"),
@@ -41,6 +42,14 @@ HEURISTIC_THRESHOLD_OVERRIDES = {"heuristic_0p3": 0.3, "heuristic_0p7": 0.7}
 
 def threshold_for_arm(arm, default):
     return HEURISTIC_THRESHOLD_OVERRIDES.get(arm, default)
+
+
+def primary_policy_for_variant(variant):
+    if variant == "selection":
+        return "jev"
+    if variant == "citation":
+        return "jev_citation"
+    raise ValueError(f"unsupported trained head variant: {variant!r}")
 
 
 TERMINAL_LABELS = {"ACCEPT": "SUPPORTED", "REJECT": "REFUTED",
@@ -355,9 +364,15 @@ def run(args):
     if output.exists():
         raise FileExistsError(f"result directory exists: {output}")
     trained_head = getattr(args, "trained_head", None)
+    trained_variant = None
     if trained_head:
         if args.backend != "rsi-jev":
             raise ValueError("a trained scorer head requires the RSI-Jev backend")
+        head_metadata = Path(trained_head).with_suffix(".json")
+        if not head_metadata.is_file():
+            raise FileNotFoundError(f"missing trained head metadata: {head_metadata}")
+        trained_variant = json.loads(head_metadata.read_text())["variant"]
+        primary_policy_for_variant(trained_variant)
         from agent.train.jev_head import JevHeadPolicy
         controller = JevHeadPolicy(args.model, head_path=trained_head)
     else:
@@ -372,7 +387,7 @@ def run(args):
               "subset_rule": "first frozen source rows in source order",
               "source_commit": manifest.get("commit"), "commit": revision,
               "jev_backend": args.backend, "jev_model": args.model,
-              "trained_head": trained_head,
+              "trained_head": trained_head, "trained_variant": trained_variant,
               "jev_package_version": importlib.metadata.version("rsi-jev" if args.backend == "rsi-jev" else "wev-ai"),
               "action_question": ACTION, "keep_question_builder": "questions_for",
               "terminal_question": TERMINAL_QUESTION,
@@ -483,6 +498,10 @@ def run(args):
             if index % 10 == 0:
                 print(f"{index}/{len(source_rows)} final Qwen verifications", flush=True)
     metrics = summarize(rows)
+    if trained_variant:
+        primary = primary_policy_for_variant(trained_variant)
+        metrics["primary_trained_policy"] = primary
+        metrics["primary_trained_quality"] = metrics["component_ablations"][primary]["quality"]
     (output / "metrics.json").write_text(json.dumps(metrics, indent=2) + "\n")
     print(json.dumps(metrics, indent=2))
     print(f"Results: {output}")
