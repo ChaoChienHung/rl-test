@@ -106,6 +106,72 @@ def pooled_decision_reward(pooled, claim, chunk_extra_draws, saved_evidence_ids=
         "action_rule": f"STOP correct +1 / wrong -1; RETRY correct -{correct_retry_penalty}; RETRY wrong +{useful_retry_credit} only if final verdict correct, else -1"}
 
 
+def first_stop_evidence(row):
+    """Fixed counterfactual: STOP on the first draw of every evidence chunk."""
+    saved = set()
+    for chunk in row["chunks"]:
+        draw = chunk["draws"][0]
+        if draw.get("format_ok"):
+            allowed = {item["id"] for item in chunk["evidence"]}
+            citations = set(draw.get("evidence", []))
+            if not citations <= allowed:
+                raise ValueError("first-draw citation outside its evidence chunk")
+            saved.update(citations)
+    return [item for item in row["shown"] if item["id"] in saved]
+
+
+def outcome_utility(draw, claim, saved_evidence_ids, extra_draws,
+                    evidence_weight=0.5, saved_set_weight=0.25,
+                    extra_draw_cost=0.05):
+    """Comparable final quality and cost, with no action-frequency bonus."""
+    groups = [{f"{page}:{line}" for page, line in group}
+              for group in gold_sets(claim)]
+    cited_credit, _ = best_gold_set_evidence_credit(
+        draw["gold"], draw.get("evidence", []), groups)
+    saved_credit, _ = best_gold_set_evidence_credit(
+        draw["gold"], saved_evidence_ids, groups)
+    return ((1.0 if draw["correct"] else -1.0)
+            + evidence_weight * cited_credit + saved_set_weight * saved_credit
+            - extra_draw_cost * extra_draws)
+
+
+def relative_stop_reward(pooled, claim, episode, baseline_draw,
+                         baseline_evidence):
+    """Policy utility minus the same claim's always-first-STOP utility."""
+    selected_ids = [item["id"] for item in episode["selected_evidence"]]
+    baseline_ids = [item["id"] for item in baseline_evidence]
+    policy_utility = outcome_utility(
+        pooled["selected"], claim, selected_ids,
+        episode["extra_draws"] + pooled["extra_draws"])
+    baseline_utility = outcome_utility(baseline_draw, claim, baseline_ids, 0)
+    return policy_utility - baseline_utility, {
+        "reward_mode": "relative_stop", "policy_utility": policy_utility,
+        "always_stop_utility": baseline_utility,
+        "quality_gain_over_always_stop": policy_utility - baseline_utility,
+        "baseline_correct": bool(baseline_draw["correct"]),
+        "baseline_fever": bool(baseline_draw["fever_score"]),
+        "baseline_saved_evidence": baseline_ids,
+        "chunk_extra_draws": episode["extra_draws"],
+        "pooled_extra_draws": pooled["extra_draws"],
+        "action_rule": "final verdict and evidence quality minus the claim-matched always-first-STOP policy, with extra verifier-call cost; no direct STOP bonus"}
+
+
+def first_stop_baseline_draw(row, claim, episode, pooled, verifier, seed):
+    """Use a matched fresh pooled sample; reuse it when policy and baseline pools match."""
+    evidence = first_stop_evidence(row)
+    policy_ids = [item["id"] for item in episode["selected_evidence"]]
+    baseline_ids = [item["id"] for item in evidence]
+    if policy_ids == baseline_ids:
+        return pooled["draws"][0], evidence, 0
+    prompt = render(row["claim"], evidence_for(evidence))
+    with verifier.torch.no_grad():
+        generations = verifier.run([prompt] * MAX_DRAWS, seed=seed)
+        if len(generations) != MAX_DRAWS:
+            raise ValueError("expected three matched baseline verifier draws")
+        draw = scored(claim, evidence_for(evidence), generations[0])
+    return draw, evidence, MAX_DRAWS
+
+
 def sample_question(policy, reference, state, key, specification, kl_coef):
     """One sampled typed choice with differentiable option log probability."""
     torch = policy.torch
@@ -259,6 +325,7 @@ def run(args):
               "kl_coef": args.kl_coef, "entropy_coef": args.entropy_coef,
               "useful_retry_credit": args.useful_retry_credit,
               "correct_retry_penalty": args.correct_retry_penalty,
+              "reward_mode": args.reward_mode,
               "baseline_ema": args.baseline_ema,
               "reward_rule": "selected verdict +/-1 + 0.5 * pooled-verifier citation credit + 0.25 * unique saved-set credit once per claim + mean asymmetric pooled STOP/RETRY feedback - 0.05 per extra draw",
               "pooled_action_rule": f"STOP correct +1 / wrong -1; RETRY correct -{args.correct_retry_penalty}; RETRY wrong +{args.useful_retry_credit} only if selected verdict becomes correct, otherwise -1",
@@ -273,6 +340,12 @@ def run(args):
               "pooled_policy": "early STOP uses current draw; forced third draw uses verdict majority then token confidence",
               "updated_parameters": "RSI-Jev option scorer only; tower frozen",
               "validation_claims_used": False}
+    if args.reward_mode == "relative_stop":
+        record["reward_rule"] = ("same-claim utility gain over always STOP on the first chunk draw and first pooled draw; "
+                                 "utility = selected verdict +/-1 + 0.5 pooled citation credit + "
+                                 "0.25 final saved-set credit - 0.05 per extra simulated call")
+        record["counterfactual_gpu_cost"] = ("three additional pooled generations when the policy's saved evidence pool "
+                                              "differs from always-first-STOP; shared pools reuse the first policy draw")
     output.mkdir(parents=True)
     (output / "manifest.json").write_text(json.dumps(record, indent=2) + "\n")
     baseline = 0.0
@@ -291,11 +364,20 @@ def run(args):
                 final = pooled["selected"]
                 saved = [item["id"] for item in episode["selected_evidence"]]
                 extra_draws = episode["extra_draws"] + pooled["extra_draws"]
-                reward, reward_detail = pooled_decision_reward(
-                    pooled, claim, episode["extra_draws"],
-                    saved_evidence_ids=saved,
-                    useful_retry_credit=args.useful_retry_credit,
-                    correct_retry_penalty=args.correct_retry_penalty)
+                baseline_qwen_calls = 0
+                if args.reward_mode == "relative_stop":
+                    baseline_draw, baseline_evidence, baseline_qwen_calls = first_stop_baseline_draw(
+                        row, claim, episode, pooled, verifier,
+                        seed=source_manifest["generation_seed"] + 100000 + int(row["id"])
+                             + epoch * 1000000)
+                    reward, reward_detail = relative_stop_reward(
+                        pooled, claim, episode, baseline_draw, baseline_evidence)
+                else:
+                    reward, reward_detail = pooled_decision_reward(
+                        pooled, claim, episode["extra_draws"],
+                        saved_evidence_ids=saved,
+                        useful_retry_credit=args.useful_retry_credit,
+                        correct_retry_penalty=args.correct_retry_penalty)
                 advantage = reward - baseline
                 baseline += args.baseline_ema * advantage
                 log_probs = episode["log_probs"] + pooled["log_probs"]
@@ -323,6 +405,7 @@ def run(args):
                          "extra_draws": extra_draws,
                          "chunk_extra_draws": episode["extra_draws"],
                          "pooled_extra_draws": pooled["extra_draws"],
+                         "counterfactual_qwen_calls": baseline_qwen_calls,
                          "saved_evidence": saved, "reward_detail": reward_detail,
                          "trace": episode["trace"],
                          "pooled_trace": pooled["decisions"],
@@ -351,6 +434,8 @@ def main():
     parser.add_argument("--split-manifest")
     parser.add_argument("--subset", choices=("sft", "rl"))
     parser.add_argument("--init-head")
+    parser.add_argument("--reward-mode", choices=("absolute", "relative_stop"),
+                        default="absolute")
     parser.add_argument("--jev-model", default="shgao/rsi-jev-v2.1-qwen3.5-2b")
     parser.add_argument("--variant", choices=("citation", "selection"), required=True)
     parser.add_argument("--epochs", type=int, default=1)

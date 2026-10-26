@@ -16,16 +16,19 @@ QUESTIONS = {"chunk": ACTION_KEEP_ALL, "pooled": FINAL_QUESTION["action"]}
 LABELS = ("STOP", "RETRY")
 
 
-def load_examples(data_dir, split_manifest):
+def load_examples(data_dir, split_manifest, subset="sft"):
     data = Path(data_dir)
     manifest = json.loads((data / "manifest.json").read_text())
     split = json.loads(Path(split_manifest).read_text())
-    if manifest["split_manifest"] != str(split_manifest) or manifest["n_claims"] != 3000:
-        raise ValueError("SFT data does not match the fixed 3,000-claim split")
-    expected = set(split["sft_ids"])
+    expected = (set(split["sft_ids"]) if subset == "sft" else
+                set(split["sft_ids"]) | set(split["rl_ids"]))
+    if (manifest["split_manifest"] != str(split_manifest) or
+            manifest["n_claims"] != len(expected) or
+            manifest.get("subset") != subset):
+        raise ValueError("SFT data does not match the requested controller subset")
     episodes = [json.loads(line) for line in (data / "episodes.jsonl").open(encoding="utf-8")
                 if line.strip()]
-    if len(episodes) != 3000 or {e["claim_id"] for e in episodes} != expected:
+    if len(episodes) != len(expected) or {e["claim_id"] for e in episodes} != expected:
         raise ValueError("SFT episodes are incomplete or contain wrong IDs")
     examples = [example for episode in episodes for example in episode["examples"]]
     for example in examples:
@@ -52,7 +55,8 @@ def run(args):
     import torch
     if not torch.cuda.is_available():
         raise RuntimeError("Jev SFT requires a CUDA GPU allocation")
-    data_manifest, examples, counts = load_examples(args.data_dir, args.split_manifest)
+    data_manifest, examples, counts = load_examples(
+        args.data_dir, args.split_manifest, args.subset)
     output = Path(args.output_dir)
     if output.exists():
         raise FileExistsError(f"training output exists: {output}")
@@ -69,7 +73,8 @@ def run(args):
         "training_code": __name__, "method": "high-margin outcome-derived SFT",
         "variant": "citation", "release": args.jev_model,
         "data_dir": args.data_dir, "data_manifest": data_manifest,
-        "split_manifest": args.split_manifest, "n_claims": 3000,
+        "split_manifest": args.split_manifest, "subset": args.subset,
+        "n_claims": data_manifest["n_claims"],
         "n_examples": len(examples), "label_counts":
             {f"{stage}:{label}": count for (stage, label), count in counts.items()},
         "class_weights": weights, "epochs": args.epochs, "seed": args.seed,
@@ -120,6 +125,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--data-dir", required=True)
     parser.add_argument("--split-manifest", required=True)
+    parser.add_argument("--subset", choices=("sft", "all"), default="sft")
     parser.add_argument("--output-dir", required=True)
     parser.add_argument("--jev-model", default="shgao/rsi-jev-v2.1-qwen3.5-2b")
     parser.add_argument("--epochs", type=int, default=2)

@@ -3,7 +3,9 @@ from contextlib import nullcontext
 from types import SimpleNamespace
 from unittest.mock import patch
 
-from agent.train.train_jev_rl import pooled_decision_reward, sample_episode, sample_pooled_episode
+from agent.train.train_jev_rl import (first_stop_baseline_draw, first_stop_evidence,
+                                     pooled_decision_reward, relative_stop_reward,
+                                     sample_episode, sample_pooled_episode)
 from agent.train.replay_env import (RETRY, STOP, best_gold_set_evidence_credit,
                                     verdict_retry_feedback)
 
@@ -113,6 +115,65 @@ class JevTrainRewardTest(unittest.TestCase):
         self.assertEqual(good_detail["pooled_action_feedback"][0], 1.5)
         self.assertEqual(bad_detail["pooled_action_feedback"][0], -1.0)
         self.assertGreater(good_reward, bad_reward)
+
+    def test_relative_reward_zero_for_always_stop_and_positive_for_recovery(self):
+        claim = {"id": 1, "label": "SUPPORTS"}
+        wrong = {"gold": "SUPPORTED", "correct": False, "fever_score": False,
+                 "evidence": []}
+        right = {"gold": "SUPPORTED", "correct": True, "fever_score": True,
+                 "evidence": ["A:1"]}
+        episode = {"selected_evidence": [{"id": "A:1", "text": "evidence"}],
+                   "extra_draws": 0}
+        pooled = {"draws": [wrong, right, wrong], "selected": wrong,
+                  "extra_draws": 0}
+        with patch("agent.train.train_jev_rl.gold_sets", return_value=[[('A', 1)]]):
+            same, detail = relative_stop_reward(
+                pooled, claim, episode, wrong, episode["selected_evidence"])
+            pooled["selected"] = right
+            pooled["extra_draws"] = 1
+            better, _ = relative_stop_reward(
+                pooled, claim, episode, wrong, episode["selected_evidence"])
+            pooled["selected"] = wrong
+            worse, _ = relative_stop_reward(
+                pooled, claim, episode, wrong, episode["selected_evidence"])
+        self.assertEqual(same, 0)
+        self.assertEqual(detail["reward_mode"], "relative_stop")
+        self.assertGreater(better, 0)
+        self.assertLess(worse, 0)
+
+    def test_first_stop_baseline_reuses_matched_pool(self):
+        evidence = [{"id": "A:1", "text": "evidence"}]
+        row = {"shown": evidence,
+               "chunks": [{"evidence": evidence,
+                           "draws": [{"format_ok": True, "evidence": ["A:1"]}]}]}
+        draw = {"correct": True, "fever_score": True}
+        episode = {"selected_evidence": evidence}
+        pooled = {"draws": [draw]}
+        self.assertEqual(first_stop_evidence(row), evidence)
+        self.assertEqual(first_stop_baseline_draw(
+            row, {"id": 1}, episode, pooled, None, 1), (draw, evidence, 0))
+
+    def test_first_stop_baseline_generates_only_when_pool_differs(self):
+        evidence = [{"id": "A:1", "text": "evidence"}]
+        row = {"claim": "claim", "shown": evidence,
+               "chunks": [{"evidence": evidence,
+                           "draws": [{"format_ok": True, "evidence": ["A:1"]}]}]}
+        episode = {"selected_evidence": []}
+        baseline = {"correct": True, "fever_score": True}
+        class FakeVerifier:
+            torch = SimpleNamespace(no_grad=nullcontext)
+            def run(self, prompts, seed):
+                self.calls = (len(prompts), seed)
+                return [{"index": index} for index in range(len(prompts))]
+        verifier = FakeVerifier()
+        with patch("agent.train.train_jev_rl.scored", return_value=baseline):
+            draw, selected, calls = first_stop_baseline_draw(
+                row, {"id": 1}, episode, {"draws": [{}] + [{}] * 2},
+                verifier, 42)
+        self.assertIs(draw, baseline)
+        self.assertEqual(selected, evidence)
+        self.assertEqual(calls, 3)
+        self.assertEqual(verifier.calls, (3, 42))
 
     def test_partial_best_gold_set_and_off_gold_penalty(self):
         groups = [{"A:1", "A:2", "A:3"}, {"B:1"}]

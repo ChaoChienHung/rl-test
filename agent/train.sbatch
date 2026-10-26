@@ -35,7 +35,16 @@ test -f "$checkpoints/adapter_model.safetensors" || test -f "$checkpoints/adapte
 }
 source_run="${TRAIN_SOURCE_RUN:-agent/data/train_rollouts/sft-direct-from-base-qwen3p5-2b-5500-samples/direct-cap160/stochastic-3-draws-per-chunk-5500-train-claims}"
 split_manifest="${CONTROLLER_SPLIT:-agent/data/controller_split/sft3000-rl2500/manifest.json}"
-sft_data="${SFT_DATA_DIR:-agent/data/controller_sft/citation-gold-margin0p2-3000-samples/run1}"
+sft_subset="${SFT_SUBSET:-sft}"
+case "$sft_subset" in sft|all) ;; *) echo 'SFT_SUBSET must be sft or all' >&2; exit 2 ;; esac
+if [[ "$sft_subset" == all ]]; then
+  default_sft_data="agent/data/controller_sft/citation-gold-margin0p2-5500-samples/run1"
+  default_sft_result="agent/experiments/jev-sft-citation-from-rsi-v2p1-5500-samples/runs/$run_name"
+else
+  default_sft_data="agent/data/controller_sft/citation-gold-margin0p2-3000-samples/run1"
+  default_sft_result="agent/experiments/jev-sft-citation-from-rsi-v2p1-3000-samples/runs/$run_name"
+fi
+sft_data="${SFT_DATA_DIR:-$default_sft_data}"
 python -m agent.data.build_controller_split --check
 case "$phase" in
   rollouts)
@@ -57,8 +66,15 @@ case "$phase" in
     result_dir="${RESULT_DIR:-$sft_data}"
     test ! -f "$result_dir/manifest.json" || { echo "SFT data already complete: $result_dir" >&2; exit 2; }
     echo "Building outcome-derived citation SFT examples into $result_dir"
+    reuse_args=()
+    if [[ "$sft_subset" == all ]]; then
+      reuse_dir="${SFT_REUSE_DIR:-agent/data/controller_sft/citation-gold-margin0p2-3000-samples/run1}"
+      test -f "$reuse_dir/manifest.json" || { echo "Missing 3,000-row reusable SFT data: $reuse_dir" >&2; exit 2; }
+      reuse_args=(--reuse-episodes "$reuse_dir")
+    fi
     srun python -m agent.train.build_citation_sft_data \
       --source-run "$source_run" --split-manifest "$split_manifest" \
+      --subset "$sft_subset" "${reuse_args[@]}" \
       --margin "${SFT_MARGIN:-0.2}" --output-dir "$result_dir"
     ;;
   sft)
@@ -67,11 +83,12 @@ case "$phase" in
     python -c 'import rsijev; from serve.release import load_release' || {
       echo 'Install the RSI-Jev GitHub package in .venv first' >&2; exit 2;
     }
-    result_dir="${RESULT_DIR:-agent/experiments/jev-sft-citation-from-rsi-v2p1-3000-samples/runs/$run_name}"
+    result_dir="${RESULT_DIR:-$default_sft_result}"
     test ! -e "$result_dir" || { echo "Training output exists: $result_dir" >&2; exit 2; }
-    echo "Citation scorer SFT on 3,000 train claims into $result_dir"
+    echo "Citation scorer SFT on $sft_subset train claims into $result_dir"
     srun python -m agent.train.train_jev_sft \
       --data-dir "$sft_data" --split-manifest "$split_manifest" \
+      --subset "$sft_subset" \
       --output-dir "$result_dir" \
       --jev-model "${JEV_MODEL:-shgao/rsi-jev-v2.1-qwen3.5-2b}" \
       --epochs "${EPOCHS:-2}" --seed "${SEED:-0}" --lr "${LR:-0.00001}"
@@ -82,11 +99,18 @@ case "$phase" in
       echo 'Install the RSI-Jev GitHub package in .venv first' >&2; exit 2;
     }
     init_head="${RL_INIT_HEAD:-}"
+    reward_mode="${REWARD_MODE:-absolute}"
+    case "$reward_mode" in absolute|relative_stop) ;; *) echo 'REWARD_MODE must be absolute or relative_stop' >&2; exit 2 ;; esac
+    if [[ "$reward_mode" == relative_stop && "$variant" != citation ]]; then
+      echo 'relative_stop currently supports CONTROLLER_VARIANT=citation only' >&2; exit 2
+    fi
+    reward_suffix=""
+    if [[ "$reward_mode" == relative_stop ]]; then reward_suffix="-relative-stop"; fi
     if [[ -n "$init_head" ]]; then
       test -f "$init_head" || { echo "Missing initial SFT head: $init_head" >&2; exit 2; }
-      default_result_dir="agent/experiments/jev-rl-$variant-from-sft3000-rsi-v2p1-2500-samples/runs/$run_name"
+      default_result_dir="agent/experiments/jev-rl-$variant-from-sft3000-rsi-v2p1${reward_suffix}-2500-samples/runs/$run_name"
     else
-      default_result_dir="agent/experiments/jev-rl-$variant-from-rsi-v2p1-2500-samples/runs/$run_name"
+      default_result_dir="agent/experiments/jev-rl-$variant-from-rsi-v2p1${reward_suffix}-2500-samples/runs/$run_name"
     fi
     result_dir="${RESULT_DIR:-$default_result_dir}"
     test ! -e "$result_dir" || { echo "Training output exists: $result_dir" >&2; exit 2; }
@@ -95,6 +119,7 @@ case "$phase" in
     if [[ -n "$init_head" ]]; then init_args=(--init-head "$init_head"); fi
     srun python -m agent.train.train_jev_rl \
       --source-run "$source_run" --variant "$variant" --output-dir "$result_dir" \
+      --reward-mode "$reward_mode" \
       --split-manifest "$split_manifest" --subset rl "${init_args[@]}" \
       --jev-model "${JEV_MODEL:-shgao/rsi-jev-v2.1-qwen3.5-2b}" \
       --epochs "${EPOCHS:-1}" --seed "${SEED:-0}" \

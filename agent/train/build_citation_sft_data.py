@@ -122,15 +122,31 @@ def pooled_examples(row, claim, evidence, draws, margin):
 
 def run(args):
     split = json.loads(Path(args.split_manifest).read_text())
-    allowed = set(split["sft_ids"])
+    allowed = (set(split["sft_ids"]) if args.subset == "sft" else
+               set(split["sft_ids"]) | set(split["rl_ids"]))
+    expected_count = len(allowed)
     source_manifest, rows, claims = validate_train_source(Path(args.source_run), allowed)
-    if len(rows) != 3000 or set(claims) != allowed:
-        raise ValueError("SFT source must contain the fixed 3,000 IDs")
+    if len(rows) != expected_count or set(claims) != allowed:
+        raise ValueError(f"SFT source must contain the fixed {expected_count} IDs")
+    reused = {}
+    if args.reuse_episodes:
+        previous = Path(args.reuse_episodes)
+        prior_manifest = json.loads((previous / "manifest.json").read_text())
+        if (prior_manifest.get("n_claims") != 3000 or
+                prior_manifest.get("source_run") != args.source_run or
+                prior_manifest.get("margin") != args.margin or args.subset != "all"):
+            raise ValueError("reused episodes must be complete matching 3,000-claim SFT data")
+        with (previous / "episodes.jsonl").open(encoding="utf-8") as stream:
+            reused = {episode["claim_id"]: episode for episode in
+                      (json.loads(line) for line in stream if line.strip())}
+        if len(reused) != 3000 or set(reused) != set(split["sft_ids"]):
+            raise ValueError("reused SFT episodes have wrong claim IDs")
     output = Path(args.output_dir)
     output.mkdir(parents=True, exist_ok=True)
     data_path = output / "episodes.jsonl"
     config_path = output / "config.json"
     config = {"source_run": args.source_run, "split_manifest": args.split_manifest,
+              "subset": args.subset, "reuse_episodes": args.reuse_episodes,
               "margin": args.margin, "useful_retry_credit": 1.5,
               "correct_retry_penalty": 1.0,
               "source_commit": source_manifest.get("commit"),
@@ -165,6 +181,10 @@ def run(args):
         for index, row in enumerate(rows, 1):
             if row["id"] in done:
                 continue
+            if row["id"] in reused:
+                stream.write(json.dumps(reused[row["id"]], ensure_ascii=False) + "\n")
+                stream.flush()
+                continue
             claim = claims[row["id"]]
             evidence = heuristic_pool(row)
             generations = verifier.run([render(row["claim"], evidence_for(evidence))] * 3,
@@ -185,13 +205,13 @@ def run(args):
             if index % 50 == 0:
                 print(f"{index}/{len(rows)} SFT claim labels", flush=True)
     episodes = [json.loads(line) for line in data_path.open(encoding="utf-8") if line.strip()]
-    if len(episodes) != 3000 or {episode["claim_id"] for episode in episodes} != allowed:
+    if len(episodes) != expected_count or {episode["claim_id"] for episode in episodes} != allowed:
         raise ValueError("incomplete SFT label output")
     counts = Counter((example["stage"], example["label"])
                      for episode in episodes for example in episode["examples"])
     revision = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True,
                               text=True, check=False).stdout.strip() or None
-    manifest = {**config, "commit": revision, "n_claims": 3000,
+    manifest = {**config, "commit": revision, "n_claims": expected_count,
                 "n_labeled_actions": sum(counts.values()),
                 "label_counts": {f"{stage}:{label}": count for (stage, label), count in counts.items()},
                 "method": "hindsight high-margin labels; heuristic only fixes the pooled citation set; future draws and FEVER gold never enter policy state"}
@@ -204,6 +224,8 @@ def main():
     parser.add_argument("--source-run", required=True)
     parser.add_argument("--output-dir", required=True)
     parser.add_argument("--split-manifest", default=str(DEFAULT_SPLIT))
+    parser.add_argument("--subset", choices=("sft", "all"), default="sft")
+    parser.add_argument("--reuse-episodes")
     parser.add_argument("--margin", type=float, default=0.2)
     args = parser.parse_args()
     if args.margin <= 0:
