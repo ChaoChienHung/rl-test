@@ -22,6 +22,7 @@ verifier/data/train/sft/fever-oracle-cot-soclaas/*/source_rows.jsonl
 verifier/data/train/sft/fever-oracle-cot-soclaas/*/responses.jsonl
 verifier/data/train/sft/fever-oracle-cot-soclaas/*/rejected.jsonl
 verifier/data/train/sft/fever-oracle-cot-soclaas/**/rejected.jsonl
+verifier/data/train/dpo/
 
 # Raw datasets and the BM25 index: download and build them with
 # verifier/docs/data.md. Too large for git (21 GB).

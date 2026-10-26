@@ -8,7 +8,8 @@
 #SBATCH --exclude=xgpe2
 #SBATCH --output=slurm-%x-%j.out
 
-# Submit from the repository root with TRAIN_SCRIPT set to a configuration's train.py.
+# Submit from the repository root with TRAIN_SCRIPT set to a configuration's
+# train.py, or the shared DPO pilot trainer selected by DPO_PAIRS.
 
 set -euo pipefail
 cd "${SLURM_SUBMIT_DIR:?submit from the repo root}"
@@ -19,10 +20,10 @@ export TMPDIR="${TMPDIR:-$HOME/.pip-tmp}"
 mkdir -p "$TMPDIR"
 export TOKENIZERS_PARALLELISM=false
 
-train_script="${TRAIN_SCRIPT:?Set TRAIN_SCRIPT=verifier/experiments/<config>/train.py}"
+train_script="${TRAIN_SCRIPT:?Set TRAIN_SCRIPT to a verifier training script}"
 case "$train_script" in
-  verifier/experiments/*/train.py) ;;
-  *) echo "TRAIN_SCRIPT must be a verifier/experiments/<config>/train.py path" >&2; exit 2 ;;
+  verifier/experiments/*/train.py|verifier/experiments/_shared/dpo_cot.py) ;;
+  *) echo "TRAIN_SCRIPT must be a verifier/experiments/<config>/train.py path or the DPO shared trainer" >&2; exit 2 ;;
 esac
 resolve_renamed_path() {
   python -c 'import sys; from utils.experiment_layout import current_experiment_path; print(current_experiment_path(sys.argv[1]))' "$1"
@@ -69,7 +70,16 @@ if [[ -n "${SFT_CHECKPOINTS:-}" ]]; then
       }
       args+=(--sft "$SFT_CHECKPOINTS")
       ;;
-    *) echo "SFT_CHECKPOINTS applies only to GRPO training" >&2; exit 2 ;;
+    verifier/experiments/_shared/dpo_cot.py)
+      [[ -f "$SFT_CHECKPOINTS/adapter_config.json" ]] || {
+        echo "Missing SFT adapter config: $SFT_CHECKPOINTS/adapter_config.json" >&2; exit 2;
+      }
+      [[ -s "$SFT_CHECKPOINTS/adapter_model.safetensors" || -s "$SFT_CHECKPOINTS/adapter_model.bin" ]] || {
+        echo "Missing SFT adapter weights in $SFT_CHECKPOINTS" >&2; exit 2;
+      }
+      args+=(--sft "$SFT_CHECKPOINTS")
+      ;;
+    *) echo "SFT_CHECKPOINTS applies only to GRPO or DPO training" >&2; exit 2 ;;
   esac
 fi
 if [[ -n "${INIT_CHECKPOINTS:-}" ]]; then
@@ -91,6 +101,30 @@ if [[ -n "${TRAIN_DATA:-}" ]]; then
     verifier/experiments/grpo-*/train.py) args+=(--data "$TRAIN_DATA") ;;
     *) echo "TRAIN_DATA applies only to CoT SFT or GRPO training" >&2; exit 2 ;;
   esac
+fi
+if [[ -n "${DPO_CHECKPOINTS:-}" || -n "${GRPO_IDS_FILE:-}" ]]; then
+  case "$train_script" in
+    verifier/experiments/grpo-cot-from-sft4500dpo500-*/train.py) ;;
+    *) echo "DPO_CHECKPOINTS and GRPO_IDS_FILE apply only to DPO500-to-GRPO500" >&2; exit 2 ;;
+  esac
+  [[ -f "${DPO_CHECKPOINTS:?Set DPO_CHECKPOINTS}/adapter_config.json" ]] || {
+    echo "Missing DPO adapter config" >&2; exit 2;
+  }
+  [[ -s "$DPO_CHECKPOINTS/adapter_model.safetensors" || -s "$DPO_CHECKPOINTS/adapter_model.bin" ]] || {
+    echo "Missing DPO adapter weights" >&2; exit 2;
+  }
+  [[ -f "${GRPO_IDS_FILE:?Set GRPO_IDS_FILE}" ]] || { echo "Missing GRPO IDs file" >&2; exit 2; }
+  args+=(--dpo "$DPO_CHECKPOINTS" --ids-file "$GRPO_IDS_FILE")
+  [[ -z "${GRPO_IDS_KEY:-}" ]] || args+=(--ids-key "$GRPO_IDS_KEY")
+fi
+if [[ "$train_script" == verifier/experiments/_shared/dpo_cot.py ]]; then
+  [[ -f "${DPO_PAIRS:?Set DPO_PAIRS to a generated pairs.jsonl}" ]] || {
+    echo "Missing DPO pairs: $DPO_PAIRS" >&2; exit 2;
+  }
+  args+=(--pairs "$DPO_PAIRS")
+  [[ -z "${DPO_REPORT:-}" ]] || args+=(--report "$DPO_REPORT")
+  [[ -z "${DPO_MAX_STEPS:-}" ]] || args+=(--max-steps "$DPO_MAX_STEPS")
+  [[ -z "${DPO_POOL_CLAIMS:-}" ]] || args+=(--pool-claims "$DPO_POOL_CLAIMS")
 fi
 echo "job=$SLURM_JOB_ID commit=$(git rev-parse HEAD) script=$train_script run=$run_name seed=$seed output_root=${OUTPUT_ROOT:-verifier/experiments}"
 srun python "$train_script" "${args[@]}"

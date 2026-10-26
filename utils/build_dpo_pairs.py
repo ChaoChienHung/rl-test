@@ -61,13 +61,16 @@ def grade(text: str, gold: str, gold_ids: list[str], shown: set[str]):
     return "correct", fmt
 
 
-def build(candidate_paths: list[Path], output: Path, source: Path = SOURCE):
+def build(candidate_paths: list[Path], output: Path, source: Path = SOURCE,
+          allowed_ids: set[str] | None = None):
     if output.exists():
         raise ValueError(f"output already exists: {output}; choose a new directory")
     source_rows = {str(row["id"]): row for row in read_jsonl(source)}
     dev_ids = set(map(str, json.loads(DEV_IDS.read_text(encoding="utf-8"))["ids"]))
     if set(source_rows) & dev_ids:
         raise ValueError("source train data overlaps frozen dev IDs")
+    if allowed_ids is not None and not allowed_ids <= set(source_rows):
+        raise ValueError("allowed IDs include claims outside the source")
 
     grouped = collections.defaultdict(list)
     for path in candidate_paths:
@@ -77,8 +80,12 @@ def build(candidate_paths: list[Path], output: Path, source: Path = SOURCE):
             cid = str(row["id"])
             if cid in dev_ids or cid not in source_rows:
                 raise ValueError(f"{path}:{number}: ID {cid} is dev or outside the training set")
+            if allowed_ids is not None and cid not in allowed_ids:
+                continue
             if row["prompt"] != source_rows[cid]["prompt"]:
                 raise ValueError(f"{path}:{number}: prompt mismatch for ID {cid}")
+            if row.get("finish_reason") not in (None, "eos"):
+                continue
             grouped[(cid, row["system_prompt"])].append({
                 "completion": row["completion"], "model": row["model"],
                 "run": row.get("run"), "file": str(path), "line": number,
@@ -97,17 +104,20 @@ def build(candidate_paths: list[Path], output: Path, source: Path = SOURCE):
             by_format[fmt][category].append(candidate)
         for fmt, outcomes in by_format.items():
             winners = outcomes.get("correct", [])
-            losers = [
-                item
-                for reason in ("wrong_verdict", "wrong_evidence", "invalid_citations", "invalid_format")
-                for item in outcomes.get(reason, [])
-            ]
+            # The committed oracle target gives only one FEVER evidence set.
+            # Alternative evidence may also be valid, so the pilot uses only
+            # unambiguous wrong-verdict rejections with valid syntax/citations.
+            losers = outcomes.get("wrong_verdict", [])
             if not winners or not losers:
                 continue
-            winner = min(winners, key=lambda x: (len(x["completion"]), x["file"], x["line"]))
-            loser = next((x for x in losers if x["completion"] != winner["completion"]), None)
-            if loser is None:
+            eligible = [(winner, loser) for winner in winners for loser in losers
+                        if winner["completion"] != loser["completion"]]
+            if not eligible:
                 continue
+            winner, loser = min(eligible, key=lambda pair: (
+                abs(len(pair[0]["completion"]) - len(pair[1]["completion"])),
+                pair[0]["file"], pair[0]["line"], pair[1]["file"], pair[1]["line"],
+            ))
             pairs.append({
                 "id": cid, "gold": row["gold"], "prompt": row["prompt"],
                 "system_prompt": system_prompt,
@@ -130,7 +140,8 @@ def build(candidate_paths: list[Path], output: Path, source: Path = SOURCE):
         "count": len(pairs), "candidate_files": [str(p) for p in candidate_paths],
         "candidate_grades": dict(counts), "source": str(source),
         "dev_overlap": 0, "sha256": hashlib.sha256(pair_path.read_bytes()).hexdigest(),
-        "caveat": "Structural correctness only; audit reasoning faithfulness before DPO training.",
+        "allowed_ids_count": len(allowed_ids) if allowed_ids is not None else len(source_rows),
+        "caveat": "Wrong-verdict pairs only; oracle evidence is one gold set. Audit reasoning faithfulness before interpreting results.",
     }
     (output / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     return manifest
@@ -142,8 +153,14 @@ def main():
                         help="repeat for each train-claim rollout JSONL")
     parser.add_argument("--output", type=Path, required=True, help="new DPO dataset directory")
     parser.add_argument("--source", type=Path, default=SOURCE)
+    parser.add_argument("--split", type=Path, help="optional DPO/GRPO split manifest")
+    parser.add_argument("--split-key", default="dpo500_ids")
     args = parser.parse_args()
-    print(json.dumps(build(args.candidate, args.output, args.source), indent=2))
+    allowed = None
+    if args.split:
+        split = json.loads(args.split.read_text(encoding="utf-8"))
+        allowed = set(map(str, split[args.split_key]))
+    print(json.dumps(build(args.candidate, args.output, args.source, allowed), indent=2))
 
 
 if __name__ == "__main__":

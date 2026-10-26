@@ -13,6 +13,9 @@ This repository studies evidence-grounded claim verification on FEVER. A verifie
 | Path | What it contains |
 |---|---|
 | [`verifier/train.sbatch`](verifier/train.sbatch) | Single training entry point; select a configuration with `TRAIN_SCRIPT` |
+| [`verifier/dpo_rollouts.sbatch`](verifier/dpo_rollouts.sbatch) | Generate one reusable 1,000-claim native-CoT rollout set for the DPO comparison |
+| [`verifier/dpo_pilot.sbatch`](verifier/dpo_pilot.sbatch) | Build genuine pairs, train DPO500 or DPO1000, then evaluate |
+| [`verifier/grpo_after_dpo.sbatch`](verifier/grpo_after_dpo.sbatch) | Train GRPO500 on the disjoint half after DPO500, then evaluate |
 | [`agent/eval.sbatch`](agent/eval.sbatch) | Agent batch-data and controller evaluation entry point; choose the method with `EVAL_METHOD` |
 | [`agent/train.sbatch`](agent/train.sbatch) | Controller rollout, SFT data, scorer SFT, and RL entry point; choose `PHASE=rollouts`, `sft_data`, `sft`, or `rl` |
 | [`agent/requirements.txt`](agent/requirements.txt) | Optional RSI-Jev controller dependency |
@@ -143,11 +146,35 @@ EVIDENCE_BATCH_SIZE=10 RUN_NAME=stochastic-3-draws-per-chunk-900-claims \
 
 The job uses `temperature=0.7`, `top_p=0.9` and seed 0 unless overridden. It saves under `agent/data/evidence_batches/<eval-model>/direct-cap160/stochastic-3-draws-per-chunk-900-claims/`. Each claim row contains `shown` plus `chunks[]`; each chunk contains its fixed `evidence`, `sampling_seed`, and three scored `draws`. No union, controller action or final verdict is selected in this dataset. If retrieval returns the same 3,169 chunks as the earlier run, expect 9,507 generated verifier outputs. `EVIDENCE_DRAWS=5` is supported for a later, separately named run; the current STOP/RETRY budget is three. This dev set is evaluation data only.
 
-### DPO pair curation (planned)
+### DPO500 → GRPO500 versus DPO1000
 
-The earlier 395 teacher-rejection pairs were removed because their chosen answers copied the rejected reasoning. No valid DPO training pairs are available yet. The saved model evaluation predictions are dev examples and must not be used to create training pairs.
+Both arms start from the **same completed JSON SFT4500 adapter**. The existing SFT4500-disjoint 1,000-claim training pool is frozen by [`dpo-grpo-split.json`](verifier/data/train/sft/fever-oracle-matched-grpo-1000/dpo-grpo-split.json): 500 claim IDs for DPO followed by a disjoint 500 for GRPO. The other arm gives all 1,000 IDs to DPO. The completed SFT4500 → GRPO1000 run is a separate control. All arms use the same frozen 900 dev IDs for evaluation; dev predictions are never preference training data.
 
-After generating several CoT completions for the **same train-only claim and exact user/system prompt**, save each unedited candidate as JSONL with `id`, `prompt`, `system_prompt`, `completion` and `model` (optional `run`). Then run:
+Generate **one** set of six native-thinking SFT4500 completions per claim and reuse it to build both DPO datasets. A DPO pair requires an actual correct-verdict, exact-oracle-citation completion and an actual wrong-verdict completion from the *same* prompt. Unfinished generations and evidence-only disagreements are excluded because the stored oracle is only one possible valid FEVER evidence set. Thus `DPO_POOL=500` or `1000` counts candidate **claims**, while the final experiment name records the smaller number of usable **pairs**. Inspect the generated pairs for reasoning faithfulness; the automated grader only checks answer and citations. GRPO samples new completions online on its own disjoint 500 claims and uses the existing verdict/evidence reward without confidence calibration.
+
+On SoC, pull the branch, verify the SFT4500 adapter, `.venv`, FEVER dev file and BM25/SQLite indexes, and check current GPU limits with `sinfo -o "%P %l %a"`. From the repository root:
+
+```bash
+python -m utils.build_dpo_grpo_split --check
+rollout_job=$(sbatch --parsable --export=ALL,ROLLOUT_NAME=shared1000-v1 verifier/dpo_rollouts.sbatch)
+rollout_dir=verifier/data/train/dpo/rollouts-sft4500-pool1000/shared1000-v1
+dpo500_job=$(sbatch --parsable --dependency=afterok:$rollout_job \
+  --export=ALL,DPO_ROLLOUTS_DIR="$rollout_dir",DPO_POOL=500,RUN_NAME=dpo500-v1 \
+  verifier/dpo_pilot.sbatch)
+dpo1000_job=$(sbatch --parsable --dependency=afterok:$rollout_job \
+  --export=ALL,DPO_ROLLOUTS_DIR="$rollout_dir",DPO_POOL=1000,RUN_NAME=dpo1000-v1 \
+  verifier/dpo_pilot.sbatch)
+grpo500_job=$(sbatch --parsable --dependency=afterok:$dpo500_job \
+  --export=ALL,DPO_REPORT=verifier/data/train/dpo/pool500-dpo500-v1/train_report.json,RUN_NAME=grpo500-v1 \
+  verifier/grpo_after_dpo.sbatch)
+printf 'rollouts=%s dpo500=%s dpo1000=%s grpo500=%s\n' "$rollout_job" "$dpo500_job" "$dpo1000_job" "$grpo500_job"
+```
+
+Use fresh run names for any repeat. Rollouts and pair data are Git-ignored under `verifier/data/train/dpo/`. `pool500-dpo500-v1/pairs/manifest.json` and `pool1000-dpo1000-v1/pairs/manifest.json` give the actual pair counts and rejection categories. The DPO training report records its configuration and checkpoint path; the experiment is named `dpo-cot-from-sft4500-qwen3p5-2b-pool<claims>-<pairs>-samples`. Training metadata and logs are in `verifier/experiments/<config>/runs/<run>/artifacts/`. Dev metrics and predictions are in `verifier/evaluation/results/<config>/cot-native-cap1024/<run>/`. The DPO evaluator loads SFT then DPO adapters; the GRPO evaluator loads SFT, DPO, then GRPO adapters. `OUTPUT_ROOT` and `RESULTS_ROOT` can relocate those roots. Each job fails if required data or adapters are missing; the dependency prevents the GRPO job from starting until DPO500 finishes successfully.
+
+Interpret the comparison as an allocation experiment, because DPO500 may yield substantially fewer than 500 trainable pairs while GRPO500 sees 500 claims. DPO1000 includes both halves and is a separate arm, so its 500 latter IDs are intentionally shared with GRPO500 across arms. Oracle-context training and title-retrieval dev evaluation also have a distribution shift. Record pair yield, label mix, token budget, runtime and the same dev metrics before attributing any gain to DPO or the sequence. The earlier 395 teacher-rejection pairs were withdrawn because their chosen and rejected answers reused the same rejected reasoning.
+
+For independent pair curation after collecting multiple CoT completions for the **same train-only claim and exact user/system prompt**, save each unedited candidate as JSONL with `id`, `prompt`, `system_prompt`, `completion` and `model` (optional `run`). Then run:
 
 ```bash
 python -m utils.build_dpo_pairs \
@@ -156,7 +183,7 @@ python -m utils.build_dpo_pairs \
   --output verifier/data/train/dpo/<new-dataset-name>
 ```
 
-The builder pairs a correct verdict with exact gold evidence against an incorrect completion, with the same output format and no frozen dev IDs. Inspect reasoning faithfulness before using the resulting pairs for DPO. The planned side-by-side reviewer and model comparison are tracked in [verifier/TODO.md](verifier/TODO.md).
+The builder requires the same output format and no frozen dev IDs. Inspect reasoning faithfulness before using the resulting pairs for DPO. The side-by-side reviewer and model comparison are tracked in [verifier/TODO.md](verifier/TODO.md).
 
 ---
 

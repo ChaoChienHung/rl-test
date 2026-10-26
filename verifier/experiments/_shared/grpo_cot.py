@@ -1,6 +1,7 @@
 """Native-thinking GRPO from SFT, using verdict/evidence reward without calibration."""
 
 import argparse
+import hashlib
 import json
 import random
 import sys
@@ -67,13 +68,19 @@ def thinking_present(completions, **_):
     return out
 
 
-def load_train_rows(data_dir, n_train):
+def load_train_rows(data_dir, n_train, ids_file=None, ids_key="grpo500_ids"):
     path = Path(data_dir) / "labeled_prompts.jsonl"
     rows = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
     ids = [str(row["id"]) for row in rows]
     dev_ids = set(map(str, json.loads((ROOT / "verifier/data/eval/fever-dev-900-ids.json").read_text())["ids"]))
     if len(rows) not in (1000, 1200) or len(set(ids)) != len(rows) or set(ids) & dev_ids:
         raise ValueError(f"expected 1,000 or 1,200 unique train claims with no frozen dev overlap, got {len(rows)}")
+    if ids_file:
+        split = json.loads(Path(ids_file).read_text(encoding="utf-8"))
+        selected = set(map(str, split[ids_key]))
+        if len(selected) != n_train or not selected <= set(ids):
+            raise ValueError(f"{ids_key} must contain exactly {n_train} unique IDs from this train pool")
+        rows = [row for row in rows if str(row["id"]) in selected]
     if n_train < 1 or n_train > len(rows) or any(row["gold"] not in LABELS for row in rows):
         raise ValueError("invalid n_train or gold label")
     random.Random(SEED).shuffle(rows)
@@ -90,23 +97,30 @@ def load_train_rows(data_dir, n_train):
     return out
 
 
-def main(config_name, n_train, default_steps):
+def main(config_name, n_train, default_steps, require_dpo=False):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--run-name", required=True)
     parser.add_argument("--sft", required=True, help="completed Qwen3.5-2B SFT adapter")
     parser.add_argument("--data", default=str(DATA))
+    parser.add_argument("--ids-file", help="fixed train-claim split manifest")
+    parser.add_argument("--ids-key", default="grpo500_ids")
+    parser.add_argument("--dpo", help="DPO adapter to merge after SFT before fresh GRPO LoRA")
     parser.add_argument("--seed", type=int, default=0)
     parser.add_argument("--output-root")
     parser.add_argument("--max-steps", type=int, default=default_steps)
     args = parser.parse_args()
     if args.max_steps < 0:
         parser.error("--max-steps must be nonnegative")
+    if require_dpo and (not args.dpo or not args.ids_file):
+        parser.error("this GRPO configuration requires --dpo and --ids-file")
     checkpoint = Path(args.sft)
     if not (checkpoint / "adapter_config.json").is_file() or not any(
         (checkpoint / name).is_file() for name in ("adapter_model.safetensors", "adapter_model.bin")
     ):
         parser.error(f"incomplete SFT adapter: {checkpoint}")
-    rows = load_train_rows(args.data, n_train)
+    if args.dpo and not (Path(args.dpo) / "adapter_config.json").is_file():
+        parser.error(f"incomplete DPO adapter: {args.dpo}")
+    rows = load_train_rows(args.data, n_train, args.ids_file, args.ids_key)
     artifacts = artifacts_dir("grpo", config_name, args.seed, args.run_name,
                               args.output_root, config_name=config_name)
     if artifacts.exists():
@@ -114,13 +128,22 @@ def main(config_name, n_train, default_steps):
 
     import torch
     from datasets import Dataset
-    from peft import PeftModel
+    from peft import LoraConfig, PeftModel, get_peft_model
     from transformers import AutoModelForCausalLM, AutoTokenizer
     from trl import GRPOConfig, GRPOTrainer
 
     tokenizer = AutoTokenizer.from_pretrained(LOCAL_MODEL)
     base = AutoModelForCausalLM.from_pretrained(LOCAL_MODEL, dtype=torch.bfloat16, device_map="cuda")
-    model = PeftModel.from_pretrained(base, str(checkpoint), is_trainable=True)
+    if args.dpo:
+        # DPO was trained on the merged SFT policy. Rebuild that exact
+        # starting policy, then add a fresh GRPO adapter on top.
+        base = PeftModel.from_pretrained(base, str(checkpoint)).merge_and_unload()
+        base = PeftModel.from_pretrained(base, args.dpo).merge_and_unload()
+        lora = LoraConfig.from_pretrained(args.dpo)
+        lora.inference_mode = False
+        model = get_peft_model(base, lora)
+    else:
+        model = PeftModel.from_pretrained(base, str(checkpoint), is_trainable=True)
     model.print_trainable_parameters()
     out = artifacts / "checkpoints"
     out.mkdir(parents=True)
@@ -150,6 +173,9 @@ def main(config_name, n_train, default_steps):
     (logs / "train_log.json").write_text(json.dumps(trainer.state.log_history, indent=1) + "\n")
     meta = {
         "experiment": config_name, "model": LOCAL_MODEL, "sft": str(checkpoint),
+        "dpo": str(args.dpo) if args.dpo else None,
+        "ids_file": str(args.ids_file) if args.ids_file else None,
+        "ids_file_sha256": hashlib.sha256(Path(args.ids_file).read_bytes()).hexdigest() if args.ids_file else None,
         "data": str(Path(args.data)), "n_train": n_train, "seed": args.seed,
         "reward": "verdict_harm_plus_evidence_no_calibration", "thinking_mode": True,
         "diagnostics": ["correctness", "evidence", "final_present", "thinking_present"],

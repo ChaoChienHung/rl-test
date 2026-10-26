@@ -52,11 +52,14 @@ if [[ -n "${MAX_NEW_TOKENS:-}" ]]; then
 fi
 model="Qwen/Qwen3.5-2B"
 if [[ -n "$checkpoints" ]]; then
-  [[ -f "$checkpoints/adapter_config.json" ]] || { echo "Missing $checkpoints/adapter_config.json" >&2; exit 2; }
-  [[ -f "$checkpoints/adapter_model.safetensors" || -f "$checkpoints/adapter_model.bin" ]] || {
-    echo "Missing adapter weights in $checkpoints" >&2; exit 2;
-  }
-  model="$(python - "$checkpoints/adapter_config.json" <<'PY'
+  IFS=',' read -r -a checkpoint_list <<< "$checkpoints"
+  for checkpoint in "${checkpoint_list[@]}"; do
+    [[ -f "$checkpoint/adapter_config.json" ]] || { echo "Missing $checkpoint/adapter_config.json" >&2; exit 2; }
+    [[ -f "$checkpoint/adapter_model.safetensors" || -f "$checkpoint/adapter_model.bin" ]] || {
+      echo "Missing adapter weights in $checkpoint" >&2; exit 2;
+    }
+  done
+  model="$(python - "${checkpoint_list[0]}/adapter_config.json" <<'PY'
 import json
 import sys
 with open(sys.argv[1], encoding='utf-8') as f:
@@ -72,7 +75,8 @@ if [[ -n "${EVAL_MODEL:-}" ]]; then
   }
   eval_model="$EVAL_MODEL"
 elif [[ -n "$checkpoints" ]]; then
-  eval_model="$(python - "$checkpoints" <<'PY'
+  last_checkpoint_index=$((${#checkpoint_list[@]} - 1))
+  eval_model="$(python - "${checkpoint_list[$last_checkpoint_index]}" <<'PY'
 import sys
 from pathlib import Path
 p = Path(sys.argv[1]).resolve()
