@@ -1,0 +1,2 @@
+{"epoch": 1, "steps": 5528, "train_loss": 0.221184913686097, "train_accuracy": 0.9580318379160637}
+{"epoch": 2, "steps": 11056, "train_loss": 0.21640106037097798, "train_accuracy": 0.9609261939218524}

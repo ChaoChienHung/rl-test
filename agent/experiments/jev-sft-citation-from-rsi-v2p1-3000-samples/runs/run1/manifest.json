@@ -1,0 +1,55 @@
+{
+  "training_code": "__main__",
+  "method": "high-margin outcome-derived SFT",
+  "variant": "citation",
+  "release": "shgao/rsi-jev-v2.1-qwen3.5-2b",
+  "data_dir": "agent/data/controller_sft/citation-gold-margin0p2-3000-samples/run1",
+  "data_manifest": {
+    "source_run": "agent/data/train_rollouts/sft-direct-from-base-qwen3p5-2b-5500-samples/direct-cap160/stochastic-3-draws-per-chunk-5500-train-claims",
+    "split_manifest": "agent/data/controller_split/sft3000-rl2500/manifest.json",
+    "subset": "sft",
+    "reuse_episodes": null,
+    "margin": 0.2,
+    "useful_retry_credit": 1.5,
+    "correct_retry_penalty": 1.0,
+    "source_commit": "8ab26c2c7f690bc27679ff7e9eaf175581862fe6",
+    "data_builder": "__main__",
+    "commit": "59e7271539d37352eb609d84e76530d881a1262f",
+    "n_claims": 3000,
+    "n_labeled_actions": 5528,
+    "label_counts": {
+      "pooled:STOP": 4990,
+      "chunk:RETRY": 249,
+      "chunk:STOP": 150,
+      "pooled:RETRY": 139
+    },
+    "method": "hindsight high-margin labels; heuristic only fixes the pooled citation set; future draws and FEVER gold never enter policy state"
+  },
+  "split_manifest": "agent/data/controller_split/sft3000-rl2500/manifest.json",
+  "subset": "sft",
+  "n_claims": 3000,
+  "n_examples": 5528,
+  "label_counts": {
+    "pooled:STOP": 4990,
+    "chunk:RETRY": 249,
+    "chunk:STOP": 150,
+    "pooled:RETRY": 139
+  },
+  "class_weights": {
+    "chunk": {
+      "STOP": 1.126030688871174,
+      "RETRY": 0.8739693111288258
+    },
+    "pooled": {
+      "STOP": 0.2860575205837855,
+      "RETRY": 1.7139424794162146
+    }
+  },
+  "epochs": 2,
+  "seed": 0,
+  "learning_rate": 1e-05,
+  "weight_decay": 0.0,
+  "updated_parameters": "RSI-Jev option scorer only; tower frozen",
+  "commit": "59e7271539d37352eb609d84e76530d881a1262f",
+  "validation_claims_used": false
+}

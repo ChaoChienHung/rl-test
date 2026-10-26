@@ -1,0 +1,8 @@
+{
+  "episode": 10151,
+  "release": "shgao/rsi-jev-v2.1-qwen3.5-2b",
+  "variant": "citation",
+  "training_method": "sft",
+  "epoch": 1,
+  "split_manifest": "agent/data/controller_split/sft3000-rl2500/manifest.json"
+}
