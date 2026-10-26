@@ -1,6 +1,6 @@
 {
-  "episode": 2100,
+  "episode": 5500,
   "release": "shgao/rsi-jev-v2.1-qwen3.5-2b",
   "variant": "citation",
-  "baseline": 1.9633235575505232
+  "baseline": 1.742431466733943
 }

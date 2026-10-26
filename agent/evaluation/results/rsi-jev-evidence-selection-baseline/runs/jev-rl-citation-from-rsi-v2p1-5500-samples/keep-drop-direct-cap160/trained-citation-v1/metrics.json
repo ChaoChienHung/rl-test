@@ -1,0 +1,496 @@
+{
+  "overall": {
+    "n": 900,
+    "heuristic": {
+      "n": 900,
+      "accuracy": 0.7466666666666667,
+      "fever_score": 0.6533333333333333,
+      "evidence_f1_non_nei": 0.6380507593587303,
+      "format_rate": 1.0,
+      "recall": {
+        "SUPPORTED": 0.7966666666666666,
+        "REFUTED": 0.7866666666666666,
+        "NOT_ENOUGH_INFO": 0.6566666666666666
+      }
+    },
+    "jev": {
+      "n": 900,
+      "accuracy": 0.6655555555555556,
+      "fever_score": 0.5488888888888889,
+      "evidence_f1_non_nei": 0.4284899621312665,
+      "format_rate": 1.0,
+      "recall": {
+        "SUPPORTED": 0.7733333333333333,
+        "REFUTED": 0.44333333333333336,
+        "NOT_ENOUGH_INFO": 0.78
+      }
+    },
+    "jev_fever_gained": 52,
+    "jev_fever_lost": 146
+  },
+  "gold_in_full_context": {
+    "n": 517,
+    "heuristic": {
+      "n": 517,
+      "accuracy": 0.8413926499032882,
+      "fever_score": 0.7562862669245648,
+      "evidence_f1_non_nei": 0.726493466696141,
+      "format_rate": 1.0,
+      "recall": {
+        "SUPPORTED": 0.872093023255814,
+        "REFUTED": 0.8108108108108109,
+        "NOT_ENOUGH_INFO": null
+      }
+    },
+    "jev": {
+      "n": 517,
+      "accuracy": 0.6441005802707931,
+      "fever_score": 0.5029013539651838,
+      "evidence_f1_non_nei": 0.4888987310356413,
+      "format_rate": 1.0,
+      "recall": {
+        "SUPPORTED": 0.8527131782945736,
+        "REFUTED": 0.4362934362934363,
+        "NOT_ENOUGH_INFO": null
+      }
+    },
+    "jev_fever_gained": 8,
+    "jev_fever_lost": 139
+  },
+  "gold_not_in_full_context": {
+    "n": 83,
+    "heuristic": {
+      "n": 83,
+      "accuracy": 0.4819277108433735,
+      "fever_score": 0.0,
+      "evidence_f1_non_nei": 0.08714859437751005,
+      "format_rate": 1.0,
+      "recall": {
+        "SUPPORTED": 0.3333333333333333,
+        "REFUTED": 0.6341463414634146,
+        "NOT_ENOUGH_INFO": null
+      }
+    },
+    "jev": {
+      "n": 83,
+      "accuracy": 0.3855421686746988,
+      "fever_score": 0.0,
+      "evidence_f1_non_nei": 0.05220883534136546,
+      "format_rate": 1.0,
+      "recall": {
+        "SUPPORTED": 0.2857142857142857,
+        "REFUTED": 0.4878048780487805,
+        "NOT_ENOUGH_INFO": null
+      }
+    },
+    "jev_fever_gained": 0,
+    "jev_fever_lost": 0
+  },
+  "gold_nei": {
+    "n": 300,
+    "heuristic": {
+      "n": 300,
+      "accuracy": 0.6566666666666666,
+      "fever_score": 0.6566666666666666,
+      "evidence_f1_non_nei": null,
+      "format_rate": 1.0,
+      "recall": {
+        "SUPPORTED": null,
+        "REFUTED": null,
+        "NOT_ENOUGH_INFO": 0.6566666666666666
+      }
+    },
+    "jev": {
+      "n": 300,
+      "accuracy": 0.78,
+      "fever_score": 0.78,
+      "evidence_f1_non_nei": null,
+      "format_rate": 1.0,
+      "recall": {
+        "SUPPORTED": null,
+        "REFUTED": null,
+        "NOT_ENOUGH_INFO": 0.78
+      }
+    },
+    "jev_fever_gained": 44,
+    "jev_fever_lost": 7
+  },
+  "policies": {
+    "heuristic": {
+      "simulated_qwen_calls_including_final": 9249,
+      "simulated_pooled_qwen_calls": 1557,
+      "pooled_retry_after_correct_draws": 411,
+      "pooled_early_stop_on_wrong": 117,
+      "pooled_forced_stop_on_wrong": 111,
+      "controller_calls": 0,
+      "extra_draws": 4523,
+      "keep_decisions": 1225,
+      "unique_evidence_kept": 1225,
+      "duplicate_keep_decisions_removed_by_set": 0,
+      "prior_citation_removals": 0,
+      "empty_evidence_claims": 240,
+      "gold_reachable_claims": 517,
+      "complete_gold_saved_claims": 434,
+      "action_hindsight": {
+        "retry_after_correct_draws": 1944,
+        "early_stop_on_wrong_draws": 153,
+        "forced_stop_on_wrong_draws": 1251,
+        "correct_retry_then_wrong_selected_chunks": 198,
+        "no_correct_candidate_chunks": 1178,
+        "stop_at_draw_1": 876,
+        "stop_at_draw_2": 63,
+        "forced_stop_at_draw_3": 2230
+      }
+    },
+    "heuristic_0p3": {
+      "simulated_qwen_calls_including_final": 8805,
+      "simulated_pooled_qwen_calls": 1471,
+      "pooled_retry_after_correct_draws": 372,
+      "pooled_early_stop_on_wrong": 149,
+      "pooled_forced_stop_on_wrong": 82,
+      "controller_calls": 0,
+      "extra_draws": 4165,
+      "keep_decisions": 1370,
+      "unique_evidence_kept": 1370,
+      "duplicate_keep_decisions_removed_by_set": 0,
+      "prior_citation_removals": 0,
+      "empty_evidence_claims": 204,
+      "gold_reachable_claims": 517,
+      "complete_gold_saved_claims": 445,
+      "action_hindsight": {
+        "retry_after_correct_draws": 1754,
+        "early_stop_on_wrong_draws": 244,
+        "forced_stop_on_wrong_draws": 1119,
+        "correct_retry_then_wrong_selected_chunks": 115,
+        "no_correct_candidate_chunks": 1178,
+        "stop_at_draw_1": 1016,
+        "stop_at_draw_2": 141,
+        "forced_stop_at_draw_3": 2012
+      }
+    },
+    "heuristic_0p7": {
+      "simulated_qwen_calls_including_final": 9752,
+      "simulated_pooled_qwen_calls": 1651,
+      "pooled_retry_after_correct_draws": 461,
+      "pooled_early_stop_on_wrong": 91,
+      "pooled_forced_stop_on_wrong": 140,
+      "controller_calls": 0,
+      "extra_draws": 4932,
+      "keep_decisions": 1135,
+      "unique_evidence_kept": 1135,
+      "duplicate_keep_decisions_removed_by_set": 0,
+      "prior_citation_removals": 0,
+      "empty_evidence_claims": 258,
+      "gold_reachable_claims": 517,
+      "complete_gold_saved_claims": 420,
+      "action_hindsight": {
+        "retry_after_correct_draws": 2213,
+        "early_stop_on_wrong_draws": 94,
+        "forced_stop_on_wrong_draws": 1350,
+        "correct_retry_then_wrong_selected_chunks": 258,
+        "no_correct_candidate_chunks": 1178,
+        "stop_at_draw_1": 692,
+        "stop_at_draw_2": 22,
+        "forced_stop_at_draw_3": 2455
+      }
+    },
+    "jev": {
+      "simulated_qwen_calls_including_final": 6698,
+      "simulated_pooled_qwen_calls": 900,
+      "pooled_retry_after_correct_draws": 0,
+      "pooled_early_stop_on_wrong": 301,
+      "pooled_forced_stop_on_wrong": 0,
+      "controller_calls": 7762,
+      "extra_draws": 2629,
+      "keep_decisions": 722,
+      "unique_evidence_kept": 722,
+      "duplicate_keep_decisions_removed_by_set": 0,
+      "prior_citation_removals": 0,
+      "empty_evidence_claims": 426,
+      "gold_reachable_claims": 517,
+      "complete_gold_saved_claims": 295,
+      "action_hindsight": {
+        "retry_after_correct_draws": 1041,
+        "early_stop_on_wrong_draws": 732,
+        "forced_stop_on_wrong_draws": 649,
+        "correct_retry_then_wrong_selected_chunks": 60,
+        "no_correct_candidate_chunks": 1178,
+        "stop_at_draw_1": 1672,
+        "stop_at_draw_2": 365,
+        "forced_stop_at_draw_3": 1132
+      }
+    },
+    "jev_citation": {
+      "simulated_qwen_calls_including_final": 4129,
+      "simulated_pooled_qwen_calls": 900,
+      "pooled_retry_after_correct_draws": 0,
+      "pooled_early_stop_on_wrong": 243,
+      "pooled_forced_stop_on_wrong": 0,
+      "controller_calls": 4104,
+      "extra_draws": 60,
+      "keep_decisions": 1129,
+      "unique_evidence_kept": 1129,
+      "duplicate_keep_decisions_removed_by_set": 0,
+      "prior_citation_removals": 0,
+      "empty_evidence_claims": 264,
+      "gold_reachable_claims": 517,
+      "complete_gold_saved_claims": 417,
+      "action_hindsight": {
+        "retry_after_correct_draws": 38,
+        "early_stop_on_wrong_draws": 1442,
+        "forced_stop_on_wrong_draws": 6,
+        "correct_retry_then_wrong_selected_chunks": 1,
+        "no_correct_candidate_chunks": 1178,
+        "stop_at_draw_1": 3134,
+        "stop_at_draw_2": 10,
+        "forced_stop_at_draw_3": 25
+      }
+    },
+    "jev_chunk_stop": {
+      "simulated_qwen_calls_including_final": 4817,
+      "simulated_pooled_qwen_calls": 1588,
+      "pooled_retry_after_correct_draws": 417,
+      "pooled_early_stop_on_wrong": 113,
+      "pooled_forced_stop_on_wrong": 124,
+      "controller_calls": 3204,
+      "extra_draws": 60,
+      "keep_decisions": 1129,
+      "unique_evidence_kept": 1129,
+      "duplicate_keep_decisions_removed_by_set": 0,
+      "prior_citation_removals": 0,
+      "empty_evidence_claims": 264,
+      "gold_reachable_claims": 517,
+      "complete_gold_saved_claims": 417,
+      "action_hindsight": {
+        "retry_after_correct_draws": 38,
+        "early_stop_on_wrong_draws": 1442,
+        "forced_stop_on_wrong_draws": 6,
+        "correct_retry_then_wrong_selected_chunks": 1,
+        "no_correct_candidate_chunks": 1178,
+        "stop_at_draw_1": 3134,
+        "stop_at_draw_2": 10,
+        "forced_stop_at_draw_3": 25
+      }
+    },
+    "jev_keep": {
+      "simulated_qwen_calls_including_final": 9543,
+      "simulated_pooled_qwen_calls": 1851,
+      "pooled_retry_after_correct_draws": 506,
+      "pooled_early_stop_on_wrong": 82,
+      "pooled_forced_stop_on_wrong": 215,
+      "controller_calls": 1680,
+      "extra_draws": 4523,
+      "keep_decisions": 940,
+      "unique_evidence_kept": 733,
+      "duplicate_keep_decisions_removed_by_set": 173,
+      "prior_citation_removals": 37,
+      "empty_evidence_claims": 424,
+      "gold_reachable_claims": 517,
+      "complete_gold_saved_claims": 292,
+      "action_hindsight": {
+        "retry_after_correct_draws": 1944,
+        "early_stop_on_wrong_draws": 153,
+        "forced_stop_on_wrong_draws": 1251,
+        "correct_retry_then_wrong_selected_chunks": 198,
+        "no_correct_candidate_chunks": 1178,
+        "stop_at_draw_1": 876,
+        "stop_at_draw_2": 63,
+        "forced_stop_at_draw_3": 2230
+      }
+    },
+    "jev_pooled_stop": {
+      "simulated_qwen_calls_including_final": 8592,
+      "simulated_pooled_qwen_calls": 900,
+      "pooled_retry_after_correct_draws": 0,
+      "pooled_early_stop_on_wrong": 236,
+      "pooled_forced_stop_on_wrong": 0,
+      "controller_calls": 900,
+      "extra_draws": 4523,
+      "keep_decisions": 1225,
+      "unique_evidence_kept": 1225,
+      "duplicate_keep_decisions_removed_by_set": 0,
+      "prior_citation_removals": 0,
+      "empty_evidence_claims": 240,
+      "gold_reachable_claims": 517,
+      "complete_gold_saved_claims": 434,
+      "action_hindsight": {
+        "retry_after_correct_draws": 1944,
+        "early_stop_on_wrong_draws": 153,
+        "forced_stop_on_wrong_draws": 1251,
+        "correct_retry_then_wrong_selected_chunks": 198,
+        "no_correct_candidate_chunks": 1178,
+        "stop_at_draw_1": 876,
+        "stop_at_draw_2": 63,
+        "forced_stop_at_draw_3": 2230
+      }
+    }
+  },
+  "component_ablations": {
+    "heuristic": {
+      "quality": {
+        "n": 900,
+        "accuracy": 0.7466666666666667,
+        "fever_score": 0.6533333333333333,
+        "evidence_f1_non_nei": 0.6380507593587303,
+        "format_rate": 1.0,
+        "recall": {
+          "SUPPORTED": 0.7966666666666666,
+          "REFUTED": 0.7866666666666666,
+          "NOT_ENOUGH_INFO": 0.6566666666666666
+        }
+      },
+      "fever_gained_vs_heuristic": 0,
+      "fever_lost_vs_heuristic": 0
+    },
+    "heuristic_0p3": {
+      "quality": {
+        "n": 900,
+        "accuracy": 0.7433333333333333,
+        "fever_score": 0.6433333333333333,
+        "evidence_f1_non_nei": 0.662217426025397,
+        "format_rate": 1.0,
+        "recall": {
+          "SUPPORTED": 0.8066666666666666,
+          "REFUTED": 0.8233333333333334,
+          "NOT_ENOUGH_INFO": 0.6
+        }
+      },
+      "fever_gained_vs_heuristic": 9,
+      "fever_lost_vs_heuristic": 18
+    },
+    "heuristic_0p7": {
+      "quality": {
+        "n": 900,
+        "accuracy": 0.7433333333333333,
+        "fever_score": 0.6488888888888888,
+        "evidence_f1_non_nei": 0.6189054602134312,
+        "format_rate": 1.0,
+        "recall": {
+          "SUPPORTED": 0.78,
+          "REFUTED": 0.7666666666666667,
+          "NOT_ENOUGH_INFO": 0.6833333333333333
+        }
+      },
+      "fever_gained_vs_heuristic": 10,
+      "fever_lost_vs_heuristic": 14
+    },
+    "jev": {
+      "quality": {
+        "n": 900,
+        "accuracy": 0.6655555555555556,
+        "fever_score": 0.5488888888888889,
+        "evidence_f1_non_nei": 0.4284899621312665,
+        "format_rate": 1.0,
+        "recall": {
+          "SUPPORTED": 0.7733333333333333,
+          "REFUTED": 0.44333333333333336,
+          "NOT_ENOUGH_INFO": 0.78
+        }
+      },
+      "fever_gained_vs_heuristic": 52,
+      "fever_lost_vs_heuristic": 146
+    },
+    "jev_citation": {
+      "quality": {
+        "n": 900,
+        "accuracy": 0.73,
+        "fever_score": 0.6433333333333333,
+        "evidence_f1_non_nei": 0.6071276824356534,
+        "format_rate": 1.0,
+        "recall": {
+          "SUPPORTED": 0.7466666666666667,
+          "REFUTED": 0.7533333333333333,
+          "NOT_ENOUGH_INFO": 0.69
+        }
+      },
+      "fever_gained_vs_heuristic": 28,
+      "fever_lost_vs_heuristic": 37
+    },
+    "jev_chunk_stop": {
+      "quality": {
+        "n": 900,
+        "accuracy": 0.7366666666666667,
+        "fever_score": 0.6455555555555555,
+        "evidence_f1_non_nei": 0.6247387935467645,
+        "format_rate": 1.0,
+        "recall": {
+          "SUPPORTED": 0.7633333333333333,
+          "REFUTED": 0.7766666666666666,
+          "NOT_ENOUGH_INFO": 0.67
+        }
+      },
+      "fever_gained_vs_heuristic": 22,
+      "fever_lost_vs_heuristic": 29
+    },
+    "jev_keep": {
+      "quality": {
+        "n": 900,
+        "accuracy": 0.67,
+        "fever_score": 0.5444444444444444,
+        "evidence_f1_non_nei": 0.4358574834987879,
+        "format_rate": 1.0,
+        "recall": {
+          "SUPPORTED": 0.7933333333333333,
+          "REFUTED": 0.45666666666666667,
+          "NOT_ENOUGH_INFO": 0.76
+        }
+      },
+      "fever_gained_vs_heuristic": 41,
+      "fever_lost_vs_heuristic": 139
+    },
+    "jev_pooled_stop": {
+      "quality": {
+        "n": 900,
+        "accuracy": 0.7377777777777778,
+        "fever_score": 0.6466666666666666,
+        "evidence_f1_non_nei": 0.6183499046578756,
+        "format_rate": 1.0,
+        "recall": {
+          "SUPPORTED": 0.7733333333333333,
+          "REFUTED": 0.7733333333333333,
+          "NOT_ENOUGH_INFO": 0.6666666666666666
+        }
+      },
+      "fever_gained_vs_heuristic": 11,
+      "fever_lost_vs_heuristic": 17
+    }
+  },
+  "jev_terminal_verdict": {
+    "n": 900,
+    "accuracy": 0.6977777777777778,
+    "confusion": {
+      "SUPPORTED": {
+        "SUPPORTED": 249,
+        "REFUTED": 6,
+        "NOT_ENOUGH_INFO": 45
+      },
+      "REFUTED": {
+        "SUPPORTED": 23,
+        "REFUTED": 160,
+        "NOT_ENOUGH_INFO": 117
+      },
+      "NOT_ENOUGH_INFO": {
+        "SUPPORTED": 53,
+        "REFUTED": 28,
+        "NOT_ENOUGH_INFO": 219
+      }
+    },
+    "status": "record_only_not_used_for_final_qwen_or_training_reward"
+  },
+  "terminal_vs_pooled_verifier_disagreement": 74,
+  "actual_new_final_qwen_calls": 4932,
+  "note": "Keep-all arms discard RETRY citations. Selection arms can revise their saved citation set after every observed draw, including RETRY; DROP can remove a prior KEEP. Three new pooled-verifier draws use unchanged final pooled evidence; STOP/RETRY selects one. Actual precomputation costs three calls per unique pool even when simulated stopping is earlier. Gold and future draws are used only in post-hoc diagnostics.",
+  "primary_trained_policy": "jev_citation",
+  "primary_trained_quality": {
+    "n": 900,
+    "accuracy": 0.73,
+    "fever_score": 0.6433333333333333,
+    "evidence_f1_non_nei": 0.6071276824356534,
+    "format_rate": 1.0,
+    "recall": {
+      "SUPPORTED": 0.7466666666666667,
+      "REFUTED": 0.7533333333333333,
+      "NOT_ENOUGH_INFO": 0.69
+    }
+  }
+}
